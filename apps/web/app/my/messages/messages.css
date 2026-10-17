@@ -1,0 +1,485 @@
+.hm-page {
+  min-height: 100vh;
+  background: #f4f7fb;
+  color: #243f5b;
+  font-family: "Vazirmatn", Tahoma, sans-serif;
+  line-height: 1.85;
+}
+
+.hm-page * {
+  box-sizing: border-box;
+}
+
+.hm-page a {
+  text-decoration: none;
+}
+
+.hm-container {
+  width: min(1180px, calc(100% - 36px));
+  margin-inline: auto;
+}
+
+.hm-header {
+  background: linear-gradient(120deg, #122f50, #17665f);
+  color: white;
+  padding: 54px 0;
+}
+
+.hm-brand {
+  color: #bce9dd;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.hm-header h1 {
+  font-size: clamp(27px, 4vw, 42px);
+  font-weight: 950;
+  margin: 14px 0 5px;
+}
+
+.hm-header p {
+  color: #d0e3e7;
+  font-size: 13px;
+}
+
+.hm-content {
+  padding-top: 28px;
+  padding-bottom: 85px;
+}
+
+.hm-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 13px;
+  margin-bottom: 30px;
+}
+
+.hm-navigation a {
+  background: white;
+  border: 1px solid #e0e8ed;
+  padding: 9px 15px;
+  border-radius: 12px;
+  color: #176b5d;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.hm-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 25px;
+  align-items: start;
+}
+
+.hm-section {
+  min-width: 0;
+}
+
+.hm-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.hm-section-head h2 {
+  color: #173b60;
+  font-size: 21px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.hm-section-head span {
+  background: #dff2e9;
+  color: #147d69;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.hm-message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hm-message {
+  background: white;
+  border: 1px solid #e2e8ed;
+  border-radius: 20px;
+  padding: 23px;
+  box-shadow: 0 12px 35px #173b6010;
+}
+
+.hm-message-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #8391a1;
+}
+
+.hm-message-type {
+  color: #167c69;
+  font-weight: 900;
+}
+
+.hm-message h3 {
+  font-size: 15px;
+  color: #193b5b;
+  margin: 12px 0 4px;
+}
+
+.hm-listing-link {
+  display: block;
+  color: #147d69;
+  font-size: 12px;
+  font-weight: 850;
+  margin-bottom: 14px;
+}
+
+.hm-message-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #f7fafc;
+  border: 1px solid #edf1f4;
+  border-radius: 13px;
+  padding: 15px;
+  font-size: 13px;
+  line-height: 2;
+  margin: 0;
+}
+
+.hm-empty {
+  padding: 35px 20px;
+  text-align: center;
+  background: white;
+  border: 1px dashed #cad9e2;
+  border-radius: 18px;
+  color: #74899a;
+  font-size: 13px;
+}
+
+.hm-empty h1 {
+  color: #173b60;
+  font-size: 27px;
+}
+
+.hm-button {
+  display: inline-flex;
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: #147d69;
+  color: white;
+  border-radius: 12px;
+  font-weight: 900;
+}
+
+.hm-limit-note {
+  margin-top: 28px;
+  color: #8191a0;
+  font-size: 12px;
+}
+
+.hm-page a:focus-visible {
+  outline: 3px solid #63c8ad;
+  outline-offset: 3px;
+}
+
+@media (max-width: 780px) {
+  .hm-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .hm-header {
+    padding: 38px 0;
+  }
+
+  .hm-message {
+    padding: 18px;
+  }
+}
+
+/* KHANEHYAR CONVERSATIONS V1 START */
+
+.hm-thread-list {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.hm-thread {
+  background: #fff;
+  border: 1px solid #e2eaf0;
+  border-radius: 23px;
+  overflow: hidden;
+  box-shadow: 0 12px 36px #183c5d0d;
+}
+
+.hm-thread-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 15px;
+  padding: 22px 27px;
+  background: linear-gradient(120deg, #f0f8f5, #f5f8fc);
+  border-bottom: 1px solid #e3ecea;
+}
+
+.hm-thread-kicker {
+  display: block;
+  font-size: 11px;
+  font-weight: 850;
+  color: #16816b;
+}
+
+.hm-thread-header h2 {
+  margin: 4px 0;
+  font-size: 19px;
+  font-weight: 950;
+  color: #163b5d;
+}
+
+.hm-thread-header p {
+  margin: 0;
+  color: #73889b;
+  font-size: 12px;
+}
+
+.hm-thread-header .hm-listing-link {
+  margin: 0;
+}
+
+.hm-thread-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 25px;
+  max-height: 620px;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 15% 20%, #eaf3f180, transparent 35%),
+    #fcfdfd;
+}
+
+.hm-bubble {
+  width: fit-content;
+  max-width: min(78%, 570px);
+  padding: 14px 17px;
+  border-radius: 17px;
+  border: 1px solid #e2e9ee;
+  box-shadow: 0 5px 15px #163b5d0a;
+}
+
+.hm-bubble-own {
+  align-self: flex-start;
+  background: #e3f4ed;
+  border-color: #cbe8d8;
+  border-bottom-right-radius: 5px;
+}
+
+.hm-bubble-other {
+  align-self: flex-end;
+  background: #ffffff;
+  border-bottom-left-radius: 5px;
+}
+
+.hm-bubble-author {
+  color: #116b5a;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.hm-bubble p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 5px 0 8px;
+  font-size: 13px;
+  line-height: 2;
+  color: #304d63;
+}
+
+.hm-bubble time {
+  display: block;
+  font-size: 10px;
+  color: #8493a2;
+}
+
+.hm-reply-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 23px 26px;
+  border-top: 1px solid #e3eaf0;
+}
+
+.hm-reply-form > label {
+  font-size: 13px;
+  font-weight: 900;
+  color: #1c425b;
+}
+
+.hm-reply-form textarea {
+  display: block;
+  width: 100%;
+  min-height: 95px;
+  padding: 14px;
+  border: 1px solid #dbe6e9;
+  border-radius: 13px;
+  background: #f9fbfc;
+  color: #25445e;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.hm-reply-form textarea:focus-visible {
+  outline: 3px solid #94d9c7;
+  outline-offset: 2px;
+}
+
+.hm-reply-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.hm-reply-footer small {
+  color: #8b9aa8;
+  font-size: 11px;
+}
+
+.hm-reply-footer button {
+  padding: 10px 22px;
+  color: #ffffff;
+  border: 0;
+  border-radius: 12px;
+  background: #147d69;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.hm-reply-footer button:hover {
+  background: #0f6656;
+}
+
+.hm-reply-footer button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.hm-reply-error,
+.hm-reply-success {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.hm-reply-error {
+  color: #b63147;
+}
+
+.hm-reply-success {
+  color: #117b5c;
+}
+
+.hm-awaiting {
+  border-top: 1px solid #e6edf1;
+  padding: 18px 25px;
+  color: #8291a0;
+  background: #f8fafc;
+  font-size: 12px;
+}
+
+@media (max-width: 650px) {
+  .hm-thread-header {
+    padding: 18px;
+  }
+
+  .hm-thread-messages {
+    padding: 16px;
+  }
+
+  .hm-bubble {
+    max-width: 92%;
+  }
+
+  .hm-reply-form {
+    padding: 17px;
+  }
+
+  .hm-thread-header h2 {
+    font-size: 17px;
+  }
+}
+
+/* KHANEHYAR CONVERSATIONS V1 END */
+
+/* KHANEHYAR MESSAGE READ STATUS V1 */
+.hm-global-unread {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 13px;
+  padding: 7px 13px;
+  border-radius: 11px;
+  background: #ffffff20;
+  border: 1px solid #ffffff38;
+  color: #e3faf0;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.hm-thread-unread {
+  display: inline-block;
+  padding: 3px 11px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: #dff4e9;
+  color: #0c7557;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.hm-read-action {
+  padding: 16px 26px;
+  border-top: 1px solid #e9eef1;
+  background: #f6fbf8;
+}
+
+.hm-read-action button {
+  border: 1px solid #a7d9c2;
+  border-radius: 11px;
+  background: #e3f4eb;
+  color: #106c54;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 10px 17px;
+  cursor: pointer;
+}
+
+.hm-read-action button:hover {
+  background: #d1eddc;
+}
+
+.hm-read-action button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+@media (max-width: 650px) {
+  .hm-read-action {
+    padding: 15px 17px;
+  }
+
+  .hm-read-action button {
+    width: 100%;
+  }
+}

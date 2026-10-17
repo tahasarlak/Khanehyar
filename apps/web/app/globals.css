@@ -24,3 +24,484 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+/* KHANEHYAR DESIGN SYSTEM V1 - BEGIN */
+
+:root {
+  --kh-navy: #142f56;
+  --kh-navy-dark: #0c203d;
+  --kh-emerald: #167d66;
+  --kh-emerald-hover: #10634f;
+  --kh-bg: #f4f7fb;
+  --kh-surface: #ffffff;
+  --kh-surface-soft: #eef3f8;
+  --kh-text: #172b47;
+  --kh-muted: #64748b;
+  --kh-border: #e2e8f0;
+  --kh-success: #168467;
+  --kh-danger: #dc4d51;
+  --kh-warning: #c58b2c;
+  --kh-radius-sm: 12px;
+  --kh-radius-md: 18px;
+  --kh-radius-lg: 24px;
+  --kh-radius-xl: 32px;
+  --kh-shadow: 0 12px 42px rgba(20, 47, 86, 0.07);
+  --kh-shadow-hover: 0 22px 56px rgba(20, 47, 86, 0.13);
+}
+
+.kh-page {
+  min-height: 100vh;
+  background: var(--kh-bg);
+  color: var(--kh-text);
+  direction: rtl;
+  font-family: "Vazirmatn", "Tahoma", sans-serif;
+  line-height: 1.8;
+}
+
+.kh-container {
+  width: min(100% - 40px, 1240px);
+  margin-inline: auto;
+}
+
+.kh-header {
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--kh-border);
+}
+
+.kh-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 86px;
+}
+
+.kh-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--kh-navy);
+}
+
+.kh-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  background: var(--kh-navy);
+  color: white;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.kh-brand-name {
+  font-weight: 900;
+  font-size: 24px;
+  line-height: 1.35;
+}
+
+.kh-brand-caption {
+  font-size: 11px;
+  color: var(--kh-muted);
+  line-height: 1.5;
+}
+
+.kh-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 26px;
+}
+
+.kh-nav a {
+  color: #435570;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 650;
+  transition: color 180ms ease;
+}
+
+.kh-nav a:hover {
+  color: var(--kh-emerald);
+}
+
+.kh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 10px 22px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 750;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.kh-btn:hover {
+  transform: translateY(-2px);
+}
+
+.kh-btn:focus-visible,
+.kh-input:focus-visible,
+.kh-nav a:focus-visible {
+  outline: 3px solid #5abca6;
+  outline-offset: 3px;
+}
+
+.kh-btn-primary {
+  background: var(--kh-emerald);
+  color: #ffffff;
+}
+
+.kh-btn-primary:hover {
+  background: var(--kh-emerald-hover);
+  box-shadow: 0 10px 25px rgba(22, 125, 102, 0.22);
+}
+
+.kh-btn-dark {
+  background: var(--kh-navy);
+  color: #ffffff;
+}
+
+.kh-btn-dark:hover {
+  background: var(--kh-navy-dark);
+}
+
+.kh-btn-outline {
+  background: white;
+  border-color: var(--kh-border);
+  color: var(--kh-navy);
+}
+
+.kh-btn-outline:hover {
+  background: var(--kh-surface-soft);
+}
+
+.kh-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 88px 0 96px;
+  background:
+    radial-gradient(circle at 13% 15%, rgba(22, 125, 102, 0.12), transparent 35%),
+    radial-gradient(circle at 92% 90%, rgba(20, 47, 86, 0.09), transparent 32%),
+    linear-gradient(145deg, #f7fafc, #eaf1f7);
+}
+
+.kh-hero-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: 56px;
+}
+
+.kh-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--kh-emerald);
+  background: #deeee8;
+  border: 1px solid #c9e6dc;
+  padding: 7px 15px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.kh-hero-title {
+  margin: 22px 0 16px;
+  font-size: clamp(35px, 5vw, 64px);
+  font-weight: 950;
+  line-height: 1.42;
+  letter-spacing: -1.3px;
+  color: var(--kh-navy);
+}
+
+.kh-accent {
+  color: var(--kh-emerald);
+}
+
+.kh-lead {
+  font-size: 16px;
+  color: var(--kh-muted);
+  line-height: 2.1;
+  max-width: 610px;
+}
+
+.kh-search-panel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 32px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid var(--kh-border);
+  border-radius: 20px;
+  box-shadow: var(--kh-shadow);
+}
+
+.kh-input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--kh-border);
+  border-radius: 13px;
+  padding: 10px 15px;
+  background: white;
+  color: var(--kh-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.kh-search-panel .kh-input {
+  flex: 1;
+  border-color: transparent;
+  min-width: 0;
+}
+
+.kh-showcase {
+  position: relative;
+  border-radius: var(--kh-radius-xl);
+  background: var(--kh-surface);
+  padding: 14px;
+  box-shadow: 0 35px 80px rgba(20, 47, 86, 0.13);
+}
+
+.kh-showcase-art {
+  display: grid;
+  place-items: center;
+  min-height: 340px;
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(20, 47, 86, 0.20), rgba(22, 125, 102, 0.15)),
+    linear-gradient(120deg, #bdd0df, #e1ecee 54%, #a9c8bc);
+  color: var(--kh-navy);
+  font-size: 110px;
+}
+
+.kh-showcase-info {
+  padding: 18px 8px 7px;
+}
+
+.kh-showcase-price {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--kh-navy);
+}
+
+.kh-section {
+  padding: 76px 0;
+}
+
+.kh-section-title {
+  margin: 0 0 8px;
+  color: var(--kh-navy);
+  font-size: clamp(25px, 3vw, 36px);
+  font-weight: 900;
+}
+
+.kh-section-desc {
+  margin: 0;
+  color: var(--kh-muted);
+  font-size: 14px;
+}
+
+.kh-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.kh-card {
+  overflow: hidden;
+  border: 1px solid var(--kh-border);
+  border-radius: var(--kh-radius-lg);
+  background: var(--kh-surface);
+  box-shadow: var(--kh-shadow);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+
+.kh-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--kh-shadow-hover);
+}
+
+.kh-card-art {
+  display: grid;
+  place-items: center;
+  min-height: 215px;
+  font-size: 65px;
+}
+
+.kh-card-body {
+  padding: 23px;
+}
+
+.kh-card-title {
+  margin: 0;
+  color: var(--kh-navy);
+  font-size: 19px;
+  font-weight: 850;
+}
+
+.kh-card-text {
+  color: var(--kh-muted);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.kh-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 12px;
+  background: #e0f2e9;
+  color: var(--kh-emerald);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kh-color-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.kh-color {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--kh-border);
+  background: white;
+}
+
+.kh-color-swatch {
+  height: 100px;
+}
+
+.kh-color-info {
+  padding: 12px;
+  font-size: 12px;
+  color: var(--kh-muted);
+}
+
+.kh-footer {
+  background: var(--kh-navy-dark);
+  color: #d9e5f1;
+  padding: 38px 0;
+  font-size: 13px;
+}
+
+.kh-footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .kh-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .kh-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kh-nav {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .kh-container {
+    width: min(100% - 28px, 1240px);
+  }
+
+  .kh-header-inner {
+    min-height: 76px;
+    flex-wrap: wrap;
+    padding-block: 12px;
+  }
+
+  .kh-brand-name {
+    font-size: 20px;
+  }
+
+  .kh-nav {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .kh-nav a {
+    font-size: 12px;
+  }
+
+  .kh-nav .kh-btn {
+    padding-inline: 12px;
+    font-size: 12px;
+    min-height: 40px;
+  }
+
+  .kh-hero {
+    padding: 52px 0 62px;
+  }
+
+  .kh-hero-title {
+    font-size: 37px;
+  }
+
+  .kh-lead {
+    font-size: 14px;
+  }
+
+  .kh-search-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .kh-search-panel .kh-input {
+    width: 100%;
+  }
+
+  .kh-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kh-color-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kh-section {
+    padding: 52px 0;
+  }
+
+  .kh-footer-inner {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kh-page *,
+  .kh-page *::before,
+  .kh-page *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* KHANEHYAR DESIGN SYSTEM V1 - END */

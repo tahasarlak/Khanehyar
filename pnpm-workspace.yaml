@@ -3,5 +3,16 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  '@prisma/client': false
+  '@prisma/engines': false
+  esbuild: false
+  prisma: false
   sharp: false
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - "@expo/cli@58.1.11"
+  - "@expo/schema-utils@58.0.2"
+  - babel-preset-expo@58.0.17
+  - expo-modules-core@58.0.22
+  - expo-modules-jsi@58.0.15
+  - expo@58.0.14

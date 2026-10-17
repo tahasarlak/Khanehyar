@@ -11,3 +11,23 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+backups/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+**/!.env.example
+
+# Local backups
+*.backup-*
+*.bak
+*.tmp
+
+# Local logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*

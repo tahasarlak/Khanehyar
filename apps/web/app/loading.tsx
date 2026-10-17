@@ -1,0 +1,1 @@
+export default function Loading(){return <main dir="rtl" role="status" style={{minHeight:"45vh",display:"grid",placeContent:"center",fontFamily:"Tahoma,sans-serif"}}>در حال بارگذاری خانه‌یار...</main>}
