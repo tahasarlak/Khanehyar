@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  checkRateLimit,
+  getRequestIdentity,
+  rateLimitResponse,
+} from "../../../../src/lib/rate-limit";
 import { compare } from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../../../../src/lib/prisma";
@@ -13,6 +18,35 @@ const loginSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const limit = await checkRateLimit("login", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+
+  let requestOrigin: string;
+
+  try {
+    requestOrigin = new URL(request.url).origin;
+  } catch {
+    return NextResponse.json(
+      { message: "درخواست معتبر نیست." },
+      {
+        status: 400,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
+  }
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { message: "درخواست از مبدأ مجاز ارسال نشده است." },
+      {
+        status: 403,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
+  }
   try {
     const body: unknown = await request.json();
     const parsed = loginSchema.safeParse(body);

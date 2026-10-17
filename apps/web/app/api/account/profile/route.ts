@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../../src/lib/rate-limit";
 import { z } from "zod";
 import { getCurrentUser } from "../../../../src/lib/auth";
 import { prisma } from "../../../../src/lib/prisma";
@@ -45,6 +46,10 @@ function normalizePhone(value: string): string | null {
 }
 
 export async function PATCH(request: Request) {
+  const limit = await checkRateLimit("update-profile", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
   const origin = request.headers.get("origin");
 
   let expectedOrigin: string;

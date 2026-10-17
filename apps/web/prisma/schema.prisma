@@ -156,3 +156,13 @@ model Inquiry {
   @@index([senderId, createdAt])
   @@index([listingId])
 }
+
+// Shared PostgreSQL-backed API rate-limit buckets.
+model RateLimitBucket {
+  key       String   @id @db.VarChar(64)
+  count     Int      @default(1)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}

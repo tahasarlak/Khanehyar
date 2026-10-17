@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../src/lib/rate-limit";
 import { prisma } from "../../../src/lib/prisma";
 import { getCurrentUser } from "../../../src/lib/auth";
 import { listingSchema } from "@real-estate/shared";
 
 export async function POST(request: Request) {
+  const limit = await checkRateLimit("create-listing", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
   try {
     // Prevent cross-origin browser submissions.
     const origin = request.headers.get("origin");

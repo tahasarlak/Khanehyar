@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../../../src/lib/rate-limit";
 import { getCurrentUser } from "../../../../../src/lib/auth";
 import { prisma } from "../../../../../src/lib/prisma";
 
@@ -7,6 +8,14 @@ type Context = {
 };
 
 export async function DELETE(request: Request, context: Context) {
+  const limit = await checkRateLimit(
+    "delete-own-listing",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
   const origin = request.headers.get("origin");
   const requestOrigin = new URL(request.url).origin;
 
@@ -117,6 +126,14 @@ export async function GET(_request: Request, context: Context) {
 }
 
 export async function PATCH(request: Request, context: Context) {
+  const limit = await checkRateLimit(
+    "update-own-listing",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
   const origin = request.headers.get("origin");
   const requestOrigin = new URL(request.url).origin;
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
 import { prisma } from "@/src/lib/prisma";
 import { getCurrentUser } from "@/src/lib/auth";
 
@@ -56,6 +57,14 @@ export async function POST(
   request: NextRequest,
   context: Context
 ) {
+  const limit = await checkRateLimit(
+    "favorite-add",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
   if (!sameOrigin(request)) {
     return NextResponse.json(
       { error: "مبدأ درخواست نامعتبر است." },
@@ -117,6 +126,14 @@ export async function DELETE(
   request: NextRequest,
   context: Context
 ) {
+  const limit = await checkRateLimit(
+    "favorite-remove",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
   if (!sameOrigin(request)) {
     return NextResponse.json(
       { error: "مبدأ درخواست نامعتبر است." },

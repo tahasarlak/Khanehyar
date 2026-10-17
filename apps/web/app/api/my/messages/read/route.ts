@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
 import { getCurrentUser } from "@/src/lib/auth";
 import { prisma } from "@/src/lib/prisma";
 
 export async function POST(request: NextRequest) {
+  const limit = await checkRateLimit(
+    "mark-messages-read",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
   const origin = request.headers.get("origin");
 
   if (origin !== request.nextUrl.origin) {

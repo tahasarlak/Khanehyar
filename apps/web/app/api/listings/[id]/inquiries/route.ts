@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
 import { prisma } from "@/src/lib/prisma";
 import { getCurrentUser } from "@/src/lib/auth";
 
@@ -7,6 +8,14 @@ type Context = {
 };
 
 export async function POST(request: NextRequest, context: Context) {
+  const limit = await checkRateLimit(
+    "create-inquiry",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
   const origin = request.headers.get("origin");
 
   if (origin !== request.nextUrl.origin) {

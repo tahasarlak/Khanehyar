@@ -5,7 +5,7 @@ export async function POST(request: Request) {
   const origin = request.headers.get("origin");
   const target = new URL(request.url);
 
-  if (origin && origin !== target.origin) {
+  if (!origin || origin !== target.origin) {
     return NextResponse.json(
       { message: "درخواست غیرمجاز است." },
       { status: 403 },
