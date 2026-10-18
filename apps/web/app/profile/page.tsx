@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../../src/lib/auth";
@@ -11,8 +10,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-
-
 export default async function ProfilePage() {
   const user = await getCurrentUser();
 
@@ -24,23 +21,17 @@ export default async function ProfilePage() {
     <main className={styles.page} dir="rtl">
       <div className={styles.container}>
         <header className={styles.heading}>
-          <div className={styles.breadcrumb}>
-            <Link href="/">خانه</Link>
-            <span aria-hidden="true">/</span>
-            <span>حساب کاربری</span>
-          </div>
-
-          <span className={styles.eyebrow}>حساب من</span>
-          <h1>پروفایل کاربری</h1>
+          <h1>پروفایل من</h1>
           <p>
-            اطلاعات حساب خود را مشاهده و به‌روز نگه دار.
+            اطلاعات حساب کاربری خود را مشاهده و به‌روز نگه دار.
           </p>
         </header>
 
         <section className={styles.profileCard}>
           <div className={styles.identity}>
             <div className={styles.avatar} aria-hidden="true">
-              {(user.name?.trim().charAt(0) || user.email.charAt(0)).toUpperCase()}
+              {(user.name?.trim().charAt(0) || user.email.charAt(0))
+                .toLocaleUpperCase("fa-IR")}
             </div>
 
             <div className={styles.identityText}>
@@ -72,12 +63,6 @@ export default async function ProfilePage() {
             </p>
           </div>
         </aside>
-
-        <footer className={styles.footer}>
-          <Link href="/dashboard">پنل کاربری</Link>
-          <Link href="/help/account">راهنمای حساب کاربری</Link>
-          <Link href="/">بازگشت به خانه</Link>
-        </footer>
       </div>
     </main>
   );

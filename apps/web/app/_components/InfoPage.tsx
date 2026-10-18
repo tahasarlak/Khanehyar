@@ -35,12 +35,6 @@ export default function InfoPage({ data }: { data: InfoData }) {
           <Link href="/contact">تماس و پشتیبانی ←</Link>
         </aside>
       </div>
-      <footer className={styles.footer}>
-        <Link href="/terms">شرایط استفاده</Link>
-        <Link href="/privacy">حریم خصوصی</Link>
-        <Link href="/cookies">سیاست کوکی‌ها</Link>
-        <Link href="/faq">پرسش‌های متداول</Link>
-      </footer>
     </main>
   );
 }

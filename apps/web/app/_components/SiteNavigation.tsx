@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import styles from "./SiteNavigation.module.css";
 
 const links = [
@@ -74,10 +75,39 @@ function isActive(pathname: string, match: string): boolean {
 }
 export default function SiteNavigation() {
   const pathname = usePathname();
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    async function checkSession() {
+      try {
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (mounted) setAuthenticated(response.ok);
+      } catch {
+        if (mounted) setAuthenticated(false);
+      }
+    }
+
+    void checkSession();
+    const onAuthChanged = () => void checkSession();
+    window.addEventListener("khanehyar-auth-changed", onAuthChanged);
+    return () => {
+      mounted = false;
+      window.removeEventListener("khanehyar-auth-changed", onAuthChanged);
+    };
+  }, []);
+
+  const visibleLinks = links.filter((link) =>
+    authenticated || !["favorites", "messages", "dashboard"].includes(link.match),
+  );
 
   return (
     <nav className={styles.dock} aria-label="دسترسی سریع خانه‌یار" dir="rtl">
-      {links.map((link) => {
+      {visibleLinks.map((link) => {
         const active = isActive(pathname, link.match);
 
         return (

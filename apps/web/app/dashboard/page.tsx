@@ -129,70 +129,11 @@ async function DashboardContent() {
   ];
 
   return (
-    <div className="ud-shell" dir="rtl">
+    <div className="ud-shell ud-shell-embedded" dir="rtl">
       
-      <aside className="ud-sidebar">
-        <Link href="/" className="ud-brand">
-          <span className="ud-brand-icon">⌂</span>
-          <span>
-            <strong>خانه‌یار</strong>
-            <small>پنل کاربری</small>
-          </span>
-        </Link>
 
-        <div className="ud-sidebar-title">منوی حساب</div>
 
-        <nav className="ud-menu" aria-label="منوی داشبورد">
-          <Link href="/dashboard" aria-current="page">
-            <span>▦</span> نمای کلی
-          </Link>
-          <Link href="/dashboard/listings">
-            <span>⌂</span> آگهی‌های من
-          </Link>
-          <Link href="/listings/new">
-            <span>＋</span> ثبت آگهی جدید
-          </Link>
-          <Link href="/favorites">
-            <span>♡</span> علاقه‌مندی‌ها
-          </Link>
-          <Link href="/my/messages">
-            <span>✉</span> صندوق پیام‌ها
-            {unreadMessages > 0 && (
-              <b className="ud-menu-count">{number(unreadMessages)}</b>
-            )}
-          </Link>
-          <Link href="/search">
-            <span>⌕</span> جست‌وجوی ملک
-          </Link>
-
-          {user.role === "ADMIN" && (
-            <Link href="/admin/listings">
-              <span>⚙</span> مدیریت آگهی‌ها
-            </Link>
-          )}
-        </nav>
-
-        <div className="ud-sidebar-note">
-          <strong>ملک جدیدی داری؟</strong>
-          <p>آگهی آن را ثبت کن و وضعیت بررسی‌اش را دنبال کن.</p>
-          <Link href="/listings/new">ثبت آگهی ←</Link>
-        </div>
-      </aside>
-
-      <main className="ud-main">
-        <div className="ud-topbar">
-          <div className="ud-topbar-links">
-            <Link href="/">صفحه اصلی</Link>
-            <Link href="/search">جست‌وجوی املاک</Link>
-          </div>
-          <div className="ud-account">
-            <span className="ud-avatar">
-              {(user.name || user.email || "ک").charAt(0)}
-            </span>
-            <span>{user.name || user.email}</span>
-          </div>
-        </div>
-
+      <div className="ud-main">
         <div className="ud-content">
           <div className="ud-welcome">
             <div>
@@ -344,7 +285,7 @@ async function DashboardContent() {
             )}
           </section>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

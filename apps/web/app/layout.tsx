@@ -1,6 +1,10 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import SiteHeader from "./_components/SiteHeader";
+import SiteFooter from "./_components/SiteFooter";
+import SiteNavigation from "./_components/SiteNavigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +27,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="fa"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col" dir="rtl">
+        <Suspense fallback={<div aria-hidden="true" style={{ minHeight: 80 }} />}>
+        <SiteHeader />
+        </Suspense>
+        <div className="site-content">{children}</div>
+        <Suspense fallback={null}><SiteNavigation /></Suspense>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

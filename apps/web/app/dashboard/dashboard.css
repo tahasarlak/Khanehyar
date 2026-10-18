@@ -597,3 +597,10 @@
     transition: none;
   }
 }
+
+/* Embedded dashboard content: shared AccountShell owns navigation. */
+.ud-shell-embedded {
+  display: block;
+  min-height: 0;
+  background: transparent;
+}

@@ -1,5 +1,3 @@
-import SiteNavigation from "./_components/SiteNavigation";
-import UnreadMessagesLink from "./_components/UnreadMessagesLink";
 import Link from "next/link";
 import { prisma } from "@/src/lib/prisma";
 import PropertyCard from "./_components/PropertyCard";
@@ -40,33 +38,6 @@ export default async function HomePage() {
 
   return (
     <div className="hy-site" dir="rtl">
-      <SiteNavigation />
-      <header className="hy-header">
-        <div className="hy-wrap hy-header-inner">
-          <Link href="/" className="hy-logo">
-            <span className="hy-logo-symbol" aria-hidden="true">⌂</span>
-            <span>
-              <strong>خانه‌یار</strong>
-              <small>انتخاب خانه، با خیال راحت</small>
-            </span>
-          </Link>
-
-          <nav className="hy-nav" aria-label="منوی اصلی">
-            <Link href="/search">جست‌وجوی ملک</Link>
-            <Link href="/search?deal=SALE">خرید ملک</Link>
-            <Link href="/search?deal=RENT">اجاره ملک</Link>
-            <Link href="/dashboard/listings">آگهی‌های من</Link>
-            <UnreadMessagesLink />
-          </nav>
-
-          <div className="hy-header-actions">
-            <Link href="/login" className="hy-login">ورود</Link>
-            <Link href="/listings/new" className="hy-button hy-button-primary">
-              + ثبت آگهی
-            </Link>
-          </div>
-        </div>
-      </header>
 
       <main>
         <section className="hy-hero">
@@ -133,7 +104,7 @@ export default async function HomePage() {
 
                   <button
                     type="submit"
-                    className="hy-button hy-button-primary hy-search-submit"
+                    className="hy-button hy-button-primary hy-search-submit ui-btn ui-btn-primary"
                   >
                     جست‌وجو ←
                   </button>
@@ -228,7 +199,7 @@ export default async function HomePage() {
                 </p>
                 <Link
                   href="/listings/new"
-                  className="hy-button hy-button-primary"
+                  className="hy-button hy-button-primary ui-btn ui-btn-primary"
                 >
                   ثبت اولین آگهی
                 </Link>
@@ -249,7 +220,7 @@ export default async function HomePage() {
                 </p>
               </div>
 
-              <Link href="/listings/new" className="hy-button hy-button-light">
+              <Link href="/listings/new" className="hy-button hy-button-light ui-btn ui-btn-outline">
                 ثبت آگهی جدید ←
               </Link>
             </div>
@@ -257,24 +228,6 @@ export default async function HomePage() {
         </section>
       </main>
 
-      <footer className="hy-footer">
-        <div className="hy-wrap hy-footer-content">
-          <div>
-            <strong>⌂ خانه‌یار</strong>
-            <p>همراه انتخاب بهتر خانه</p>
-          </div>
-
-          <div className="hy-footer-links">
-            <Link href="/search">جست‌وجوی ملک</Link>
-            <Link href="/register">ساخت حساب</Link>
-            <Link href="/dashboard/listings">پنل کاربری</Link>
-          </div>
-        </div>
-
-        <div className="hy-wrap hy-footer-bottom">
-          خانه‌یار — پلتفرم ثبت و جست‌وجوی آگهی املاک
-        </div>
-      </footer>
     </div>
   );
 }

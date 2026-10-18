@@ -121,72 +121,72 @@ export default function MyListingsPage() {
   }
 
   return (
-    <main dir="rtl" className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <div dir="rtl" className="w-full min-w-0 text-[#18304e]">
+      <div className="w-full min-w-0 space-y-6">
+        <div className="mb-7 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#e2e9f0] bg-white p-6 shadow-sm sm:p-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">
+            <h1 className="text-2xl font-black text-[#173b60] sm:text-3xl">
               آگهی‌های من
             </h1>
-            <p className="mt-2 text-slate-600">
+            <p className="mt-2 text-sm leading-7 text-slate-500">
               مدیریت آگهی‌های ثبت‌شده در خانه‌یار
             </p>
           </div>
 
           <Link
             href="/listings/new"
-            className="rounded-lg bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-800"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#147d69] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#116653]"
           >
             + ثبت آگهی جدید
           </Link>
         </div>
 
         {needsLogin ? (
-          <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+          <div className="rounded-2xl border border-[#e2e9f0] bg-white p-8 text-center shadow-sm">
             <p className="mb-5">برای مشاهده آگهی‌های خود وارد شوید.</p>
             <Link
               href="/login"
-              className="rounded-lg bg-emerald-700 px-5 py-3 text-white"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#147d69] px-5 py-3 text-white"
             >
               ورود به حساب
             </Link>
           </div>
         ) : loading ? (
-          <p className="rounded-xl bg-white p-6 text-slate-600">
+          <p className="rounded-2xl border border-[#e2e9f0] bg-white p-6 text-sm text-slate-600">
             در حال دریافت آگهی‌ها...
           </p>
         ) : (
           <>
             {error && (
-              <p role="alert" className="mb-5 rounded-lg bg-red-50 p-4 text-red-700">
+              <p role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-7 text-red-700">
                 {error}
               </p>
             )}
 
             {!error && listings.length === 0 && (
-              <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+              <div className="rounded-2xl border border-[#e2e9f0] bg-white p-8 text-center shadow-sm">
                 <p>هنوز آگهی‌ای با این حساب ثبت نکرده‌اید.</p>
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="grid min-w-0 grid-cols-1 gap-4">
               {listings.map((listing) => (
                 <article
                   key={listing.id}
-                  className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                  className="min-w-0 rounded-2xl border border-[#e2e9f0] bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-xl font-bold text-slate-900">
+                      <h2 className="break-words text-lg font-extrabold text-[#173b60] sm:text-xl">
                         {listing.title}
                       </h2>
 
-                      <p className="mt-2 text-sm text-slate-600">
+                      <p className="mt-2 text-sm leading-7 text-slate-500">
                         {listing.city} |{" "}
                         {listing.listingType === "SALE" ? "فروش" : "اجاره"}
                       </p>
 
-                      <p className="mt-2 font-semibold text-emerald-800">
+                      <p className="mt-3 text-base font-extrabold text-[#147d69]">
                         {Number(listing.price).toLocaleString("fa-IR")}{" "}
                         {listing.currency}
                       </p>
@@ -253,6 +253,6 @@ export default function MyListingsPage() {
           بازگشت به صفحه اصلی
         </Link>
       </div>
-    </main>
+    </div>
   );
 }

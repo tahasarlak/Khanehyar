@@ -483,3 +483,187 @@
     width: 100%;
   }
 }
+ 
+/* KHANEHYAR MESSAGES DASHBOARD ALIGNMENT V1 */
+.hm-page {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: #18304e;
+  font-family: Vazirmatn, Tahoma, sans-serif;
+}
+
+.hm-page,
+.hm-page * {
+  box-sizing: border-box;
+}
+
+.hm-container {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.hm-content {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+
+.hm-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+  margin: 0 0 22px;
+  padding: 22px 24px;
+  border: 1px solid #e2e9f0;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.hm-section-head h2 {
+  margin: 0;
+  color: #173b60;
+  font-size: 21px;
+  font-weight: 850;
+}
+
+.hm-thread-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+.hm-thread {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid #e2e9f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(24 48 78 / 4%);
+}
+
+.hm-empty,
+.hm-limit-note {
+  width: 100%;
+  margin-inline: 0;
+}
+
+.hm-page h1 {
+  color: #173b60;
+  font-weight: 900;
+}
+
+@media (max-width: 650px) {
+  .hm-section-head {
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+
+  .hm-thread-list {
+    gap: 14px;
+  }
+}
+/* END KHANEHYAR MESSAGES DASHBOARD ALIGNMENT V1 */
+
+/* KHANEHYAR DASHBOARD MESSAGES LAYOUT V2 */
+.hm-page {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: #18304e;
+  font-family: Vazirmatn, Tahoma, sans-serif;
+}
+
+.hm-page > .hm-container,
+.hm-page > .hm-content,
+.hm-page .hm-container {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin-inline: 0;
+}
+
+.hm-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0;
+}
+
+.hm-dashboard-page-title {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 20px;
+  border-bottom: 1px solid #e2e9f0;
+}
+
+.hm-dashboard-page-title h1 {
+  margin: 0;
+  color: #173b60;
+  font-size: clamp(24px, 2.5vw, 32px);
+  font-weight: 900;
+  line-height: 1.6;
+}
+
+.hm-dashboard-page-title p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+.hm-section-head,
+.hm-thread-list,
+.hm-thread,
+.hm-global-unread,
+.hm-empty,
+.hm-limit-note {
+  width: 100%;
+  min-width: 0;
+}
+
+.hm-thread-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+}
+
+.hm-thread {
+  margin: 0;
+}
+
+.hm-page input,
+.hm-page textarea,
+.hm-page button {
+  max-width: 100%;
+  font-family: inherit;
+}
+
+@media (max-width: 650px) {
+  .hm-content {
+    gap: 18px;
+  }
+
+  .hm-dashboard-page-title {
+    padding-bottom: 15px;
+  }
+
+  .hm-dashboard-page-title h1 {
+    font-size: 23px;
+  }
+}
+/* END KHANEHYAR DASHBOARD MESSAGES LAYOUT V2 */

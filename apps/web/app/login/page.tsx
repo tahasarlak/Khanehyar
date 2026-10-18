@@ -1,18 +1,39 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import {useState, type FormEvent, useEffect} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import styles from "../auth.module.css";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [registeredMessage, setRegisteredMessage] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("registered") !== "1") {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setRegisteredMessage(
+        "حساب شما با موفقیت ساخته شد. حالا وارد حساب خود شوید."
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
+
     setLoading(true);
     setMessage("");
 
@@ -20,102 +41,146 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.message || "ورود ناموفق بود.");
+        setMessage(data.message || "ورود ناموفق بود. اطلاعات را بررسی کنید.");
         return;
       }
 
       router.push("/");
       router.refresh();
     } catch {
-      setMessage("ارتباط با سرور برقرار نشد.");
+      setMessage("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main
-      dir="rtl"
-      className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12"
-    >
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
-        <h1 className="mb-2 text-center text-3xl font-bold text-emerald-700">
-          ورود به خانه‌یار
-        </h1>
+    <main className={styles.page} dir="rtl">
+      <div className={styles.glow} aria-hidden="true" />
 
-        <p className="mb-8 text-center text-slate-500">
-          برای مدیریت آگهی‌های خود وارد شوید.
-        </p>
+      <div className={styles.container}>
+        <section className={styles.card} aria-labelledby="login-title">
+          <div className={styles.brandMark} aria-hidden="true">⌂</div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="email" className="mb-2 block font-medium">
-              ایمیل
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-left"
-              dir="ltr"
-              placeholder="example@email.com"
-            />
+          <div className={styles.heading}>
+            <span className={styles.eyebrow}>خوش برگشتید</span>
+            <h1 id="login-title">ورود به خانه‌یار</h1>
+            <p>وارد حساب خود شوید و مدیریت املاک‌تان را ادامه دهید.</p>
           </div>
 
-          <div>
-            <label htmlFor="password" className="mb-2 block font-medium">
-              رمز عبور
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 text-left"
-              dir="ltr"
-              placeholder="رمز عبور"
-            />
+          <div className={styles.benefit}>
+            <span className={styles.benefitIcon} aria-hidden="true">✓</span>
+            <span>آگهی‌ها و پیام‌های شما، یک‌جا و همیشه در دسترس</span>
           </div>
 
-          {message && (
-            <p role="alert" className="text-sm text-red-600">
-              {message}
-            </p>
-          )}
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.field}>
+              <label htmlFor="login-email">آدرس ایمیل</label>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                required
+                maxLength={254}
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@example.com"
+                dir="ltr"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-emerald-700 px-4 py-3 font-bold text-white hover:bg-emerald-800 disabled:opacity-50"
-          >
-            {loading ? "در حال ورود..." : "ورود به حساب"}
-          </button>
-        </form>
+            <div className={styles.field}>
+              <div className={styles.labelRow}>
+                <label htmlFor="login-password">رمز عبور</label>
+              </div>
+              <div className={styles.passwordWrap}>
+                <input
+                  id="login-password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="رمز عبور خود را وارد کنید"
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  className={styles.passwordToggle}
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? "پنهان" : "نمایش"}
+                </button>
+              </div>
+            </div>
 
-        <p className="mt-6 text-center text-sm text-slate-600">
-          حساب ندارید؟{" "}
-          <Link href="/register" className="font-bold text-emerald-700">
-            ثبت‌نام کنید
+            {registeredMessage && (
+              <p className={styles.successMessage} role="status" aria-live="polite">
+                <span aria-hidden="true">✓</span>
+                {registeredMessage}
+              </p>
+            )}
+
+            {message && (
+              <p className={styles.error} role="alert" aria-live="polite">
+                {message}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className={styles.submit}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className={styles.spinner} aria-hidden="true" />
+                  در حال ورود...
+                </>
+              ) : (
+                <>ورود به حساب <span aria-hidden="true">←</span></>
+              )}
+            </button>
+          </form>
+
+          <div className={styles.switchAuth}>
+            حساب کاربری ندارید؟
+            <Link href="/register">ساخت حساب جدید</Link>
+          </div>
+
+          <Link href="/" className={styles.backHome}>
+            <span aria-hidden="true">→</span> بازگشت به صفحهٔ اصلی
           </Link>
-        </p>
+        </section>
 
-        <Link
-          href="/"
-          className="mt-5 block text-center text-sm text-slate-500"
-        >
-          بازگشت به صفحه اصلی
-        </Link>
+        <aside className={styles.sidePanel}>
+          <span className={styles.sideBadge}>خانه‌یار؛ همراه انتخاب شما</span>
+          <h2>خانهٔ بعدی‌تان را<br />با اطمینان پیدا کنید.</h2>
+          <p>
+            جست‌وجوی ملک، ارتباط با آگهی‌دهندگان و مدیریت درخواست‌ها
+            در یک تجربهٔ ساده و یکپارچه.
+          </p>
+          <div className={styles.sideArt} aria-hidden="true">
+            <span className={styles.artCircle} />
+            <span className={styles.artHouse}>⌂</span>
+            <span className={styles.artDot}>✦</span>
+          </div>
+          <div className={styles.sideFoot}>
+            <span>●</span> شروعی مطمئن برای انتخاب خانه
+          </div>
+        </aside>
       </div>
     </main>
   );

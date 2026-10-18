@@ -1,4 +1,3 @@
-import SiteNavigation from "../_components/SiteNavigation";
 import UnreadMessagesLink from "../_components/UnreadMessagesLink";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -453,21 +452,7 @@ export default function SearchPage({
 }) {
   return (
     <div className="hy-site hy-search-page" dir="rtl">
-      <SiteNavigation />
-      <header className="hy-results-header">
-        <div className="hy-wrap">
-          <>
-          <UnreadMessagesLink />
-          <Link href="/" className="hy-results-home">
-            ⌂ خانه‌یار
-          </Link>
-          </>
-          <h1>جست‌وجوی پیشرفته املاک</h1>
-          <p>
-            ملک مناسب را براساس بودجه، متراژ و نیاز خود پیدا کن.
-          </p>
-        </div>
-      </header>
+
 
       <main className="hy-wrap hy-advanced-main">
         <Suspense
@@ -481,9 +466,7 @@ export default function SearchPage({
         </Suspense>
       </main>
 
-      <footer className="hy-simple-footer">
-        <Link href="/">بازگشت به خانه‌یار</Link>
-      </footer>
+
     </div>
   );
 }

@@ -1,15 +1,15 @@
 /* KHANEHYAR MARKET UI V1 */
 
 .hy-site {
-  --hy-ink: #18304e;
-  --hy-ink-soft: #546780;
-  --hy-navy: #173b60;
-  --hy-navy-dark: #102943;
-  --hy-green: #147d69;
-  --hy-green-dark: #0d6453;
-  --hy-bg: #f6f8fb;
-  --hy-border: #e5eaf0;
-  --hy-shadow: 0 12px 36px rgba(20, 49, 78, .07);
+  --hy-ink: var(--color-text);
+  --hy-ink-soft: var(--color-text-muted);
+  --hy-navy: var(--color-brand-primary);
+  --hy-navy-dark: var(--color-brand-primary-hover);
+  --hy-green: var(--color-brand-accent);
+  --hy-green-dark: var(--color-brand-accent-hover);
+  --hy-bg: var(--color-page);
+  --hy-border: var(--color-border);
+  --hy-shadow: var(--shadow-card);
   min-height: 100vh;
   background: var(--hy-bg);
   color: var(--hy-ink);
@@ -1248,3 +1248,26 @@
     padding-bottom: 90px;
   }
 }
+
+.hy-signout-wrap { position: relative; display: inline-flex; }
+.hy-signout-error { position: absolute; top: calc(100% + 5px); inset-inline-end: 0; width: 220px; color: var(--color-danger); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 11px; box-shadow: var(--shadow-card); }
+.hy-signout:disabled { cursor: wait; opacity: .65; }
+
+/* KHANEHYAR SHARED PAGE WIDTH NORMALIZATION V1 */
+.hy-search-page {
+  width: 100%;
+  min-width: 0;
+}
+
+.hy-search-page .hy-advanced-main {
+  width: min(1200px, calc(100% - 40px));
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+@media (max-width: 640px) {
+  .hy-search-page .hy-advanced-main {
+    width: calc(100% - 28px);
+  }
+}
+/* END KHANEHYAR SHARED PAGE WIDTH NORMALIZATION V1 */

@@ -1,22 +1,35 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Khanehyar design tokens: update these values to recolor the entire site. */
+  --color-brand-primary: #173b60;
+  --color-brand-primary-hover: #102943;
+  --color-brand-accent: #147d69;
+  --color-brand-accent-hover: #0d6453;
+  --color-brand-accent-soft: #e1f1eb;
+  --color-page: #f6f8fb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f5f8;
+  --color-text: #18304e;
+  --color-text-muted: #64748b;
+  --color-border: #e3eaf0;
+  --color-success: #168467;
+  --color-danger: #c9434a;
+  --color-warning: #b7791f;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --shadow-card: 0 12px 36px rgba(20, 49, 78, .07);
+  --shadow-card-hover: 0 22px 50px rgba(22, 59, 90, .12);
+  --background: var(--color-surface);
+  --foreground: var(--color-text);
 }
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
@@ -29,19 +42,19 @@ body {
 /* KHANEHYAR DESIGN SYSTEM V1 - BEGIN */
 
 :root {
-  --kh-navy: #142f56;
-  --kh-navy-dark: #0c203d;
-  --kh-emerald: #167d66;
-  --kh-emerald-hover: #10634f;
-  --kh-bg: #f4f7fb;
-  --kh-surface: #ffffff;
-  --kh-surface-soft: #eef3f8;
-  --kh-text: #172b47;
-  --kh-muted: #64748b;
-  --kh-border: #e2e8f0;
-  --kh-success: #168467;
-  --kh-danger: #dc4d51;
-  --kh-warning: #c58b2c;
+  --kh-navy: var(--color-brand-primary);
+  --kh-navy-dark: var(--color-brand-primary-hover);
+  --kh-emerald: var(--color-brand-accent);
+  --kh-emerald-hover: var(--color-brand-accent-hover);
+  --kh-bg: var(--color-page);
+  --kh-surface: var(--color-surface);
+  --kh-surface-soft: var(--color-surface-muted);
+  --kh-text: var(--color-text);
+  --kh-muted: var(--color-text-muted);
+  --kh-border: var(--color-border);
+  --kh-success: var(--color-success);
+  --kh-danger: var(--color-danger);
+  --kh-warning: var(--color-warning);
   --kh-radius-sm: 12px;
   --kh-radius-md: 18px;
   --kh-radius-lg: 24px;
@@ -505,3 +518,72 @@ body {
 }
 
 /* KHANEHYAR DESIGN SYSTEM V1 - END */
+
+/* Shared controls used throughout the application. */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.ui-btn:hover { transform: translateY(-1px); }
+.ui-btn:focus-visible { outline: 3px solid var(--color-brand-accent); outline-offset: 3px; }
+.ui-btn-primary { background: var(--color-brand-accent); color: #fff; }
+.ui-btn-primary:hover { background: var(--color-brand-accent-hover); box-shadow: 0 8px 22px rgba(20, 125, 105, .18); }
+.ui-btn-brand { background: var(--color-brand-primary); color: #fff; }
+.ui-btn-brand:hover { background: var(--color-brand-primary-hover); }
+.ui-btn-outline { background: var(--color-surface); border-color: var(--color-border); color: var(--color-brand-primary); }
+.ui-btn-outline:hover { background: var(--color-surface-muted); }
+.ui-btn-quiet { background: transparent; color: var(--color-text-muted); }
+.ui-btn-quiet:hover { background: var(--color-surface-muted); color: var(--color-text); }
+.ui-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn { transition: none; }
+  .ui-btn:hover { transform: none; }
+}
+
+
+/* Shared container for site header, footer and page content. */
+.hy-wrap {
+  width: min(1200px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+@media (max-width: 600px) {
+  .hy-wrap {
+    width: calc(100% - 30px);
+  }
+}
+
+/* Khanehyar shared site layout */
+.site-content {
+  display: block;
+  flex: 1 0 auto;
+  min-width: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.hy-wrap {
+  width: min(1200px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+@media (max-width: 640px) {
+  .hy-wrap {
+    width: calc(100% - 28px);
+  }
+}

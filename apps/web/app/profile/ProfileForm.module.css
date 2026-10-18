@@ -640,3 +640,88 @@
     transition-duration: .01ms !important;
   }
 }
+
+/* KHANEHYAR PROFILE DASHBOARD NORMALIZATION V1 */
+.page {
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  color: #18304e;
+  background: transparent;
+  font-family: Vazirmatn, Tahoma, sans-serif;
+}
+
+.container {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+}
+
+.heading {
+  width: 100%;
+  margin: 0 0 24px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid #e2e9f0;
+}
+
+.heading h1 {
+  margin: 0;
+  color: #173b60;
+  font-size: clamp(24px, 2.5vw, 32px);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.6;
+}
+
+.heading > p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+.profileCard {
+  width: 100%;
+  min-width: 0;
+  padding: clamp(20px, 2.5vw, 30px);
+  border: 1px solid #e2e9f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(24, 48, 78, 0.035);
+}
+
+.securityNote {
+  width: 100%;
+  margin-top: 20px;
+  border-radius: 14px;
+}
+
+@media (min-width: 1200px) {
+  .page {
+    padding-top: 0;
+  }
+
+  .profileCard {
+    padding: 30px;
+  }
+}
+
+@media (max-width: 700px) {
+  .heading {
+    margin-bottom: 18px;
+    padding-bottom: 15px;
+  }
+
+  .heading h1 {
+    font-size: 24px;
+  }
+
+  .profileCard {
+    padding: 19px 16px;
+    border-radius: 15px;
+  }
+}
+/* END KHANEHYAR PROFILE DASHBOARD NORMALIZATION V1 */

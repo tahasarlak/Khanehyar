@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import AccountLayout from "../_components/AccountLayout";
 
 export const metadata: Metadata = {
   robots: {
@@ -9,10 +10,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function PrivateLayout({
+export default function AdminLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  return children;
+  return (
+    <AccountLayout requireAdmin>
+      {children}
+    </AccountLayout>
+  );
 }

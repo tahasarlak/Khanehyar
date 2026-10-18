@@ -1,0 +1,235 @@
+.header {
+  position: relative;
+  z-index: 30;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 4px 22px rgba(20, 49, 78, 0.045);
+}
+
+.inner {
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  flex-shrink: 0;
+  color: var(--color-brand-primary);
+  text-decoration: none;
+}
+
+.logoMark {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  color: #fff;
+  background: var(--color-brand-primary);
+  font-size: 30px;
+  line-height: 1;
+}
+
+.logoText strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.logoText small {
+  display: block;
+  margin-top: 3px;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.nav,
+.actions {
+  display: flex;
+  align-items: center;
+}
+
+.nav {
+  gap: 20px;
+}
+
+.nav a,
+.login {
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: color 150ms ease;
+}
+
+.nav a:hover,
+.login:hover {
+  color: var(--color-brand-accent);
+}
+
+.nav a:focus-visible,
+.login:focus-visible,
+.logo:focus-visible,
+.account:focus-visible {
+  outline: 3px solid var(--color-brand-accent);
+  outline-offset: 4px;
+  border-radius: 5px;
+}
+
+.actions {
+  justify-content: flex-start;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.account {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 160px;
+  color: var(--color-brand-primary);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.accountAvatar {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  flex: 0 0 35px;
+  border-radius: 50%;
+  background: var(--color-brand-accent-soft);
+  color: var(--color-brand-accent);
+  font-size: 14px;
+}
+
+.accountName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions > a,
+  .actions > button {
+  min-height: 40px;
+  padding: 8px 13px;
+  font-size: 12px;
+}
+
+@media (max-width: 1120px) {
+  .inner {
+    gap: 14px;
+  }
+
+  .nav {
+    gap: 12px;
+  }
+
+  .nav a,
+  .login {
+    font-size: 11px;
+  }
+
+  .actions {
+    gap: 7px;
+  }
+
+  .logoText strong {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 900px) {
+  .inner {
+    min-height: 0;
+    flex-wrap: wrap;
+    padding-block: 13px;
+  }
+
+  .nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px 22px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .actions {
+    margin-inline-start: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .inner {
+    width: calc(100% - 28px);
+    gap: 12px;
+  }
+
+  .logo {
+    gap: 8px;
+  }
+
+  .logoMark {
+    width: 39px;
+    height: 39px;
+    border-radius: 12px;
+    font-size: 26px;
+  }
+
+  .logoText strong {
+    font-size: 18px;
+  }
+
+  .logoText small {
+    font-size: 9px;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .actions > a,
+  .actions > button {
+    min-height: 36px;
+    padding: 7px 9px;
+    font-size: 10px;
+  }
+
+  .account {
+    max-width: 40px;
+  }
+
+  .accountName {
+    display: none;
+  }
+
+  .nav {
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .nav a,
+  .login {
+    font-size: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav a,
+  .login {
+    transition: none;
+  }
+}

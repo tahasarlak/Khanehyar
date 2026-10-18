@@ -1,5 +1,3 @@
-import SiteNavigation from "../../_components/SiteNavigation";
-import UnreadMessagesLink from "../../_components/UnreadMessagesLink";
 import InquiryForm from "./InquiryForm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -130,24 +128,7 @@ export default async function ListingDetailPage({ params }: Props) {
 
   return (
     <div className="hd-page" dir="rtl">
-      <SiteNavigation />
-      <header className="hd-header">
-        <div className="hd-container hd-header-inner">
-          <Link href="/" className="hd-brand">
-            <span className="hd-brand-icon" aria-hidden="true">⌂</span>
-            <strong>خانه‌یار</strong>
-          </Link>
 
-          <nav className="hd-nav" aria-label="ناوبری">
-            <Link href="/search">جست‌وجوی ملک</Link>
-            <Link href="/dashboard/listings">آگهی‌های من</Link>
-            <UnreadMessagesLink />
-            <Link href="/listings/new" className="hd-create-link">
-              + ثبت آگهی
-            </Link>
-          </nav>
-        </div>
-      </header>
 
       <main className="hd-container">
         <nav className="hd-breadcrumb" aria-label="مسیر صفحه">
@@ -286,11 +267,7 @@ export default async function ListingDetailPage({ params }: Props) {
         </div>
       </main>
 
-      <footer className="hd-footer">
-        <div className="hd-container">
-          خانه‌یار — جست‌وجویی بهتر برای انتخاب خانه
-        </div>
-      </footer>
+
     </div>
   );
 }

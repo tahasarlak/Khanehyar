@@ -1,18 +1,24 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import styles from "../auth.module.css";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
+
     setMessage("");
     setLoading(true);
 
@@ -21,8 +27,8 @@ export default function RegisterPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          email,
+          name: name.trim(),
+          email: email.trim(),
           password,
           ...(phone.trim() ? { phone: phone.trim() } : {}),
         }),
@@ -31,15 +37,12 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.message || "ثبت‌نام انجام نشد.");
+        setMessage(data.message || "ثبت‌نام انجام نشد. اطلاعات را بررسی کنید.");
         return;
       }
 
-      setMessage("ثبت‌نام موفق بود. مرحله ورود را در ادامه پیاده‌سازی می‌کنیم.");
-      setName("");
-      setEmail("");
-      setPhone("");
-      setPassword("");
+      router.push("/login?registered=1");
+      router.refresh();
     } catch {
       setMessage("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.");
     } finally {
@@ -48,106 +51,148 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-12">
-      <div className="rounded-2xl border border-gray-200 p-6 shadow-sm">
-        <h1 className="mb-2 text-2xl font-bold">ایجاد حساب کاربری</h1>
-        <p className="mb-6 text-sm text-gray-600">
-          برای ثبت آگهی و استفاده از امکانات خانه‌یار حساب بسازید.
-        </p>
+    <main className={styles.page} dir="rtl">
+      <div className={styles.glow} aria-hidden="true" />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="mb-1 block text-sm font-medium">
-              نام و نام خانوادگی
-            </label>
-            <input
-              id="name"
-              autoComplete="name"
-              required
-              minLength={2}
-              maxLength={100}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
-              placeholder="نام شما"
-            />
+      <div className={`${styles.container} ${styles.registerContainer}`}>
+        <section className={`${styles.card} ${styles.registerCard}`} aria-labelledby="register-title">
+          <div className={styles.brandMark} aria-hidden="true">⌂</div>
+
+          <div className={styles.heading}>
+            <span className={styles.eyebrow}>به خانوادهٔ خانه‌یار بپیوندید</span>
+            <h1 id="register-title">حساب کاربری بسازید</h1>
+            <p>چند قدم کوتاه تا شروع جست‌وجو و مدیریت آگهی‌های شما.</p>
           </div>
 
-          <div>
-            <label htmlFor="email" className="mb-1 block text-sm font-medium">
-              ایمیل
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              maxLength={254}
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
-              placeholder="you@example.com"
-              dir="ltr"
-            />
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.field}>
+              <label htmlFor="register-name">نام و نام خانوادگی</label>
+              <input
+                id="register-name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                minLength={2}
+                maxLength={100}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="نام کامل شما"
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="register-email">آدرس ایمیل</label>
+              <input
+                id="register-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                maxLength={254}
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@example.com"
+                dir="ltr"
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="register-phone">
+                شمارهٔ تماس <span className={styles.optional}>اختیاری</span>
+              </label>
+              <input
+                id="register-phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                maxLength={30}
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                placeholder="شماره تماس شما"
+                dir="ltr"
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="register-password">رمز عبور</label>
+              <div className={styles.passwordWrap}>
+                <input
+                  id="register-password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  maxLength={72}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="حداقل ۸ کاراکتر"
+                  dir="ltr"
+                />
+                <button
+                  type="button"
+                  className={styles.passwordToggle}
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? "پنهان" : "نمایش"}
+                </button>
+              </div>
+              <span className={styles.hint}>برای امنیت بیشتر، رمز عبور قوی انتخاب کنید.</span>
+            </div>
+
+            {message && (
+              <p className={styles.error} role="alert" aria-live="polite">
+                {message}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className={styles.submit}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <span className={styles.spinner} aria-hidden="true" />
+                  در حال ساخت حساب...
+                </>
+              ) : (
+                <>ساخت حساب کاربری <span aria-hidden="true">←</span></>
+              )}
+            </button>
+          </form>
+
+          <div className={styles.switchAuth}>
+            قبلاً ثبت‌نام کرده‌اید؟
+            <Link href="/login">وارد حساب شوید</Link>
           </div>
 
-          <div>
-            <label htmlFor="phone" className="mb-1 block text-sm font-medium">
-              شماره تلفن (اختیاری)
-            </label>
-            <input
-              id="phone"
-              type="tel"
-              autoComplete="tel"
-              maxLength={30}
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
-              placeholder="شماره تماس"
-              dir="ltr"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="mb-1 block text-sm font-medium">
-              رمز عبور
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              maxLength={72}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-blue-600"
-              placeholder="حداقل ۸ کاراکتر"
-              dir="ltr"
-            />
-          </div>
-
-          {message && (
-            <p role="status" aria-live="polite" className="text-sm">
-              {message}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "در حال ثبت‌نام..." : "ثبت‌نام"}
-          </button>
-        </form>
-
-        <p className="mt-5 text-center text-sm text-gray-600">
-          حساب دارید؟{" "}
-          <Link href="/login" className="font-medium text-blue-600 hover:underline">
-            ورود به حساب
+          <Link href="/" className={styles.backHome}>
+            <span aria-hidden="true">→</span> بازگشت به صفحهٔ اصلی
           </Link>
-        </p>
+        </section>
+
+        <aside className={styles.sidePanel}>
+          <span className={styles.sideBadge}>شروعی ساده، انتخابی بهتر</span>
+          <h2>مسیر پیدا کردن<br />خانهٔ دلخواهتان.</h2>
+          <p>
+            با ساخت حساب در خانه‌یار، برای ثبت آگهی، پیگیری درخواست‌ها
+            و ارتباط با دیگر کاربران آماده می‌شوید.
+          </p>
+          <div className={styles.sideArt} aria-hidden="true">
+            <span className={styles.artCircle} />
+            <span className={styles.artHouse}>⌂</span>
+            <span className={styles.artDot}>✦</span>
+          </div>
+          <div className={styles.sideFoot}>
+            <span>●</span> حساب شما، شروع تجربه‌ای تازه
+          </div>
+        </aside>
       </div>
     </main>
   );
