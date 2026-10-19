@@ -1,0 +1,3454 @@
+
+========== apps\web\app\layout.tsx ==========
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import SiteHeader from "./_components/SiteHeader";
+import SiteFooter from "./_components/SiteFooter";
+import SiteNavigation from "./_components/SiteNavigation";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "خانه‌یار | خرید، فروش و اجاره ملک",
+  description: "جست‌وجو، خرید، فروش و اجاره ملک و ثبت آگهی در خانه‌یار.",
+};
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return (
+    <html
+      lang="fa"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col" dir="rtl">
+        <Suspense fallback={<div aria-hidden="true" style={{ minHeight: 80 }} />}>
+        <SiteHeader />
+        </Suspense>
+        <div className="site-content">{children}</div>
+        <Suspense fallback={null}><SiteNavigation /></Suspense>
+        <SiteFooter />
+      </body>
+    </html>
+  );
+}
+
+
+========== apps\web\app\page.tsx ==========
+import Link from "next/link";
+import { prisma } from "@/src/lib/prisma";
+import PropertyCard from "./_components/PropertyCard";
+import "./market.css";
+
+export const instant = false;
+
+const categories = [
+  { name: "آپارتمان", mark: "▦", type: "APARTMENT" },
+  { name: "خانه", mark: "⌂", type: "HOUSE" },
+  { name: "ویلا", mark: "♧", type: "VILLA" },
+  { name: "زمین", mark: "▱", type: "LAND" },
+  { name: "تجاری", mark: "▤", type: "COMMERCIAL" },
+];
+
+export default async function HomePage() {
+  const listings = await prisma.listing.findMany({
+    where: { status: "PUBLISHED" },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 6,
+    select: {
+      id: true,
+      title: true,
+      city: true,
+      area: true,
+      price: true,
+      currency: true,
+      rooms: true,
+      propertyType: true,
+      listingType: true,
+      images: {
+        take: 1,
+        orderBy: { sortOrder: "asc" },
+        select: { url: true },
+      },
+    },
+  });
+
+  return (
+    <div className="hy-site" dir="rtl">
+
+      <main>
+        <section className="hy-hero">
+          <div className="hy-wrap hy-hero-layout">
+            <div className="hy-hero-copy">
+              <span className="hy-kicker">
+                <span className="hy-kicker-dot" />
+                تجربه‌ای تازه در بازار املاک
+              </span>
+
+              <h1>
+                خانه‌ای که
+                <br />
+                <span>دنبالش هستی،</span>
+                <br />
+                همین نزدیکی‌هاست.
+              </h1>
+
+              <p>
+                از آپارتمان‌های مدرن تا ویلاهای دنج،
+                آگهی‌های منتشرشده را در یک فضای ساده،
+                سریع و زیبا پیدا کن.
+              </p>
+
+              <form action="/search" method="get" className="hy-searchbox">
+                <div className="hy-searchbox-head">
+                  <span>جست‌وجوی ملک</span>
+                  <span className="hy-searchbox-hint">
+                    خرید، اجاره و انواع ملک
+                  </span>
+                </div>
+
+                <div className="hy-search-fields">
+                  <label className="hy-field">
+                    <span>شهر</span>
+                    <input
+                      name="city"
+                      type="search"
+                      placeholder="نام شهر"
+                      maxLength={100}
+                    />
+                  </label>
+
+                  <label className="hy-field">
+                    <span>نوع معامله</span>
+                    <select name="deal" defaultValue="">
+                      <option value="">همه معاملات</option>
+                      <option value="SALE">خرید</option>
+                      <option value="RENT">اجاره</option>
+                    </select>
+                  </label>
+
+                  <label className="hy-field">
+                    <span>نوع ملک</span>
+                    <select name="property" defaultValue="">
+                      <option value="">همه املاک</option>
+                      <option value="APARTMENT">آپارتمان</option>
+                      <option value="HOUSE">خانه</option>
+                      <option value="VILLA">ویلا</option>
+                      <option value="LAND">زمین</option>
+                      <option value="COMMERCIAL">تجاری</option>
+                    </select>
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="hy-button hy-button-primary hy-search-submit ui-btn ui-btn-primary"
+                  >
+                    جست‌وجو ←
+                  </button>
+                </div>
+              </form>
+
+              <div className="hy-hero-trust">
+                <span>✓ آگهی‌های دارای تأیید مدیر</span>
+                <span>✓ جست‌وجوی آسان</span>
+                <span>✓ ثبت آگهی آنلاین</span>
+              </div>
+            </div>
+
+            <div className="hy-hero-visual" aria-hidden="true">
+              <div className="hy-visual-halo" />
+              <div className="hy-visual-building">
+                <div className="hy-visual-roof" />
+                <div className="hy-visual-windows">
+                  <i /><i /><i /><i /><i /><i />
+                </div>
+                <div className="hy-visual-door" />
+              </div>
+              <div className="hy-visual-ground" />
+              <div className="hy-floating-card hy-floating-card-top">
+                <span>✦</span>
+                خانه مناسب انتخاب تو
+              </div>
+              <div className="hy-floating-card hy-floating-card-bottom">
+                <span>⌂</span>
+                همه املاک در یک جا
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="hy-section hy-categories">
+          <div className="hy-wrap">
+            <div className="hy-section-heading">
+              <div>
+                <span className="hy-overline">دسته‌بندی‌ها</span>
+                <h2>دنبال چه نوع ملکی هستی؟</h2>
+                <p>از دسته‌بندی مناسب جست‌وجو را شروع کن.</p>
+              </div>
+            </div>
+
+            <div className="hy-category-grid">
+              {categories.map((item) => (
+                <Link
+                  key={item.type}
+                  href={`/search?property=${item.type}`}
+                  className="hy-category"
+                >
+                  <span className="hy-category-icon" aria-hidden="true">
+                    {item.mark}
+                  </span>
+                  <strong>{item.name}</strong>
+                  <span className="hy-category-more">مشاهده ←</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="hy-section hy-listings">
+          <div className="hy-wrap">
+            <div className="hy-section-heading">
+              <div>
+                <span className="hy-overline">تازه‌ترین فرصت‌ها</span>
+                <h2>جدیدترین آگهی‌های ملک</h2>
+                <p>آگهی‌های منتشرشده از دیتابیس خانه‌یار</p>
+              </div>
+              <Link href="/search" className="hy-text-link">
+                مشاهده همه آگهی‌ها ←
+              </Link>
+            </div>
+
+            {listings.length ? (
+              <div className="hy-property-grid">
+                {listings.map((listing) => (
+                  <PropertyCard
+                    key={listing.id}
+                    listing={listing}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="hy-empty">
+                <span aria-hidden="true">⌂</span>
+                <h3>هنوز آگهی منتشرشده‌ای نداریم</h3>
+                <p>
+                  آگهی‌ها بعد از تأیید مدیر در اینجا ظاهر می‌شوند.
+                </p>
+                <Link
+                  href="/listings/new"
+                  className="hy-button hy-button-primary ui-btn ui-btn-primary"
+                >
+                  ثبت اولین آگهی
+                </Link>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="hy-section hy-cta-section">
+          <div className="hy-wrap">
+            <div className="hy-cta">
+              <div>
+                <span className="hy-overline">مخصوص مالکان و مشاوران</span>
+                <h2>ملکت را با خانه‌یار معرفی کن.</h2>
+                <p>
+                  آگهی جدید ثبت کن و وضعیت بررسی آن را از
+                  پنل کاربری دنبال کن.
+                </p>
+              </div>
+
+              <Link href="/listings/new" className="hy-button hy-button-light ui-btn ui-btn-outline">
+                ثبت آگهی جدید ←
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
+
+    </div>
+  );
+}
+
+========== apps\web\app\search\page.tsx ==========
+import UnreadMessagesLink from "../_components/UnreadMessagesLink";
+import Link from "next/link";
+import { Suspense } from "react";
+import type { Prisma } from "@prisma/client";
+import { prisma } from "@/src/lib/prisma";
+import PropertyCard from "../_components/PropertyCard";
+import "../market.css";
+
+type RawValue = string | string[] | undefined;
+
+type SearchParams = {
+  city?: RawValue;
+  deal?: RawValue;
+  property?: RawValue;
+  minPrice?: RawValue;
+  maxPrice?: RawValue;
+  minArea?: RawValue;
+  maxArea?: RawValue;
+  rooms?: RawValue;
+  sort?: RawValue;
+  page?: RawValue;
+};
+
+type SearchFilters = {
+  city: string;
+  deal: "SALE" | "RENT" | "";
+  property: "APARTMENT" | "HOUSE" | "VILLA" | "LAND" | "COMMERCIAL" | "";
+  minPrice: string;
+  maxPrice: string;
+  minArea: string;
+  maxArea: string;
+  rooms: string;
+  sort: "newest" | "price_asc" | "price_desc" | "area_desc";
+};
+
+const PAGE_SIZE = 12;
+
+const propertyTypes = [
+  "APARTMENT",
+  "HOUSE",
+  "VILLA",
+  "LAND",
+  "COMMERCIAL",
+] as const;
+
+const sortOptions = [
+  "newest",
+  "price_asc",
+  "price_desc",
+  "area_desc",
+] as const;
+
+function single(value: RawValue): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function moneyInput(value: RawValue): string {
+  const raw = single(value);
+  if (!/^\d{1,12}$/.test(raw)) return "";
+  return String(Number(raw));
+}
+
+function areaInput(value: RawValue): string {
+  const raw = single(value);
+  if (!/^\d{1,8}$/.test(raw)) return "";
+  return String(Number(raw));
+}
+
+function roomInput(value: RawValue): string {
+  const raw = single(value);
+  if (!/^\d{1,2}$/.test(raw)) return "";
+  const number = Number(raw);
+  return number <= 30 ? String(number) : "";
+}
+
+function parsePage(value: RawValue): number {
+  const raw = single(value);
+
+  if (!/^[1-9]\d{0,6}$/.test(raw)) {
+    return 1;
+  }
+
+  return Number(raw);
+}
+
+function parseFilters(params: SearchParams): SearchFilters {
+  const dealValue = single(params.deal);
+  const propertyValue = single(params.property);
+  const sortValue = single(params.sort);
+
+  const deal =
+    dealValue === "SALE" || dealValue === "RENT"
+      ? dealValue
+      : "";
+
+  const property =
+    propertyTypes.find((item) => item === propertyValue) ?? "";
+
+  const sort =
+    sortOptions.find((item) => item === sortValue) ?? "newest";
+
+  return {
+    city: single(params.city).slice(0, 100),
+    deal,
+    property,
+    minPrice: moneyInput(params.minPrice),
+    maxPrice: moneyInput(params.maxPrice),
+    minArea: areaInput(params.minArea),
+    maxArea: areaInput(params.maxArea),
+    rooms: roomInput(params.rooms),
+    sort,
+  };
+}
+
+function buildWhere(filters: SearchFilters): Prisma.ListingWhereInput {
+  const where: Prisma.ListingWhereInput = {
+    status: "PUBLISHED",
+  };
+
+  if (filters.city) {
+    where.city = {
+      contains: filters.city,
+      mode: "insensitive",
+    };
+  }
+
+  if (filters.deal) {
+    where.listingType = filters.deal;
+  }
+
+  if (filters.property) {
+    where.propertyType = filters.property;
+  }
+
+  if (filters.minPrice || filters.maxPrice) {
+    where.price = {
+      ...(filters.minPrice ? { gte: filters.minPrice } : {}),
+      ...(filters.maxPrice ? { lte: filters.maxPrice } : {}),
+    };
+  }
+
+  if (filters.minArea || filters.maxArea) {
+    where.area = {
+      ...(filters.minArea ? { gte: filters.minArea } : {}),
+      ...(filters.maxArea ? { lte: filters.maxArea } : {}),
+    };
+  }
+
+  if (filters.rooms) {
+    where.rooms = { gte: Number(filters.rooms) };
+  }
+
+  return where;
+}
+
+function sortBy(value: SearchFilters["sort"]): Prisma.ListingOrderByWithRelationInput[] {
+  switch (value) {
+    case "price_asc":
+      return [{ price: "asc" }, { id: "desc" }];
+    case "price_desc":
+      return [{ price: "desc" }, { id: "desc" }];
+    case "area_desc":
+      return [{ area: "desc" }, { id: "desc" }];
+    default:
+      return [{ createdAt: "desc" }, { id: "desc" }];
+  }
+}
+
+function pageUrl(filters: SearchFilters, page: number): string {
+  const query = new URLSearchParams();
+
+  const values: Record<string, string> = {
+    city: filters.city,
+    deal: filters.deal,
+    property: filters.property,
+    minPrice: filters.minPrice,
+    maxPrice: filters.maxPrice,
+    minArea: filters.minArea,
+    maxArea: filters.maxArea,
+    rooms: filters.rooms,
+    sort: filters.sort === "newest" ? "" : filters.sort,
+  };
+
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== "") {
+      query.set(key, value);
+    }
+  }
+
+  if (page > 1) {
+    query.set("page", String(page));
+  }
+
+  const encoded = query.toString();
+  return encoded ? `/search?${encoded}` : "/search";
+}
+
+async function SearchResults({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const filters = parseFilters(params);
+  const where = buildWhere(filters);
+
+  const requestedPage = parsePage(params.page);
+  const total = await prisma.listing.count({ where });
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(requestedPage, totalPages);
+
+  const listings = await prisma.listing.findMany({
+    where,
+    orderBy: sortBy(filters.sort),
+    skip: (currentPage - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+    select: {
+      id: true,
+      title: true,
+      city: true,
+      area: true,
+      price: true,
+      currency: true,
+      rooms: true,
+      propertyType: true,
+      listingType: true,
+      images: {
+        take: 1,
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        select: { url: true },
+      },
+    },
+  });
+
+  const firstResult =
+    total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+
+  const lastResult =
+    total === 0 ? 0 : Math.min(currentPage * PAGE_SIZE, total);
+
+  return (
+    <div className="hy-advanced-layout">
+      <aside className="hy-advanced-sidebar">
+        <div className="hy-filter-header">
+          <h2>فیلترهای جست‌وجو</h2>
+          <Link href="/search">پاک کردن فیلترها</Link>
+        </div>
+
+        <form action="/search" method="get" className="hy-filter-form">
+          <label className="hy-field">
+            <span>شهر</span>
+            <input
+              name="city"
+              type="search"
+              defaultValue={filters.city}
+              maxLength={100}
+              placeholder="مثلاً مسکو"
+            />
+          </label>
+
+          <label className="hy-field">
+            <span>نوع معامله</span>
+            <select name="deal" defaultValue={filters.deal}>
+              <option value="">خرید و اجاره</option>
+              <option value="SALE">خرید</option>
+              <option value="RENT">اجاره</option>
+            </select>
+          </label>
+
+          <label className="hy-field">
+            <span>نوع ملک</span>
+            <select name="property" defaultValue={filters.property}>
+              <option value="">همه املاک</option>
+              <option value="APARTMENT">آپارتمان</option>
+              <option value="HOUSE">خانه</option>
+              <option value="VILLA">ویلا</option>
+              <option value="LAND">زمین</option>
+              <option value="COMMERCIAL">تجاری</option>
+            </select>
+          </label>
+
+          <fieldset className="hy-filter-group">
+            <legend>محدوده قیمت</legend>
+            <div className="hy-filter-pair">
+              <label className="hy-field">
+                <span>از</span>
+                <input
+                  name="minPrice"
+                  type="number"
+                  min="0"
+                  max="999999999999"
+                  step="1"
+                  inputMode="numeric"
+                  defaultValue={filters.minPrice}
+                  placeholder="حداقل"
+                />
+              </label>
+
+              <label className="hy-field">
+                <span>تا</span>
+                <input
+                  name="maxPrice"
+                  type="number"
+                  min="0"
+                  max="999999999999"
+                  step="1"
+                  inputMode="numeric"
+                  defaultValue={filters.maxPrice}
+                  placeholder="حداکثر"
+                />
+              </label>
+            </div>
+            <p className="hy-filter-hint">
+              مبلغ را با واحد پول درج‌شده در آگهی وارد کنید.
+              آگهی‌ها ممکن است ارزهای متفاوتی داشته باشند.
+            </p>
+          </fieldset>
+
+          <fieldset className="hy-filter-group">
+            <legend>متراژ ملک (متر مربع)</legend>
+            <div className="hy-filter-pair">
+              <label className="hy-field">
+                <span>از</span>
+                <input
+                  name="minArea"
+                  type="number"
+                  min="0"
+                  max="99999999"
+                  step="1"
+                  defaultValue={filters.minArea}
+                  placeholder="حداقل"
+                />
+              </label>
+
+              <label className="hy-field">
+                <span>تا</span>
+                <input
+                  name="maxArea"
+                  type="number"
+                  min="0"
+                  max="99999999"
+                  step="1"
+                  defaultValue={filters.maxArea}
+                  placeholder="حداکثر"
+                />
+              </label>
+            </div>
+          </fieldset>
+
+          <label className="hy-field">
+            <span>حداقل تعداد اتاق</span>
+            <select name="rooms" defaultValue={filters.rooms}>
+              <option value="">فرقی ندارد</option>
+              <option value="1">۱ اتاق</option>
+              <option value="2">۲ اتاق</option>
+              <option value="3">۳ اتاق</option>
+              <option value="4">۴ اتاق</option>
+              <option value="5">۵ اتاق یا بیشتر</option>
+            </select>
+          </label>
+
+          <label className="hy-field">
+            <span>مرتب‌سازی</span>
+            <select name="sort" defaultValue={filters.sort}>
+              <option value="newest">جدیدترین آگهی‌ها</option>
+              <option value="price_asc">ارزان‌ترین</option>
+              <option value="price_desc">گران‌ترین</option>
+              <option value="area_desc">بیشترین متراژ</option>
+            </select>
+          </label>
+
+          <button
+            type="submit"
+            className="hy-button hy-button-primary hy-filter-submit"
+          >
+            نمایش نتایج
+          </button>
+        </form>
+      </aside>
+
+      <section className="hy-advanced-results" aria-label="نتایج جست‌وجو">
+        <div className="hy-advanced-summary">
+          <div>
+            <h2>آگهی‌های املاک</h2>
+            <p>
+              {total.toLocaleString("fa-IR")} آگهی مطابق فیلترها
+            </p>
+          </div>
+          <span className="hy-results-range">
+            نمایش {firstResult.toLocaleString("fa-IR")} تا{" "}
+            {lastResult.toLocaleString("fa-IR")}
+          </span>
+        </div>
+
+        {listings.length ? (
+          <div className="hy-advanced-property-grid">
+            {listings.map((listing) => (
+              <PropertyCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        ) : (
+          <div className="hy-empty">
+            <span aria-hidden="true">⌕</span>
+            <h3>آگهی مناسبی پیدا نشد</h3>
+            <p>محدوده قیمت، شهر یا دیگر فیلترها را تغییر بده.</p>
+            <Link
+              href="/search"
+              className="hy-button hy-button-primary"
+            >
+              نمایش همه آگهی‌ها
+            </Link>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <nav
+            className="hy-pagination"
+            aria-label="صفحه‌بندی آگهی‌ها"
+          >
+            {currentPage > 1 ? (
+              <Link href={pageUrl(filters, currentPage - 1)}>
+                صفحه قبلی
+              </Link>
+            ) : (
+              <span className="hy-page-disabled">صفحه قبلی</span>
+            )}
+
+            <span className="hy-page-current">
+              صفحه {currentPage.toLocaleString("fa-IR")} از{" "}
+              {totalPages.toLocaleString("fa-IR")}
+            </span>
+
+            {currentPage < totalPages ? (
+              <Link href={pageUrl(filters, currentPage + 1)}>
+                صفحه بعدی
+              </Link>
+            ) : (
+              <span className="hy-page-disabled">صفحه بعدی</span>
+            )}
+          </nav>
+        )}
+      </section>
+    </div>
+  );
+}
+
+export default function SearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  return (
+    <div className="hy-site hy-search-page" dir="rtl">
+      <header className="hy-results-header">
+        <div className="hy-wrap">
+          <>
+          <UnreadMessagesLink />
+          <Link href="/" className="hy-results-home">
+            ⌂ خانه‌یار
+          </Link>
+          </>
+          <h1>جست‌وجوی پیشرفته املاک</h1>
+          <p>
+            ملک مناسب را براساس بودجه، متراژ و نیاز خود پیدا کن.
+          </p>
+        </div>
+      </header>
+
+      <main className="hy-wrap hy-advanced-main">
+        <Suspense
+          fallback={
+            <div className="hy-results-loading" role="status">
+              در حال جست‌وجوی آگهی‌ها...
+            </div>
+          }
+        >
+          <SearchResults searchParams={searchParams} />
+        </Suspense>
+      </main>
+
+      <footer className="hy-simple-footer">
+        <Link href="/">بازگشت به خانه‌یار</Link>
+      </footer>
+    </div>
+  );
+}
+
+========== apps\web\app\market.css ==========
+/* KHANEHYAR MARKET UI V1 */
+
+.hy-site {
+  --hy-ink: var(--color-text);
+  --hy-ink-soft: var(--color-text-muted);
+  --hy-navy: var(--color-brand-primary);
+  --hy-navy-dark: var(--color-brand-primary-hover);
+  --hy-green: var(--color-brand-accent);
+  --hy-green-dark: var(--color-brand-accent-hover);
+  --hy-bg: var(--color-page);
+  --hy-border: var(--color-border);
+  --hy-shadow: var(--shadow-card);
+  min-height: 100vh;
+  background: var(--hy-bg);
+  color: var(--hy-ink);
+  font-family: "Vazirmatn", Tahoma, sans-serif;
+  line-height: 1.8;
+}
+
+.hy-site *,
+.hy-site *::before,
+.hy-site *::after {
+  box-sizing: border-box;
+}
+
+.hy-site a {
+  text-decoration: none;
+}
+
+.hy-wrap {
+  width: min(1200px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+.hy-header {
+  background: rgba(255,255,255,.97);
+  border-bottom: 1px solid var(--hy-border);
+  position: relative;
+  z-index: 5;
+}
+
+.hy-header-inner {
+  min-height: 88px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 25px;
+}
+
+.hy-logo {
+  display: inline-flex;
+  gap: 11px;
+  align-items: center;
+  color: var(--hy-navy);
+  flex-shrink: 0;
+}
+
+.hy-logo-symbol {
+  background: var(--hy-navy);
+  color: white;
+  width: 51px;
+  height: 51px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.hy-logo strong {
+  font-size: 24px;
+  font-weight: 900;
+  display: block;
+  line-height: 1.25;
+}
+
+.hy-logo small {
+  display: block;
+  color: #7b8a9c;
+  font-size: 10px;
+  margin-top: 3px;
+}
+
+.hy-nav,
+.hy-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.hy-nav a,
+.hy-login {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3e5670;
+  transition: color .2s;
+}
+
+.hy-nav a:hover,
+.hy-login:hover {
+  color: var(--hy-green);
+}
+
+.hy-button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s, transform .2s, box-shadow .2s;
+}
+
+.hy-button:hover {
+  transform: translateY(-2px);
+}
+
+.hy-button-primary {
+  background: var(--hy-green);
+  color: white;
+}
+
+.hy-button-primary:hover {
+  background: var(--hy-green-dark);
+  box-shadow: 0 10px 24px rgba(20,125,105,.2);
+}
+
+.hy-button-light {
+  background: #fff;
+  color: var(--hy-navy);
+}
+
+.hy-site a:focus-visible,
+.hy-site button:focus-visible,
+.hy-site input:focus-visible,
+.hy-site select:focus-visible {
+  outline: 3px solid #58c8b1;
+  outline-offset: 3px;
+}
+
+.hy-hero {
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 5% 12%, #dfece9 0, transparent 42%),
+    radial-gradient(ellipse at 95% 90%, #e5edf5 0, transparent 46%),
+    linear-gradient(130deg, #f8fbfd, #edf4f7);
+  padding: 96px 0 102px;
+}
+
+.hy-hero-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
+  align-items: center;
+  gap: 58px;
+}
+
+.hy-kicker {
+  width: fit-content;
+  background: #e1f1eb;
+  border: 1px solid #cae8dd;
+  padding: 6px 16px;
+  border-radius: 100px;
+  color: var(--hy-green);
+  font-size: 12px;
+  font-weight: 850;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.hy-kicker-dot {
+  background: #23a184;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.hy-hero h1 {
+  font-size: clamp(38px, 4.4vw, 66px);
+  color: var(--hy-navy-dark);
+  font-weight: 950;
+  line-height: 1.43;
+  letter-spacing: -1px;
+  margin: 24px 0 16px;
+}
+
+.hy-hero h1 span {
+  color: var(--hy-green);
+}
+
+.hy-hero-copy > p {
+  color: var(--hy-ink-soft);
+  font-size: 15px;
+  max-width: 570px;
+  line-height: 2.3;
+}
+
+.hy-searchbox {
+  background: white;
+  border: 1px solid var(--hy-border);
+  border-radius: 22px;
+  box-shadow: 0 20px 60px rgba(19,54,79,.1);
+  padding: 18px;
+  margin-top: 30px;
+  position: relative;
+  z-index: 2;
+}
+
+.hy-searchbox-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 4px 14px;
+}
+
+.hy-searchbox-hint {
+  color: var(--hy-green);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hy-search-fields,
+.hy-results-form {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.hy-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hy-field > span {
+  color: #62748a;
+  font-size: 11px;
+  font-weight: 800;
+  padding-inline: 4px;
+}
+
+.hy-field input,
+.hy-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid #e6ecf1;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #243d55;
+  font: inherit;
+  font-size: 12px;
+}
+
+.hy-field input::placeholder {
+  color: #93a0af;
+}
+
+.hy-search-submit {
+  min-height: 48px;
+  padding-inline: 17px;
+}
+
+.hy-hero-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 23px;
+  color: #668076;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.hy-hero-visual {
+  position: relative;
+  min-height: 490px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.hy-visual-halo {
+  position: absolute;
+  width: 430px;
+  height: 430px;
+  max-width: 100%;
+  border-radius: 50%;
+  bottom: 15px;
+  background: linear-gradient(145deg, #d8e9ec, #c8dce7);
+  box-shadow: 0 0 0 35px rgba(216,233,236,.29);
+}
+
+.hy-visual-building {
+  width: 69%;
+  max-width: 320px;
+  height: 370px;
+  background: linear-gradient(120deg,#fff,#d6e2e7);
+  border: 9px solid #f9fcfd;
+  border-bottom: 0;
+  border-radius: 18px 18px 4px 4px;
+  box-shadow: 18px 24px 50px rgba(36,69,86,.17), inset -18px 0 26px #bdced638;
+  position: relative;
+  z-index: 1;
+}
+
+.hy-visual-roof {
+  position: absolute;
+  inset: -35px -18px auto;
+  height: 35px;
+  background: #214766;
+  transform: skewX(-8deg);
+  border-radius: 6px 6px 0 0;
+}
+
+.hy-visual-windows {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 28px 45px;
+  padding: 48px 38px 0;
+}
+
+.hy-visual-windows i {
+  display: block;
+  height: 68px;
+  border: 7px solid #f9fcff;
+  border-radius: 3px;
+  background: linear-gradient(135deg,#75b5c0,#cbe0e1);
+  box-shadow: 0 8px 18px #24506a20;
+}
+
+.hy-visual-door {
+  position: absolute;
+  bottom: 0;
+  width: 70px;
+  height: 100px;
+  right: calc(50% - 35px);
+  border-radius: 9px 9px 0 0;
+  background: #204861;
+  border: 7px solid #f9fcff;
+  border-bottom: 0;
+}
+
+.hy-visual-ground {
+  position: absolute;
+  bottom: 0;
+  height: 35px;
+  width: 100%;
+  background: #bfd8cc;
+  border-radius: 100%;
+  filter: blur(12px);
+}
+
+.hy-floating-card {
+  z-index: 2;
+  position: absolute;
+  background: #fff;
+  border: 1px solid #eaf0f3;
+  border-radius: 18px;
+  padding: 15px 18px;
+  box-shadow: 0 16px 44px #1f456a20;
+  font-size: 11px;
+  font-weight: 850;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hy-floating-card span {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #e5f2ed;
+  color: var(--hy-green);
+  font-size: 20px;
+}
+
+.hy-floating-card-top {
+  top: 85px;
+  right: -15px;
+}
+
+.hy-floating-card-bottom {
+  left: -15px;
+  bottom: 65px;
+}
+
+.hy-section {
+  padding: 84px 0;
+}
+
+.hy-categories {
+  background: #fff;
+}
+
+.hy-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+.hy-overline {
+  display: block;
+  color: var(--hy-green);
+  font-size: 12px;
+  font-weight: 850;
+  margin-bottom: 7px;
+}
+
+.hy-section-heading h2,
+.hy-cta h2 {
+  color: var(--hy-navy);
+  font-size: clamp(25px,3vw,37px);
+  font-weight: 950;
+  line-height: 1.45;
+  margin: 0 0 8px;
+}
+
+.hy-section-heading p {
+  color: #8390a1;
+  font-size: 13px;
+  margin: 0;
+}
+
+.hy-text-link {
+  color: var(--hy-green);
+  font-size: 13px;
+  font-weight: 850;
+  flex-shrink: 0;
+}
+
+.hy-category-grid {
+  display: grid;
+  grid-template-columns: repeat(5,minmax(0,1fr));
+  gap: 18px;
+}
+
+.hy-category {
+  display: flex;
+  min-height: 174px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  background: #f8fafc;
+  border: 1px solid #e9edf2;
+  border-radius: 20px;
+  color: var(--hy-navy);
+  transition: transform .2s, background .2s, border-color .2s;
+}
+
+.hy-category:hover {
+  transform: translateY(-5px);
+  background: #edf7f2;
+  border-color: #b8dfd0;
+}
+
+.hy-category-icon {
+  display: grid;
+  place-items: center;
+  background: #e7f0f4;
+  width: 60px;
+  height: 60px;
+  border-radius: 17px;
+  color: var(--hy-navy);
+  font-size: 32px;
+  line-height: 1;
+}
+
+.hy-category strong {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.hy-category-more {
+  color: var(--hy-green);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.hy-property-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 25px;
+}
+
+.hy-property {
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #e9edf2;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: var(--hy-shadow);
+  transition: transform .2s, box-shadow .2s;
+}
+
+.hy-property:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 22px 50px #163b5a1c;
+}
+
+.hy-property-link {
+  display: block;
+  color: inherit;
+  height: 100%;
+}
+
+.hy-property-image {
+  position: relative;
+  height: 228px;
+  overflow: hidden;
+  background: #e0eaf0;
+}
+
+.hy-property-photo {
+  object-fit: cover;
+  transition: transform .35s;
+}
+
+.hy-property:hover .hy-property-photo {
+  transform: scale(1.04);
+}
+
+.hy-property-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg,#d6e9ed,#a7c9c6);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #2b6771;
+}
+
+.hy-property-placeholder span {
+  font-size: 95px;
+  line-height: 1;
+}
+
+.hy-property-placeholder small {
+  font-weight: 900;
+}
+
+.hy-property-badge {
+  position: absolute;
+  top: 17px;
+  right: 17px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  background: #fff;
+  color: var(--hy-green);
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 5px 20px #00000012;
+}
+
+.hy-property-body {
+  padding: 21px;
+}
+
+.hy-property-meta,
+.hy-property-specs {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  color: #8291a2;
+  font-size: 12px;
+}
+
+.hy-property-title {
+  color: var(--hy-navy);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.6;
+  margin: 8px 0 12px;
+  min-height: 58px;
+}
+
+.hy-property-specs {
+  gap: 17px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.hy-property-bottom {
+  padding-top: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hy-property-bottom small,
+.hy-property-bottom strong {
+  display: block;
+}
+
+.hy-property-bottom small {
+  color: #98a4b0;
+  font-size: 10px;
+}
+
+.hy-property-bottom strong {
+  color: var(--hy-green);
+  font-weight: 950;
+  font-size: 18px;
+}
+
+.hy-property-arrow {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  width: 40px;
+  border-radius: 12px;
+  background: #ecf6f1;
+  color: var(--hy-green);
+}
+
+.hy-empty {
+  margin: 20px 0;
+  padding: 62px 25px;
+  background: #fff;
+  border: 1px dashed #cbd9e1;
+  border-radius: 22px;
+  text-align: center;
+}
+
+.hy-empty > span {
+  display: block;
+  font-size: 65px;
+  color: #8abcb1;
+}
+
+.hy-empty h2,
+.hy-empty h3 {
+  color: var(--hy-navy);
+  font-size: 22px;
+  font-weight: 900;
+  margin: 10px 0;
+}
+
+.hy-empty p {
+  color: #8493a3;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.hy-cta-section {
+  padding-top: 24px;
+}
+
+.hy-cta {
+  border-radius: 30px;
+  padding: 55px 64px;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+  background:
+    radial-gradient(circle at 18% 0%,#226e6a 0%,transparent 45%),
+    linear-gradient(120deg,#113451,#174c64);
+}
+
+.hy-cta h2 {
+  color: white;
+  max-width: 680px;
+}
+
+.hy-cta p {
+  color: #c2d8de;
+  font-size: 13px;
+}
+
+.hy-cta .hy-overline {
+  color: #a9ead1;
+}
+
+.hy-footer {
+  background: #102841;
+  color: #dce9ef;
+  margin-top: 15px;
+  padding: 53px 0 20px;
+}
+
+.hy-footer-content,
+.hy-footer-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 35px;
+}
+
+.hy-footer-content strong {
+  font-size: 24px;
+}
+
+.hy-footer-content p {
+  font-size: 12px;
+  color: #a7bacb;
+}
+
+.hy-footer-links {
+  align-items: start;
+  flex-wrap: wrap;
+}
+
+.hy-footer-links a,
+.hy-simple-footer a {
+  color: #c6dce7;
+  font-size: 12px;
+}
+
+.hy-footer-bottom {
+  border-top: 1px solid #ffffff1c;
+  margin-top: 32px;
+  padding-top: 20px;
+  color: #93adbe;
+  font-size: 11px;
+}
+
+.hy-results-header {
+  background: linear-gradient(115deg,#153a5b,#206c70);
+  color: white;
+  padding: 52px 0;
+}
+
+.hy-results-home {
+  color: #c1f2e2;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.hy-results-header h1 {
+  font-size: clamp(28px,4vw,42px);
+  font-weight: 950;
+  margin: 15px 0 5px;
+}
+
+.hy-results-header p {
+  color: #d0e4e8;
+  font-size: 13px;
+}
+
+.hy-results-main {
+  padding-top: 28px;
+  padding-bottom: 90px;
+}
+
+.hy-results-form {
+  background: white;
+  padding: 20px;
+  border: 1px solid var(--hy-border);
+  border-radius: 22px;
+  box-shadow: var(--hy-shadow);
+}
+
+.hy-results-count {
+  padding: 25px 5px 20px;
+  font-size: 13px;
+  color: #75889b;
+}
+
+.hy-results-count strong {
+  color: var(--hy-green);
+}
+
+.hy-results-loading {
+  padding: 70px 25px;
+  text-align: center;
+  color: #73899b;
+}
+
+.hy-simple-footer {
+  background: #102841;
+  text-align: center;
+  padding: 25px;
+}
+
+@media(max-width:1100px) {
+  .hy-nav {
+    gap: 13px;
+  }
+
+  .hy-hero-layout {
+    gap: 25px;
+  }
+
+  .hy-search-fields,
+  .hy-results-form {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .hy-search-submit {
+    width: 100%;
+  }
+
+  .hy-category-grid {
+    gap: 11px;
+  }
+}
+
+@media(max-width:900px) {
+  .hy-header-inner {
+    flex-wrap: wrap;
+    padding-block: 16px;
+  }
+
+  .hy-nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hy-hero-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hy-hero-visual {
+    min-height: 390px;
+    max-width: 500px;
+    width: 100%;
+    margin-inline: auto;
+  }
+
+  .hy-visual-building {
+    height: 310px;
+  }
+
+  .hy-visual-windows {
+    gap: 18px 35px;
+    padding-top: 28px;
+  }
+
+  .hy-category-grid {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+
+  .hy-property-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:620px) {
+  .hy-wrap {
+    width: calc(100% - 30px);
+  }
+
+  .hy-header-inner {
+    gap: 15px;
+  }
+
+  .hy-logo strong {
+    font-size: 19px;
+  }
+
+  .hy-logo-symbol {
+    width: 43px;
+    height: 43px;
+  }
+
+  .hy-header-actions {
+    gap: 10px;
+  }
+
+  .hy-header-actions .hy-button {
+    padding-inline: 12px;
+    font-size: 11px;
+  }
+
+  .hy-login,
+  .hy-nav a {
+    font-size: 11px;
+  }
+
+  .hy-nav {
+    justify-content: space-between;
+    gap: 11px;
+  }
+
+  .hy-hero {
+    padding: 58px 0 62px;
+  }
+
+  .hy-hero h1 {
+    font-size: clamp(33px,8vw,44px);
+  }
+
+  .hy-hero-copy > p {
+    font-size: 13px;
+  }
+
+  .hy-search-fields,
+  .hy-results-form {
+    grid-template-columns: 1fr;
+  }
+
+  .hy-hero-visual {
+    min-height: 320px;
+  }
+
+  .hy-visual-halo {
+    width: 290px;
+    height: 290px;
+  }
+
+  .hy-visual-building {
+    height: 270px;
+    width: 61%;
+  }
+
+  .hy-visual-windows {
+    gap: 12px 18px;
+    padding-inline: 22px;
+  }
+
+  .hy-visual-windows i {
+    height: 50px;
+  }
+
+  .hy-floating-card {
+    font-size: 9px;
+    padding: 8px;
+  }
+
+  .hy-floating-card-top {
+    right: 0;
+  }
+
+  .hy-floating-card-bottom {
+    left: 0;
+    bottom: 30px;
+  }
+
+  .hy-section {
+    padding: 58px 0;
+  }
+
+  .hy-section-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .hy-category-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .hy-property-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hy-category {
+    min-height: 145px;
+  }
+
+  .hy-cta {
+    padding: 32px 23px;
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .hy-footer-content {
+    flex-direction: column;
+  }
+
+  .hy-footer-links {
+    gap: 20px;
+  }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .hy-site *,
+  .hy-site *::before,
+  .hy-site *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+/* KHANEHYAR FAVORITES PAGE */
+.hy-favorites-inner {
+  padding-top: 45px;
+  padding-bottom: 90px;
+}
+
+.hy-favorite-item {
+  min-width: 0;
+}
+
+.hy-favorite-item > .hy-favorite-control {
+  padding-top: 12px;
+}
+
+.hy-favorite-item .hy-favorite-button {
+  width: 100%;
+}
+
+
+/* KHANEHYAR ADVANCED SEARCH V1 - BEGIN */
+
+.hy-advanced-main {
+  padding-top: 36px;
+  padding-bottom: 96px;
+}
+
+.hy-advanced-layout {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.hy-advanced-sidebar {
+  border: 1px solid var(--hy-border);
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 23px;
+  box-shadow: var(--hy-shadow);
+}
+
+.hy-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 19px;
+  border-bottom: 1px solid #edf1f4;
+}
+
+.hy-filter-header h2 {
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--hy-navy);
+  margin: 0;
+}
+
+.hy-filter-header a {
+  color: var(--hy-green);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.hy-filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 19px;
+  padding-top: 20px;
+}
+
+.hy-filter-group {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.hy-filter-group legend {
+  color: #51657c;
+  font-size: 12px;
+  font-weight: 850;
+  margin-bottom: 9px;
+}
+
+.hy-filter-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.hy-filter-hint {
+  color: #8292a3;
+  font-size: 10px;
+  line-height: 1.8;
+  margin: 9px 0 0;
+}
+
+.hy-filter-submit {
+  width: 100%;
+}
+
+.hy-advanced-results {
+  min-width: 0;
+}
+
+.hy-advanced-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 0 0 24px;
+}
+
+.hy-advanced-summary h2 {
+  margin: 0;
+  color: var(--hy-navy);
+  font-size: 25px;
+  font-weight: 950;
+}
+
+.hy-advanced-summary p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #7d8fa2;
+}
+
+.hy-results-range {
+  font-size: 12px;
+  color: #78909b;
+  background: white;
+  border: 1px solid var(--hy-border);
+  border-radius: 12px;
+  padding: 8px 13px;
+}
+
+.hy-advanced-property-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.hy-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 40px;
+}
+
+.hy-pagination a,
+.hy-page-current,
+.hy-page-disabled {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 43px;
+  border-radius: 12px;
+  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.hy-pagination a {
+  background: white;
+  border: 1px solid #cfe3dc;
+  color: var(--hy-green);
+}
+
+.hy-pagination a:hover {
+  background: #e6f4ed;
+}
+
+.hy-page-current {
+  background: var(--hy-navy);
+  color: white;
+}
+
+.hy-page-disabled {
+  background: #edf1f4;
+  color: #a1acb8;
+}
+
+@media (max-width: 1050px) {
+  .hy-advanced-layout {
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .hy-advanced-property-grid {
+    gap: 15px;
+  }
+}
+
+@media (max-width: 830px) {
+  .hy-advanced-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hy-advanced-sidebar {
+    position: static;
+  }
+
+  .hy-filter-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .hy-filter-submit {
+    align-self: end;
+  }
+}
+
+@media (max-width: 620px) {
+  .hy-advanced-main {
+    padding-top: 20px;
+  }
+
+  .hy-advanced-sidebar {
+    padding: 18px;
+  }
+
+  .hy-filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .hy-advanced-property-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hy-advanced-summary h2 {
+    font-size: 21px;
+  }
+
+  .hy-pagination {
+    gap: 7px;
+  }
+
+  .hy-pagination a,
+  .hy-page-current,
+  .hy-page-disabled {
+    padding-inline: 11px;
+    font-size: 11px;
+  }
+}
+
+/* KHANEHYAR ADVANCED SEARCH V1 - END */
+/* KHANEHYAR MOBILE DOCK SPACE V1 */
+@media (max-width: 768px) {
+  .hy-site {
+    padding-bottom: 90px;
+  }
+}
+
+.hy-signout-wrap { position: relative; display: inline-flex; }
+.hy-signout-error { position: absolute; top: calc(100% + 5px); inset-inline-end: 0; width: 220px; color: var(--color-danger); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 11px; box-shadow: var(--shadow-card); }
+.hy-signout:disabled { cursor: wait; opacity: .65; }
+
+
+========== apps\web\app\listings\[id]\page.tsx ==========
+import UnreadMessagesLink from "../../_components/UnreadMessagesLink";
+import InquiryForm from "./InquiryForm";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "@/src/lib/prisma";
+import PropertyGallery, { ShareListing } from "./PropertyGallery";
+import FavoriteButton from "../../_components/FavoriteButton";
+import "./detail.css";
+
+export const instant = false;
+
+type Props = {
+  params: Promise<{ id: string }>;
+};
+
+const propertyNames: Record<string, string> = {
+  APARTMENT: "آپارتمان",
+  HOUSE: "خانه",
+  VILLA: "ویلا",
+  LAND: "زمین",
+  COMMERCIAL: "ملک تجاری",
+};
+
+const currencyNames: Record<string, string> = {
+  RUB: "روبل",
+  IRR: "ریال",
+  IRT: "تومان",
+  USD: "دلار",
+  EUR: "یورو",
+};
+
+function formatNumber(value: string, digits = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed)
+    ? new Intl.NumberFormat("fa-IR", {
+        maximumFractionDigits: digits,
+      }).format(parsed)
+    : value;
+}
+
+function imageIsSafe(url: string) {
+  if (url.startsWith("/") && !url.startsWith("//")) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+export default async function ListingDetailPage({ params }: Props) {
+  const { id } = await params;
+
+  const listing = await prisma.listing.findFirst({
+    where: {
+      id,
+      status: "PUBLISHED",
+    },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      listingType: true,
+      propertyType: true,
+      price: true,
+      currency: true,
+      area: true,
+      rooms: true,
+      floor: true,
+      totalFloors: true,
+      city: true,
+      address: true,
+      createdAt: true,
+      images: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        take: 20,
+        select: { url: true },
+      },
+    },
+  });
+
+  if (!listing) {
+    notFound();
+  }
+
+  const pictures = listing.images
+    .map((item) => item.url)
+    .filter(imageIsSafe);
+
+  const isRent = listing.listingType === "RENT";
+  const propertyName = propertyNames[listing.propertyType] ?? "ملک";
+  const price = formatNumber(listing.price.toString());
+  const area = formatNumber(listing.area.toString(), 2);
+  const currency = currencyNames[listing.currency] ?? listing.currency;
+  const publishedDate = new Intl.DateTimeFormat("fa-IR", {
+    dateStyle: "long",
+  }).format(listing.createdAt);
+
+  const facts: { label: string; value: string }[] = [
+    { label: "نوع ملک", value: propertyName },
+    { label: "نوع معامله", value: isRent ? "اجاره" : "فروش" },
+    { label: "متراژ", value: `${area} متر مربع` },
+    { label: "شهر", value: listing.city },
+  ];
+
+  if (listing.rooms !== null) {
+    facts.push({
+      label: "تعداد اتاق",
+      value: listing.rooms.toLocaleString("fa-IR"),
+    });
+  }
+
+  if (listing.floor !== null) {
+    facts.push({
+      label: "طبقه",
+      value: listing.floor.toLocaleString("fa-IR"),
+    });
+  }
+
+  if (listing.totalFloors !== null) {
+    facts.push({
+      label: "تعداد طبقات ساختمان",
+      value: listing.totalFloors.toLocaleString("fa-IR"),
+    });
+  }
+
+  return (
+    <div className="hd-page" dir="rtl">
+      <header className="hd-header">
+        <div className="hd-container hd-header-inner">
+          <Link href="/" className="hd-brand">
+            <span className="hd-brand-icon" aria-hidden="true">⌂</span>
+            <strong>خانه‌یار</strong>
+          </Link>
+
+          <nav className="hd-nav" aria-label="ناوبری">
+            <Link href="/search">جست‌وجوی ملک</Link>
+            <Link href="/dashboard/listings">آگهی‌های من</Link>
+            <UnreadMessagesLink />
+            <Link href="/listings/new" className="hd-create-link">
+              + ثبت آگهی
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <main className="hd-container">
+        <nav className="hd-breadcrumb" aria-label="مسیر صفحه">
+          <Link href="/">خانه‌یار</Link>
+          <span>/</span>
+          <Link href="/search">آگهی‌های املاک</Link>
+          <span>/</span>
+          <span aria-current="page">{propertyName}</span>
+        </nav>
+
+        <div className="hd-heading">
+          <div>
+            <div className="hd-tags">
+              <span>{isRent ? "برای اجاره" : "برای فروش"}</span>
+              <span>{propertyName}</span>
+            </div>
+            <h1>{listing.title}</h1>
+            <p>⌖ {listing.city}{listing.address ? `، ${listing.address}` : ""}</p>
+          </div>
+          <div className="hd-favorite-actions">
+            <ShareListing />
+            <FavoriteButton listingId={listing.id} />
+          </div>
+        </div>
+
+        <div className="hd-layout">
+          <div className="hd-main-column">
+            <PropertyGallery title={listing.title} images={pictures} />
+
+            <section className="hd-panel">
+              <div className="hd-section-heading">
+                <span className="hd-section-icon" aria-hidden="true">▦</span>
+                <div>
+                  <h2>مشخصات ملک</h2>
+                  <p>اطلاعات ثبت‌شده توسط آگهی‌دهنده</p>
+                </div>
+              </div>
+
+              <dl className="hd-facts">
+                {facts.map((fact) => (
+                  <div key={fact.label} className="hd-fact">
+                    <dt>{fact.label}</dt>
+                    <dd>{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+
+            <section className="hd-panel">
+              <div className="hd-section-heading">
+                <span className="hd-section-icon" aria-hidden="true">≡</span>
+                <div>
+                  <h2>توضیحات آگهی</h2>
+                  <p>با جزئیات بیشتری ملک را بشناس</p>
+                </div>
+              </div>
+              <div className="hd-description">{listing.description}</div>
+            </section>
+
+            <section className="hd-panel">
+              <div className="hd-section-heading">
+                <span className="hd-section-icon" aria-hidden="true">⌖</span>
+                <div>
+                  <h2>موقعیت ملک</h2>
+                  <p>اطلاعات مکانی درج‌شده در آگهی</p>
+                </div>
+              </div>
+
+              <div className="hd-location">
+                <strong>{listing.city}</strong>
+                <p>
+                  {listing.address
+                    ? listing.address
+                    : "نشانی دقیق برای این آگهی ثبت نشده است."}
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <aside className="hd-sidebar" aria-label="قیمت و اطلاعات آگهی">
+            <div className="hd-price-card">
+              <div className="hd-price-label">
+                {isRent ? "مبلغ درج‌شده برای اجاره" : "قیمت پیشنهادی فروش"}
+              </div>
+              <div className="hd-price" dir="auto">
+                {price}
+                <span>{currency}</span>
+              </div>
+
+              <div className="hd-price-divider" />
+
+              <div className="hd-info-row">
+                <span>نوع معامله</span>
+                <strong>{isRent ? "اجاره" : "فروش"}</strong>
+              </div>
+
+              <div className="hd-info-row">
+                <span>متراژ</span>
+                <strong>{area} متر مربع</strong>
+              </div>
+
+              <div className="hd-info-row">
+                <span>تاریخ ثبت</span>
+                <strong>{publishedDate}</strong>
+              </div>
+
+              <div className="hd-price-note">
+                مبلغ از اطلاعات آگهی نمایش داده می‌شود. شرایط
+                معامله و صحت مشخصات را پیش از هر توافق بررسی کنید.
+              </div>
+
+              <InquiryForm listingId={listing.id} />
+
+              <Link href="/search" className="hd-action-primary">
+                مشاهده املاک مشابه ←
+              </Link>
+
+              <Link href="/login" className="hd-action-secondary">
+                ورود به حساب کاربری
+              </Link>
+            </div>
+
+            <div className="hd-safety-card">
+              <strong>◈ نکته امنیتی خانه‌یار</strong>
+              <p>
+                پیش از بازدید یا بررسی مدارک، وجهی پرداخت نکنید.
+                تأیید انتشار آگهی به معنی تضمین مالکیت یا صحت
+                تمام اطلاعات آن نیست.
+              </p>
+            </div>
+          </aside>
+        </div>
+
+        <div className="hd-bottom-link">
+          <Link href="/search">← بازگشت به جست‌وجوی املاک</Link>
+        </div>
+      </main>
+
+      <footer className="hd-footer">
+        <div className="hd-container">
+          خانه‌یار — جست‌وجویی بهتر برای انتخاب خانه
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+========== apps\web\app\listings\[id]\detail.css ==========
+.hd-page {
+  --hd-navy: #142f56;
+  --hd-navy-dark: #0d253f;
+  --hd-emerald: #147d69;
+  --hd-muted: #718096;
+  --hd-border: #e5eaf0;
+  --hd-bg: #f5f8fb;
+  --hd-card: #ffffff;
+  min-height: 100vh;
+  background: var(--hd-bg);
+  color: #233951;
+  font-family: "Vazirmatn", Tahoma, sans-serif;
+  line-height: 1.85;
+}
+
+.hd-page *,
+.hd-page *::before,
+.hd-page *::after {
+  box-sizing: border-box;
+}
+
+.hd-page a {
+  text-decoration: none;
+}
+
+.hd-page button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.hd-container {
+  width: min(1190px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+.hd-header {
+  background: #fff;
+  border-bottom: 1px solid var(--hd-border);
+}
+
+.hd-header-inner {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.hd-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--hd-navy);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.hd-brand-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: var(--hd-navy);
+  color: white;
+  border-radius: 15px;
+  font-size: 33px;
+  line-height: 1;
+}
+
+.hd-nav {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hd-nav a {
+  color: #486078;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.hd-nav .hd-create-link {
+  padding: 10px 19px;
+  background: var(--hd-emerald);
+  border-radius: 12px;
+  color: white;
+}
+
+.hd-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 28px 0 15px;
+  font-size: 12px;
+  color: #8593a3;
+}
+
+.hd-breadcrumb a {
+  color: var(--hd-emerald);
+}
+
+.hd-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 25px;
+  margin-bottom: 28px;
+}
+
+.hd-tags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.hd-tags span {
+  background: #e2f2eb;
+  color: #11735e;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.hd-heading h1 {
+  color: var(--hd-navy);
+  font-size: clamp(25px, 3vw, 38px);
+  font-weight: 950;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.hd-heading p {
+  color: #7b8da0;
+  font-size: 13px;
+  margin: 7px 0 0;
+}
+
+.hd-share {
+  flex-shrink: 0;
+  color: var(--hd-navy);
+  border: 1px solid var(--hd-border);
+  background: white;
+  padding: 10px 17px;
+  border-radius: 13px;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.hd-share:hover {
+  background: #edf5f3;
+}
+
+.hd-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 28px;
+  align-items: start;
+}
+
+.hd-main-column {
+  min-width: 0;
+}
+
+.hd-gallery-main {
+  height: clamp(350px, 39vw, 520px);
+  position: relative;
+  background: #d6e7eb;
+  border-radius: 22px;
+  overflow: hidden;
+}
+
+.hd-gallery-image {
+  object-fit: cover;
+}
+
+.hd-gallery-counter {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: #102d46d9;
+  border-radius: 100px;
+  color: white;
+  padding: 5px 15px;
+  font-size: 12px;
+  direction: ltr;
+}
+
+.hd-gallery-arrows {
+  position: absolute;
+  inset-inline: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.hd-gallery-arrows button {
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  width: 43px;
+  height: 43px;
+  background: #ffffffee;
+  color: var(--hd-navy);
+  border: 0;
+  border-radius: 50%;
+  font-size: 23px;
+  box-shadow: 0 4px 20px #00000020;
+}
+
+.hd-gallery-arrows button:hover {
+  background: #dff2e9;
+}
+
+.hd-thumbnails {
+  display: flex;
+  gap: 11px;
+  overflow-x: auto;
+  padding: 15px 2px 8px;
+  scrollbar-width: thin;
+}
+
+.hd-thumbnail {
+  width: 89px;
+  height: 75px;
+  flex: 0 0 89px;
+  border: 3px solid transparent;
+  border-radius: 13px;
+  overflow: hidden;
+  position: relative;
+  background: #d8e5ea;
+}
+
+.hd-thumbnail-active {
+  border-color: var(--hd-emerald);
+}
+
+.hd-thumbnail-image {
+  object-fit: cover;
+}
+
+.hd-gallery-empty {
+  min-height: 350px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #dcecf0, #c0dcd5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #2c6c75;
+  text-align: center;
+}
+
+.hd-gallery-empty > span {
+  font-size: 110px;
+  line-height: 1;
+}
+
+.hd-gallery-empty strong {
+  font-size: 23px;
+}
+
+.hd-gallery-empty p {
+  font-size: 13px;
+}
+
+.hd-panel {
+  background: var(--hd-card);
+  border: 1px solid var(--hd-border);
+  border-radius: 22px;
+  padding: 28px;
+  margin-top: 26px;
+}
+
+.hd-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.hd-section-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  background: #e9f4ef;
+  color: var(--hd-emerald);
+  border-radius: 14px;
+  font-size: 25px;
+  font-weight: 900;
+}
+
+.hd-section-heading h2 {
+  font-size: 20px;
+  font-weight: 950;
+  color: var(--hd-navy);
+  margin: 0;
+}
+
+.hd-section-heading p {
+  color: var(--hd-muted);
+  font-size: 11px;
+  margin: 2px 0 0;
+}
+
+.hd-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.hd-fact {
+  background: #f8fafc;
+  border: 1px solid #edf1f5;
+  padding: 16px 18px;
+  border-radius: 13px;
+}
+
+.hd-fact dt {
+  font-size: 11px;
+  color: #8393a2;
+}
+
+.hd-fact dd {
+  margin: 3px 0 0;
+  font-size: 14px;
+  font-weight: 850;
+  color: #243f5b;
+}
+
+.hd-description {
+  color: #52677c;
+  font-size: 14px;
+  line-height: 2.3;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.hd-location {
+  border: 1px solid #deebe8;
+  background: linear-gradient(120deg, #f5faf8, #eef5f9);
+  padding: 26px;
+  border-radius: 17px;
+}
+
+.hd-location strong {
+  color: var(--hd-navy);
+  font-size: 17px;
+}
+
+.hd-location p {
+  color: #6a7e90;
+  font-size: 13px;
+  margin: 5px 0 0;
+}
+
+.hd-sidebar {
+  position: sticky;
+  top: 22px;
+}
+
+.hd-price-card,
+.hd-safety-card {
+  background: white;
+  border: 1px solid var(--hd-border);
+  border-radius: 22px;
+  padding: 26px;
+  box-shadow: 0 16px 40px #1437580d;
+}
+
+.hd-price-label {
+  font-size: 12px;
+  color: #7e90a2;
+  margin-bottom: 8px;
+}
+
+.hd-price {
+  font-size: clamp(24px, 2.5vw, 33px);
+  font-weight: 950;
+  color: var(--hd-emerald);
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.hd-price span {
+  display: inline-block;
+  font-size: 13px;
+  margin-inline-start: 8px;
+  font-weight: 800;
+}
+
+.hd-price-divider {
+  border-top: 1px solid var(--hd-border);
+  margin: 21px 0;
+}
+
+.hd-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  padding: 10px 0;
+}
+
+.hd-info-row span {
+  color: #8492a1;
+}
+
+.hd-info-row strong {
+  color: #2b4762;
+  text-align: end;
+}
+
+.hd-price-note {
+  background: #f4f8f7;
+  border: 1px solid #e0eeea;
+  padding: 13px;
+  font-size: 11px;
+  color: #587669;
+  border-radius: 12px;
+  margin: 18px 0;
+}
+
+.hd-action-primary,
+.hd-action-secondary {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 49px;
+  border-radius: 13px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 900;
+  margin-top: 10px;
+}
+
+.hd-action-primary {
+  background: var(--hd-emerald);
+  color: white;
+}
+
+.hd-action-primary:hover {
+  background: #0f6454;
+}
+
+.hd-action-secondary {
+  border: 1px solid var(--hd-border);
+  color: var(--hd-navy);
+  background: #fff;
+}
+
+.hd-action-secondary:hover {
+  background: #f5f8fb;
+}
+
+.hd-safety-card {
+  margin-top: 19px;
+  background: #fffdf8;
+  border-color: #f0e6ce;
+}
+
+.hd-safety-card strong {
+  color: #986d29;
+  font-size: 13px;
+}
+
+.hd-safety-card p {
+  color: #917b58;
+  font-size: 11px;
+  margin: 8px 0 0;
+}
+
+.hd-bottom-link {
+  padding: 45px 0 80px;
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.hd-bottom-link a {
+  color: var(--hd-emerald);
+}
+
+.hd-footer {
+  background: var(--hd-navy-dark);
+  color: #b8cbd7;
+  padding: 28px 0;
+  text-align: center;
+  font-size: 12px;
+}
+
+.hd-page a:focus-visible,
+.hd-page button:focus-visible {
+  outline: 3px solid #51c8ad;
+  outline-offset: 3px;
+}
+
+@media (max-width: 1020px) {
+  .hd-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 18px;
+  }
+
+  .hd-price-card {
+    padding: 19px;
+  }
+}
+
+@media (max-width: 820px) {
+  .hd-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hd-sidebar {
+    position: static;
+  }
+
+  .hd-gallery-main {
+    height: clamp(310px, 55vw, 500px);
+  }
+}
+
+@media (max-width: 600px) {
+  .hd-container {
+    width: calc(100% - 28px);
+  }
+
+  .hd-header-inner {
+    flex-wrap: wrap;
+    padding-block: 12px;
+  }
+
+  .hd-brand {
+    font-size: 20px;
+  }
+
+  .hd-nav {
+    gap: 12px;
+  }
+
+  .hd-nav a {
+    font-size: 11px;
+  }
+
+  .hd-nav .hd-create-link {
+    padding: 7px 12px;
+  }
+
+  .hd-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 13px;
+  }
+
+  .hd-heading h1 {
+    font-size: 27px;
+  }
+
+  .hd-share {
+    align-self: flex-start;
+  }
+
+  .hd-gallery-main {
+    height: 290px;
+    border-radius: 17px;
+  }
+
+  .hd-gallery-arrows button {
+    width: 36px;
+    height: 36px;
+  }
+
+  .hd-thumbnail {
+    height: 65px;
+    width: 73px;
+    flex-basis: 73px;
+  }
+
+  .hd-panel {
+    padding: 20px;
+    border-radius: 17px;
+    margin-top: 18px;
+  }
+
+  .hd-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .hd-price-card,
+  .hd-safety-card {
+    padding: 20px;
+  }
+
+  .hd-section-heading h2 {
+    font-size: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hd-page *,
+  .hd-page *::before,
+  .hd-page *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* KHANEHYAR FAVORITES */
+.hd-favorite-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hy-favorite-control {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.hy-favorite-button {
+  min-height: 44px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 17px;
+  border-radius: 13px;
+  border: 1px solid #d9e5e0;
+  background: #ffffff;
+  color: #147d69;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.hy-favorite-button > span {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.hy-favorite-button:hover {
+  background: #eef8f3;
+}
+
+.hy-favorite-active {
+  background: #e4f4eb;
+  border-color: #9ed5bd;
+  color: #11775e;
+}
+
+.hy-favorite-button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.hy-favorite-error {
+  color: #ba3a48;
+  font-size: 11px;
+  margin: 0;
+}
+
+.hy-favorites-inner {
+  padding-top: 45px;
+  padding-bottom: 90px;
+}
+
+.hy-favorite-item {
+  min-width: 0;
+}
+
+.hy-favorite-item > .hy-favorite-control {
+  padding-top: 12px;
+}
+
+/* KHANEHYAR INQUIRY FORM */
+.hd-inquiry-form {
+  border: 1px solid #e2ebe8;
+  border-radius: 16px;
+  padding: 17px;
+  background: #f7fbf9;
+  margin: 20px 0;
+}
+
+.hd-inquiry-form h3 {
+  color: #173b60;
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0 0 5px;
+}
+
+.hd-inquiry-form > p,
+.hd-inquiry-form > small {
+  color: #738799;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.hd-inquiry-form label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin: 14px 0 7px;
+}
+
+.hd-inquiry-form textarea {
+  display: block;
+  width: 100%;
+  min-height: 125px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid #dbe5e8;
+  border-radius: 12px;
+  background: white;
+  color: #243f5b;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+.hd-inquiry-form textarea:focus-visible {
+  outline: 3px solid #89d8c4;
+  outline-offset: 2px;
+}
+
+.hd-inquiry-form > small {
+  display: block;
+  margin: 7px 0 13px;
+}
+
+.hd-inquiry-form button {
+  border: 0;
+  width: 100%;
+}
+
+.hd-inquiry-form button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.hd-inquiry-error {
+  color: #b53348 !important;
+}
+
+.hd-inquiry-success {
+  background: #e7f5ed;
+  border: 1px solid #b6dfc8;
+  padding: 18px;
+  border-radius: 14px;
+  margin: 20px 0;
+  font-size: 13px;
+  color: #136c52;
+}
+
+.hd-inquiry-success p {
+  margin: 7px 0;
+}
+
+.hd-inquiry-success a {
+  color: #125b96;
+  font-weight: 900;
+}
+/* KHANEHYAR DETAIL MOBILE DOCK SPACE V1 */
+@media (max-width: 768px) {
+  .hd-page {
+    padding-bottom: 90px;
+  }
+}
+
+========== apps\web\app\listings\[id]\PropertyGallery.tsx ==========
+"use client";
+
+import Image from "next/image";
+import { useState } from "react";
+
+type Props = {
+  title: string;
+  images: string[];
+};
+
+export default function PropertyGallery({ title, images }: Props) {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  if (images.length === 0) {
+    return (
+      <div className="hd-gallery-empty" role="img" aria-label="تصویر ملک موجود نیست">
+        <span aria-hidden="true">⌂</span>
+        <strong>خانه‌یار</strong>
+        <p>هنوز تصویری برای این ملک ثبت نشده است.</p>
+      </div>
+    );
+  }
+
+  const selected = images[activeIndex] ?? images[0];
+
+  return (
+    <section className="hd-gallery" aria-label="گالری تصاویر ملک">
+      <div className="hd-gallery-main">
+        <Image
+          key={selected}
+          src={selected}
+          alt={`${title} - تصویر ${activeIndex + 1}`}
+          fill
+          unoptimized
+          priority={activeIndex === 0}
+          sizes="(max-width: 900px) 100vw, 760px"
+          className="hd-gallery-image"
+        />
+
+        <div className="hd-gallery-counter">
+          {(activeIndex + 1).toLocaleString("fa-IR")}
+          {" / "}
+          {images.length.toLocaleString("fa-IR")}
+        </div>
+
+        {images.length > 1 && (
+          <div className="hd-gallery-arrows">
+            <button
+              type="button"
+              aria-label="تصویر قبلی"
+              onClick={() =>
+                setActiveIndex((index) =>
+                  (index - 1 + images.length) % images.length
+                )
+              }
+            >
+              →
+            </button>
+
+            <button
+              type="button"
+              aria-label="تصویر بعدی"
+              onClick={() =>
+                setActiveIndex((index) => (index + 1) % images.length)
+              }
+            >
+              ←
+            </button>
+          </div>
+        )}
+      </div>
+
+      {images.length > 1 && (
+        <div className="hd-thumbnails" aria-label="انتخاب تصویر">
+          {images.map((url, index) => (
+            <button
+              type="button"
+              key={`${url}-${index}`}
+              onClick={() => setActiveIndex(index)}
+              className={
+                index === activeIndex
+                  ? "hd-thumbnail hd-thumbnail-active"
+                  : "hd-thumbnail"
+              }
+              aria-label={`نمایش تصویر ${index + 1}`}
+              aria-pressed={index === activeIndex}
+            >
+              <Image
+                src={url}
+                alt=""
+                fill
+                unoptimized
+                sizes="90px"
+                className="hd-thumbnail-image"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function ShareListing() {
+  const [copied, setCopied] = useState(false);
+
+  async function share() {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: document.title,
+          url: window.location.href,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={share}
+      className="hd-share"
+      aria-label="اشتراک‌گذاری لینک آگهی"
+    >
+      {copied ? "✓ لینک کپی شد" : "↗ اشتراک‌گذاری"}
+    </button>
+  );
+}
+
+========== apps\web\app\listings\[id]\InquiryForm.tsx ==========
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+
+export default function InquiryForm({
+  listingId,
+}: {
+  listingId: string;
+}) {
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [loginRequired, setLoginRequired] = useState(false);
+
+  async function send(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (busy) return;
+
+    setError("");
+    setBusy(true);
+
+    try {
+      const response = await fetch(
+        `/api/listings/${encodeURIComponent(listingId)}/inquiries`,
+        {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        }
+      );
+
+      if (response.status === 401) {
+        setLoginRequired(true);
+        return;
+      }
+
+      const data = (await response.json()) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setError(data.error || "ارسال پیام ناموفق بود.");
+        return;
+      }
+
+      setSuccess(true);
+      setMessage("");
+    } catch {
+      setError("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="hd-inquiry-success" role="status">
+        <strong>پیامت ارسال شد.</strong>
+        <p>آگهی‌دهنده می‌تواند آن را در صندوق پیام‌هایش مشاهده کند.</p>
+        <Link href="/my/messages">مشاهده صندوق پیام‌ها</Link>
+      </div>
+    );
+  }
+
+  return (
+    <form className="hd-inquiry-form" onSubmit={send}>
+      <h3>پیام به آگهی‌دهنده</h3>
+      <p>
+        درباره شرایط بازدید یا اطلاعات بیشتر ملک سؤال بپرس.
+      </p>
+
+      <label htmlFor="inquiry-message">متن پیام</label>
+
+      <textarea
+        id="inquiry-message"
+        value={message}
+        onChange={(event) => setMessage(event.target.value)}
+        minLength={20}
+        maxLength={2000}
+        required
+        rows={5}
+        placeholder="سلام، درباره این ملک و امکان بازدید سؤال داشتم..."
+        disabled={busy || loginRequired}
+      />
+
+      <small>
+        {message.length.toLocaleString("fa-IR")} / ۲۰۰۰ کاراکتر
+      </small>
+
+      {error && (
+        <p className="hd-inquiry-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {loginRequired ? (
+        <Link
+          href={`/login?next=${encodeURIComponent(
+            `/listings/${listingId}`
+          )}`}
+          className="hd-action-primary"
+        >
+          برای ارسال پیام وارد شوید
+        </Link>
+      ) : (
+        <button
+          type="submit"
+          className="hd-action-primary"
+          disabled={busy || message.trim().length < 20}
+        >
+          {busy ? "در حال ارسال..." : "ارسال پیام"}
+        </button>
+      )}
+    </form>
+  );
+}
+
+========== apps\web\app\_components\SiteHeader.tsx ==========
+import Link from "next/link";
+import { getCurrentUser } from "@/src/lib/auth";
+import UnreadMessagesLink from "./UnreadMessagesLink";
+import SignOutButton from "./SignOutButton";
+import styles from "./SiteHeader.module.css";
+
+export default async function SiteHeader() {
+  const user = await getCurrentUser();
+
+  return (
+    <header className={styles.header} dir="rtl">
+      <div className={`hy-wrap ${styles.inner}`}>
+        <Link href="/" className={styles.logo} aria-label="خانه‌یار، صفحه اصلی">
+          <span className={styles.logoMark} aria-hidden="true">⌂</span>
+          <span className={styles.logoText}>
+            <strong>خانه‌یار</strong>
+            <small>انتخاب خانه، با خیال راحت</small>
+          </span>
+        </Link>
+
+        <nav className={styles.nav} aria-label="منوی اصلی">
+          <Link href="/search">جست‌وجوی ملک</Link>
+          <Link href="/search?deal=SALE">خرید ملک</Link>
+          <Link href="/search?deal=RENT">اجاره ملک</Link>
+          {user ? <Link href="/dashboard/listings">آگهی‌های من</Link> : null}
+          {user ? <UnreadMessagesLink /> : null}
+        </nav>
+
+        <div className={styles.actions}>
+          {user ? (
+            <>
+              <Link href="/dashboard" className={styles.account}>
+                <span className={styles.accountAvatar} aria-hidden="true">{(user.name?.trim().charAt(0) || "ک").toLocaleUpperCase("fa-IR")}</span>
+                <span className={styles.accountName}>{user.name?.trim() || "حساب کاربری"}</span>
+              </Link>
+              {user.role === "ADMIN" ? <Link href="/admin/listings" className="ui-btn ui-btn-outline">مدیریت</Link> : null}
+              <SignOutButton />
+            </>
+          ) : (
+            <>
+              <Link href="/login" className={styles.login}>ورود</Link>
+              <Link href="/register" className="ui-btn ui-btn-outline">ساخت حساب</Link>
+            </>
+          )}
+          <Link href="/listings/new" className="ui-btn ui-btn-primary">+ ثبت آگهی</Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+
+========== apps\web\app\_components\SiteFooter.tsx ==========
+import Link from "next/link";
+import styles from "./SiteFooter.module.css";
+
+export default function SiteFooter() {
+  return (
+    <footer className={styles.footer} dir="rtl">
+      <div className={`hy-wrap ${styles.main}`}>
+        <div className={styles.brandBlock}>
+          <Link href="/" className={styles.brand}><span aria-hidden="true">⌂</span> خانه‌یار</Link>
+          <p>همراه شما برای پیدا کردن خانه‌ای بهتر؛ از جست‌وجو تا ارتباط با مالک.</p>
+        </div>
+        <div className={styles.column}>
+          <h2>دسترسی سریع</h2>
+          <Link href="/search">جست‌وجوی ملک</Link>
+          <Link href="/search?deal=SALE">خرید ملک</Link>
+          <Link href="/search?deal=RENT">اجاره ملک</Link>
+          <Link href="/listings/new">ثبت آگهی</Link>
+        </div>
+        <div className={styles.column}>
+          <h2>خانه‌یار</h2>
+          <Link href="/about">درباره ما</Link>
+          <Link href="/contact">تماس با ما</Link>
+          <Link href="/faq">سؤالات متداول</Link>
+          <Link href="/help">راهنما</Link>
+        </div>
+        <div className={styles.column}>
+          <h2>قوانین و امنیت</h2>
+          <Link href="/safety">نکات ایمنی</Link>
+          <Link href="/privacy">حریم خصوصی</Link>
+          <Link href="/terms">شرایط استفاده</Link>
+          <Link href="/cookies">سیاست کوکی‌ها</Link>
+        </div>
+      </div>
+      <div className={`hy-wrap ${styles.bottom}`}>
+        <span>© {2026} خانه‌یار — تمامی حقوق محفوظ است.</span>
+        <span>با دقت انتخاب کن، با خیال راحت خانه پیدا کن.</span>
+      </div>
+    </footer>
+  );
+}
+
