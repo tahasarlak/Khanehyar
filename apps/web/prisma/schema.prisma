@@ -40,6 +40,7 @@ model User {
   reviews ListingReview[]
   id           String     @id @default(cuid())
   name         String?
+  avatarUrl    String?    @db.VarChar(2048)
   email        String     @unique
   phone        String?    @unique
   passwordHash String
@@ -69,6 +70,28 @@ model Listing {
   floor        Int?
   totalFloors  Int?
 
+  yearBuilt              Int?
+  bathrooms              Int?
+  parkingSpaces          Int?
+  hasElevator            Boolean?
+  hasStorage             Boolean?
+  heatingType            String?   @db.VarChar(80)
+  coolingType            String?   @db.VarChar(80)
+  documentType           String?   @db.VarChar(100)
+  orientation            String?   @db.VarChar(50)
+  naturalLight           String?   @db.VarChar(50)
+  furnished              Boolean?
+  readyToMove            Boolean?
+  balcony                Boolean?
+  terrace                Boolean?
+  garden                 Boolean?
+  amenities              String[]  @default([])
+  monthlyRent            Decimal?  @db.Decimal(14, 2)
+  deposit                Decimal?  @db.Decimal(14, 2)
+  allowDepositConversion Boolean   @default(false)
+  advertiserType         String?   @db.VarChar(20)
+  showExactLocation      Boolean   @default(false)
+
   city         String        @db.VarChar(100)
   address      String?       @db.VarChar(300)
   latitude     Float?
@@ -94,6 +117,8 @@ model ListingImage {
   id        String   @id @default(cuid())
   url       String   @db.VarChar(2048)
   sortOrder Int      @default(0)
+  label     String?  @db.VarChar(50)
+  altText   String?  @db.VarChar(200)
 
   listingId String
   listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
@@ -145,6 +170,8 @@ model Inquiry {
   senderId    String
   recipientId String
   message     String   @db.VarChar(2000)
+  kind        String   @default("MESSAGE") @db.VarChar(20)
+  preferredVisitAt DateTime?
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
 
