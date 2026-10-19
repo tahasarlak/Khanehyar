@@ -1,134 +1,80 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-type Props = {
-  title: string;
-  images: string[];
-};
+type Props = { title: string; images: string[] };
 
 export default function PropertyGallery({ title, images }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+  const previous = useCallback(() => setActiveIndex((index) => (index - 1 + images.length) % images.length), [images.length]);
+  const next = useCallback(() => setActiveIndex((index) => (index + 1) % images.length), [images.length]);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeLightbox();
+      if (event.key === "ArrowLeft") next();
+      if (event.key === "ArrowRight") previous();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [lightboxOpen, closeLightbox, next, previous]);
 
   if (images.length === 0) {
-    return (
-      <div className="hd-gallery-empty" role="img" aria-label="تصویر ملک موجود نیست">
-        <span aria-hidden="true">⌂</span>
-        <strong>خانه‌یار</strong>
-        <p>هنوز تصویری برای این ملک ثبت نشده است.</p>
-      </div>
-    );
+    return <div className="hd-gallery-empty" role="img" aria-label="تصویر ملک موجود نیست"><span aria-hidden="true">⌂</span><strong>خانه‌یار</strong><p>هنوز تصویری برای این ملک ثبت نشده است.</p></div>;
   }
 
   const selected = images[activeIndex] ?? images[0];
 
-  return (
+  return <>
     <section className="hd-gallery" aria-label="گالری تصاویر ملک">
       <div className="hd-gallery-main">
-        <Image
-          key={selected}
-          src={selected}
-          alt={`${title} - تصویر ${activeIndex + 1}`}
-          fill
-          unoptimized
-          priority={activeIndex === 0}
-          sizes="(max-width: 900px) 100vw, 760px"
-          className="hd-gallery-image"
-        />
-
-        <div className="hd-gallery-counter">
-          {(activeIndex + 1).toLocaleString("fa-IR")}
-          {" / "}
-          {images.length.toLocaleString("fa-IR")}
-        </div>
-
-        {images.length > 1 && (
-          <div className="hd-gallery-arrows">
-            <button
-              type="button"
-              aria-label="تصویر قبلی"
-              onClick={() =>
-                setActiveIndex((index) =>
-                  (index - 1 + images.length) % images.length
-                )
-              }
-            >
-              →
-            </button>
-
-            <button
-              type="button"
-              aria-label="تصویر بعدی"
-              onClick={() =>
-                setActiveIndex((index) => (index + 1) % images.length)
-              }
-            >
-              ←
-            </button>
-          </div>
-        )}
+        <button type="button" className="hd-gallery-open" onClick={() => setLightboxOpen(true)} aria-label="نمایش تصویر در اندازه بزرگ">
+          <Image key={selected} src={selected} alt={`${title} - تصویر ${activeIndex + 1}`} fill unoptimized priority={activeIndex === 0} sizes="(max-width: 900px) 100vw, 760px" className="hd-gallery-image" />
+        </button>
+        <div className="hd-gallery-counter">{(activeIndex + 1).toLocaleString("fa-IR")} / {images.length.toLocaleString("fa-IR")}</div>
+        <button type="button" className="hd-gallery-fullscreen" onClick={() => setLightboxOpen(true)} aria-label="باز کردن گالری تمام صفحه">⛶ نمایش بزرگ</button>
+        {images.length > 1 && <div className="hd-gallery-arrows">
+          <button type="button" aria-label="تصویر قبلی" onClick={previous}>→</button>
+          <button type="button" aria-label="تصویر بعدی" onClick={next}>←</button>
+        </div>}
       </div>
-
-      {images.length > 1 && (
-        <div className="hd-thumbnails" aria-label="انتخاب تصویر">
-          {images.map((url, index) => (
-            <button
-              type="button"
-              key={`${url}-${index}`}
-              onClick={() => setActiveIndex(index)}
-              className={
-                index === activeIndex
-                  ? "hd-thumbnail hd-thumbnail-active"
-                  : "hd-thumbnail"
-              }
-              aria-label={`نمایش تصویر ${index + 1}`}
-              aria-pressed={index === activeIndex}
-            >
-              <Image
-                src={url}
-                alt=""
-                fill
-                unoptimized
-                sizes="90px"
-                className="hd-thumbnail-image"
-              />
-            </button>
-          ))}
-        </div>
-      )}
+      {images.length > 1 && <div className="hd-thumbnails" aria-label="انتخاب تصویر">
+        {images.map((url, index) => <button type="button" key={`${url}-${index}`} onClick={() => setActiveIndex(index)} className={index === activeIndex ? "hd-thumbnail hd-thumbnail-active" : "hd-thumbnail"} aria-label={`نمایش تصویر ${index + 1}`} aria-pressed={index === activeIndex}>
+          <Image src={url} alt="" fill unoptimized sizes="90px" className="hd-thumbnail-image" />
+        </button>)}
+      </div>}
     </section>
-  );
+    {lightboxOpen && <div className="hd-lightbox" role="dialog" aria-modal="true" aria-label={`گالری تصاویر ${title}`} onClick={(event) => { if (event.target === event.currentTarget) closeLightbox(); }}>
+      <button type="button" className="hd-lightbox-close" onClick={closeLightbox} aria-label="بستن گالری">×</button>
+      <div className="hd-lightbox-count">{(activeIndex + 1).toLocaleString("fa-IR")} / {images.length.toLocaleString("fa-IR")}</div>
+      {images.length > 1 && <button type="button" className="hd-lightbox-arrow hd-lightbox-prev" onClick={previous} aria-label="تصویر قبلی">→</button>}
+      <div className="hd-lightbox-image"><Image src={selected} alt={`${title} - تصویر ${activeIndex + 1}`} fill unoptimized sizes="100vw" /></div>
+      {images.length > 1 && <button type="button" className="hd-lightbox-arrow hd-lightbox-next" onClick={next} aria-label="تصویر بعدی">←</button>}
+    </div>}
+  </>;
 }
 
 export function ShareListing() {
   const [copied, setCopied] = useState(false);
-
   async function share() {
     try {
       if (navigator.share) {
-        await navigator.share({
-          title: document.title,
-          url: window.location.href,
-        });
+        await navigator.share({ title: document.title, url: window.location.href });
         return;
       }
-
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
-    } catch {
-      setCopied(false);
-    }
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch { setCopied(false); }
   }
-
-  return (
-    <button
-      type="button"
-      onClick={share}
-      className="hd-share"
-      aria-label="اشتراک‌گذاری لینک آگهی"
-    >
-      {copied ? "✓ لینک کپی شد" : "↗ اشتراک‌گذاری"}
-    </button>
-  );
+  return <button type="button" onClick={share} className="hd-share" aria-label="اشتراک‌گذاری لینک آگهی">{copied ? "✓ لینک کپی شد" : "↗ اشتراک‌گذاری"}</button>;
 }
