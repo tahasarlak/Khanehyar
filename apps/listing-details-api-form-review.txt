@@ -1,0 +1,1421 @@
+
+===========================================================================
+FILE: app\api\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../src/lib/rate-limit";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+export async function POST(request: Request) {
+  const limit = await checkRateLimit("create-listing", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""),
+      propertyType: String(formData.get("propertyType") ?? ""),
+      price: Number(formData.get("price")),
+      currency: String(formData.get("currency") ?? "RUB"),
+      area: Number(formData.get("area")),
+      rooms:
+        formData.get("rooms") === null || formData.get("rooms") === ""
+          ? null
+          : Number(formData.get("rooms")),
+      city: String(formData.get("city") ?? ""),
+      address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null,
+      longitude: null,
+      imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor,
+        totalFloors,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: app\api\my\listings\[id]\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../../../src/lib/rate-limit";
+import { getCurrentUser } from "../../../../../src/lib/auth";
+import { prisma } from "../../../../../src/lib/prisma";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function DELETE(request: Request, context: Context) {
+  const limit = await checkRateLimit(
+    "delete-own-listing",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const result = await prisma.listing.deleteMany({
+    where: {
+      id,
+      ownerId: user.id,
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا اجازه حذف آن را ندارید." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "آگهی با موفقیت حذف شد.",
+  });
+}
+
+import { listingSchema } from "@real-estate/shared";
+
+export async function GET(_request: Request, context: Context) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  const listing = await prisma.listing.findFirst({
+    where: { id, ownerId: user.id },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      listingType: true,
+      propertyType: true,
+      price: true,
+      currency: true,
+      area: true,
+      rooms: true,
+      floor: true,
+      totalFloors: true,
+      city: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+      status: true,
+    },
+  });
+
+  if (!listing) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      listing: {
+        ...listing,
+        price: listing.price.toString(),
+        area: listing.area.toString(),
+      },
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+export async function PATCH(request: Request, context: Context) {
+  const limit = await checkRateLimit(
+    "update-own-listing",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
+    return NextResponse.json(
+      { error: "فرمت درخواست معتبر نیست." },
+      { status: 415 },
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "JSON معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json(
+      { error: "اطلاعات درخواست معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const input = body as Record<string, unknown>;
+  const allowedKeys = new Set([
+    "title", "description", "listingType", "propertyType",
+    "price", "currency", "area", "rooms", "city", "address",
+    "latitude", "longitude", "floor", "totalFloors",
+  ]);
+
+  if (Object.keys(input).some((key) => !allowedKeys.has(key))) {
+    return NextResponse.json(
+      { error: "فیلد غیرمجاز در درخواست وجود دارد." },
+      { status: 400 },
+    );
+  }
+
+  const validation = listingSchema.safeParse({
+    ...input,
+    imageUrls: [],
+  });
+
+  if (!validation.success) {
+    return NextResponse.json(
+      {
+        error: "اطلاعات فرم معتبر نیست.",
+        details: validation.error.flatten(),
+      },
+      { status: 400 },
+    );
+  }
+
+  const { floor, totalFloors } = input;
+
+  const validFloor =
+    floor === null ||
+    (typeof floor === "number" && Number.isInteger(floor) && floor >= 0);
+
+  const validTotalFloors =
+    totalFloors === null ||
+    (typeof totalFloors === "number" &&
+      Number.isInteger(totalFloors) && totalFloors >= 1);
+
+  if (
+    !validFloor ||
+    !validTotalFloors ||
+    floor === undefined ||
+    totalFloors === undefined ||
+    (typeof floor === "number" &&
+      typeof totalFloors === "number" &&
+      floor > totalFloors)
+  ) {
+    return NextResponse.json(
+      { error: "اطلاعات طبقه معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const data = validation.data;
+
+  const result = await prisma.listing.updateMany({
+    where: { id, ownerId: user.id },
+    data: {
+      title: data.title,
+      description: data.description,
+      listingType: data.listingType,
+      propertyType: data.propertyType,
+      price: data.price,
+      currency: data.currency,
+      area: data.area,
+      rooms: data.rooms,
+      city: data.city,
+      address: data.address,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      floor: floor as number | null,
+      totalFloors: totalFloors as number | null,
+      status: "PENDING",
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا متعلق به شما نیست." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "تغییرات ذخیره شد و آگهی منتظر تأیید مجدد است.",
+    id,
+    status: "PENDING",
+  });
+}
+
+===========================================================================
+FILE: app\api\listings\[id]\inquiries\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const limit = await checkRateLimit(
+    "create-inquiry",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+
+  if (origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const contentLength = Number(request.headers.get("content-length") || 0);
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش‌ازحد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "ساختار پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 20 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "متن پیام باید بین ۲۰ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const listing = await prisma.listing.findFirst({
+    where: { id, status: "PUBLISHED" },
+    select: { id: true, ownerId: true },
+  });
+
+  if (!listing) {
+    return NextResponse.json(
+      { error: "آگهی در دسترس نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (listing.ownerId === user.id) {
+    return NextResponse.json(
+      { error: "نمی‌توانید برای آگهی خودتان پیام بفرستید." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentMessages = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentMessages >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  await prisma.inquiry.create({
+    data: {
+      listingId: listing.id,
+      senderId: user.id,
+      recipientId: listing.ownerId,
+      message,
+    },
+  });
+
+  return NextResponse.json(
+    { success: true, message: "پیام با موفقیت ارسال شد." },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: app\listings\new\page.tsx
+===========================================================================
+"use client";
+
+import Link from "next/link";
+import { useState, type FormEvent } from "react";
+import "./new-listing.css";
+
+export default function NewListingPage() {
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    setSubmitting(true);
+    setMessage("");
+    setError("");
+
+    try {
+      const formData = new FormData(form);
+      const response = await fetch("/api/listings", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setError(
+          typeof result.error === "string"
+            ? result.error
+            : "ثبت آگهی انجام نشد. اطلاعات را بررسی کن.",
+        );
+        return;
+      }
+
+      setMessage(
+        `${result.message} کد آگهی: ${result.listing.id}`,
+      );
+      form.reset();
+    } catch {
+      setError("ارتباط با سرور برقرار نشد. دوباره تلاش کن.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="nl-page" dir="rtl">
+      <div className="nl-heading">
+        <div>
+          <span className="nl-eyebrow">مدیریت املاک</span>
+          <h1>ثبت آگهی جدید</h1>
+          <p>
+            مشخصات ملک را وارد کن تا آگهی برای بررسی و انتشار ثبت شود.
+          </p>
+        </div>
+
+        <Link href="/dashboard/listings" className="nl-back">
+          بازگشت به آگهی‌های من
+        </Link>
+      </div>
+
+      <div className="nl-notice">
+        <span className="nl-notice-icon" aria-hidden="true">i</span>
+        <div>
+          <strong>قبل از ثبت آگهی</strong>
+          <p>
+            اطلاعات و قیمت را با دقت وارد کن. فیلدهای ستاره‌دار الزامی هستند.
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="nl-form">
+        <section className="nl-section">
+          <div className="nl-section-heading">
+            <span className="nl-section-number">۱</span>
+            <div>
+              <h2>اطلاعات اصلی ملک</h2>
+              <p>عنوان، نوع معامله و موقعیت ملک را مشخص کن.</p>
+            </div>
+          </div>
+
+          <div className="nl-grid">
+            <label className="nl-field">
+              عنوان آگهی *
+              <input
+                name="title"
+                required
+                minLength={5}
+                maxLength={120}
+                placeholder="مثلاً آپارتمان دوخوابه نزدیک مترو"
+              />
+            </label>
+
+            <label className="nl-field">
+              نوع معامله *
+              <select name="listingType" required defaultValue="SALE">
+                <option value="SALE">فروش</option>
+                <option value="RENT">اجاره</option>
+              </select>
+            </label>
+
+            <label className="nl-field">
+              نوع ملک *
+              <select name="propertyType" required defaultValue="APARTMENT">
+                <option value="APARTMENT">آپارتمان</option>
+                <option value="HOUSE">خانه</option>
+                <option value="VILLA">ویلا</option>
+                <option value="LAND">زمین</option>
+                <option value="COMMERCIAL">تجاری</option>
+              </select>
+            </label>
+
+            <label className="nl-field">
+              شهر *
+              <input
+                name="city"
+                required
+                minLength={2}
+                maxLength={100}
+                placeholder="نام شهر"
+              />
+            </label>
+
+            <label className="nl-field nl-full">
+              توضیحات ملک *
+              <textarea
+                name="description"
+                required
+                minLength={20}
+                maxLength={5000}
+                rows={5}
+                placeholder="درباره موقعیت، امکانات، وضعیت و ویژگی‌های ملک بنویس..."
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="nl-section">
+          <div className="nl-section-heading">
+            <span className="nl-section-number">۲</span>
+            <div>
+              <h2>قیمت و مشخصات</h2>
+              <p>اطلاعات مالی و جزئیات ساختمان را وارد کن.</p>
+            </div>
+          </div>
+
+          <div className="nl-grid">
+            <label className="nl-field">
+              قیمت *
+              <input
+                name="price"
+                type="number"
+                required
+                min="0.01"
+                step="0.01"
+                placeholder="مبلغ قیمت"
+              />
+            </label>
+
+            <label className="nl-field">
+              واحد پول *
+              <select name="currency" required defaultValue="RUB">
+                <option value="RUB">روبل روسیه (RUB)</option>
+                <option value="IRR">ریال ایران (IRR)</option>
+                <option value="USD">دلار آمریکا (USD)</option>
+              </select>
+            </label>
+
+            <label className="nl-field">
+              مساحت (متر مربع) *
+              <input
+                name="area"
+                type="number"
+                required
+                min="0.01"
+                step="0.01"
+                placeholder="مثلاً ۸۶"
+              />
+            </label>
+
+            <label className="nl-field">
+              تعداد اتاق
+              <input
+                name="rooms"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="مثلاً ۳"
+              />
+            </label>
+
+            <label className="nl-field">
+              طبقه
+              <input
+                name="floor"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="مثلاً ۴"
+              />
+            </label>
+
+            <label className="nl-field">
+              تعداد کل طبقات ساختمان
+              <input
+                name="totalFloors"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="مثلاً ۹"
+              />
+            </label>
+
+            <label className="nl-field nl-full">
+              آدرس دقیق
+              <input
+                name="address"
+                maxLength={300}
+                placeholder="خیابان، منطقه یا نشانی ملک (اختیاری)"
+              />
+            </label>
+          </div>
+        </section>
+
+        {message && (
+          <div className="nl-message nl-success" role="status">
+            {message}
+          </div>
+        )}
+
+        {error && (
+          <div className="nl-message nl-error" role="alert">
+            {error}
+          </div>
+        )}
+
+        <div className="nl-actions">
+          <button
+            type="submit"
+            disabled={submitting}
+            className="nl-submit"
+          >
+            {submitting ? "در حال ثبت آگهی..." : "ثبت آگهی"}
+          </button>
+
+          <Link href="/dashboard/listings" className="nl-cancel">
+            انصراف
+          </Link>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+===========================================================================
+FILE: app\dashboard\listings\[id]\edit\page.tsx
+===========================================================================
+import { Suspense } from "react";
+import EditListingForm from "./EditListingForm";
+
+export default function EditListingPage() {
+  return (
+    <Suspense
+      fallback={
+        <main dir="rtl" className="mx-auto max-w-3xl p-8">
+          در حال آماده‌سازی فرم ویرایش...
+        </main>
+      }
+    >
+      <EditListingForm />
+    </Suspense>
+  );
+}
+
+===========================================================================
+FILE: app\dashboard\listings\[id]\edit\EditListingForm.tsx
+===========================================================================
+"use client";
+
+import { useEffect, useState, type FormEvent } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+
+type Property = {
+  id: string;
+  title: string;
+  description: string;
+  listingType: "SALE" | "RENT";
+  propertyType: "APARTMENT" | "HOUSE" | "VILLA" | "LAND" | "COMMERCIAL";
+  price: string;
+  currency: string;
+  area: string;
+  rooms: number | null;
+  city: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  floor: number | null;
+  totalFloors: number | null;
+};
+
+export default function EditListingForm() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+
+  const [form, setForm] = useState<Property | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function load() {
+      try {
+        const response = await fetch(
+          `/api/my/listings/${encodeURIComponent(params.id)}`,
+          { cache: "no-store", signal: controller.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            response.status === 401
+              ? "ابتدا وارد حساب شوید."
+              : "آگهی پیدا نشد یا دسترسی ندارید.",
+          );
+        }
+
+        const data: { listing: Property } = await response.json();
+
+        if (!controller.signal.aborted) {
+          setForm(data.listing);
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : "خطایی رخ داد.");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+    return () => controller.abort();
+  }, [params.id]);
+
+  function update<K extends keyof Property>(key: K, value: Property[K]) {
+    setForm((previous) =>
+      previous ? { ...previous, [key]: value } : previous,
+    );
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!form || saving) return;
+
+    setSaving(true);
+    setError("");
+
+    const payload = {
+      title: form.title,
+      description: form.description,
+      listingType: form.listingType,
+      propertyType: form.propertyType,
+      price: Number(form.price),
+      currency: form.currency.toUpperCase(),
+      area: Number(form.area),
+      rooms: form.rooms,
+      city: form.city,
+      address: form.address,
+      latitude: form.latitude,
+      longitude: form.longitude,
+      floor: form.floor,
+      totalFloors: form.totalFloors,
+    };
+
+    try {
+      const response = await fetch(
+        `/api/my/listings/${encodeURIComponent(params.id)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "ذخیره تغییرات ناموفق بود.");
+      }
+
+      router.push("/dashboard/listings");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "خطایی رخ داد.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <main dir="rtl" className="mx-auto max-w-3xl p-8">
+        در حال دریافت اطلاعات آگهی...
+      </main>
+    );
+  }
+
+  if (!form) {
+    return (
+      <main dir="rtl" className="mx-auto max-w-3xl p-8">
+        <p role="alert" className="text-red-700">{error}</p>
+        <Link href="/dashboard/listings" className="mt-5 inline-block text-emerald-700">
+          بازگشت به آگهی‌های من
+        </Link>
+      </main>
+    );
+  }
+
+  const inputClass =
+    "w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-slate-900";
+
+  return (
+    <main dir="rtl" className="min-h-screen bg-slate-50 px-4 py-10">
+      <div className="mx-auto max-w-3xl rounded-2xl bg-white p-6 shadow-sm md:p-8">
+        <h1 className="text-2xl font-bold text-emerald-800">
+          ویرایش آگهی
+        </h1>
+        <p className="mb-7 mt-2 text-sm text-slate-600">
+          پس از ذخیره، آگهی برای تأیید مجدد مدیر ارسال می‌شود.
+        </p>
+
+        <form onSubmit={submit} className="grid gap-5 md:grid-cols-2">
+          <label className="md:col-span-2">
+            عنوان آگهی
+            <input
+              required
+              maxLength={120}
+              className={inputClass}
+              value={form.title}
+              onChange={(e) => update("title", e.target.value)}
+            />
+          </label>
+
+          <label className="md:col-span-2">
+            توضیحات
+            <textarea
+              required
+              rows={5}
+              className={inputClass}
+              value={form.description}
+              onChange={(e) => update("description", e.target.value)}
+            />
+          </label>
+
+          <label>
+            نوع آگهی
+            <select
+              className={inputClass}
+              value={form.listingType}
+              onChange={(e) =>
+                update("listingType", e.target.value as Property["listingType"])
+              }
+            >
+              <option value="SALE">فروش</option>
+              <option value="RENT">اجاره</option>
+            </select>
+          </label>
+
+          <label>
+            نوع ملک
+            <select
+              className={inputClass}
+              value={form.propertyType}
+              onChange={(e) =>
+                update("propertyType", e.target.value as Property["propertyType"])
+              }
+            >
+              <option value="APARTMENT">آپارتمان</option>
+              <option value="HOUSE">خانه</option>
+              <option value="VILLA">ویلا</option>
+              <option value="LAND">زمین</option>
+              <option value="COMMERCIAL">تجاری</option>
+            </select>
+          </label>
+
+          <label>
+            قیمت
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              dir="ltr"
+              className={inputClass}
+              value={form.price}
+              onChange={(e) => update("price", e.target.value)}
+            />
+          </label>
+
+          <label>
+            واحد پول
+            <input
+              required
+              maxLength={3}
+              minLength={3}
+              dir="ltr"
+              className={inputClass}
+              value={form.currency}
+              onChange={(e) => update("currency", e.target.value)}
+            />
+          </label>
+
+          <label>
+            متراژ
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              dir="ltr"
+              className={inputClass}
+              value={form.area}
+              onChange={(e) => update("area", e.target.value)}
+            />
+          </label>
+
+          <label>
+            تعداد اتاق
+            <input
+              type="number"
+              min="0"
+              step="1"
+              dir="ltr"
+              className={inputClass}
+              value={form.rooms ?? ""}
+              onChange={(e) =>
+                update("rooms", e.target.value === "" ? null : Number(e.target.value))
+              }
+            />
+          </label>
+
+          <label>
+            شهر
+            <input
+              required
+              className={inputClass}
+              value={form.city}
+              onChange={(e) => update("city", e.target.value)}
+            />
+          </label>
+
+          <label>
+            آدرس
+            <input
+              className={inputClass}
+              value={form.address ?? ""}
+              onChange={(e) => update("address", e.target.value || null)}
+            />
+          </label>
+
+          <label>
+            طبقه
+            <input
+              type="number"
+              min="0"
+              step="1"
+              dir="ltr"
+              className={inputClass}
+              value={form.floor ?? ""}
+              onChange={(e) =>
+                update("floor", e.target.value === "" ? null : Number(e.target.value))
+              }
+            />
+          </label>
+
+          <label>
+            تعداد کل طبقات
+            <input
+              type="number"
+              min="1"
+              step="1"
+              dir="ltr"
+              className={inputClass}
+              value={form.totalFloors ?? ""}
+              onChange={(e) =>
+                update(
+                  "totalFloors",
+                  e.target.value === "" ? null : Number(e.target.value),
+                )
+              }
+            />
+          </label>
+
+          {error && (
+            <p role="alert" className="md:col-span-2 text-red-700">
+              {error}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-3 md:col-span-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-emerald-700 px-6 py-3 font-bold text-white disabled:opacity-50"
+            >
+              {saving ? "در حال ذخیره..." : "ذخیره تغییرات"}
+            </button>
+
+            <Link
+              href="/dashboard/listings"
+              className="rounded-lg border border-slate-300 px-6 py-3"
+            >
+              انصراف
+            </Link>
+          </div>
+        </form>
+      </div>
+    </main>
+  );
+}
+
+===========================================================================
+FILE: app\listings\[id]\InquiryForm.tsx
+===========================================================================
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+
+export default function InquiryForm({
+  listingId,
+}: {
+  listingId: string;
+}) {
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [loginRequired, setLoginRequired] = useState(false);
+
+  async function send(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (busy) return;
+
+    setError("");
+    setBusy(true);
+
+    try {
+      const response = await fetch(
+        `/api/listings/${encodeURIComponent(listingId)}/inquiries`,
+        {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        }
+      );
+
+      if (response.status === 401) {
+        setLoginRequired(true);
+        return;
+      }
+
+      const data = (await response.json()) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        setError(data.error || "ارسال پیام ناموفق بود.");
+        return;
+      }
+
+      setSuccess(true);
+      setMessage("");
+    } catch {
+      setError("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="hd-inquiry-success" role="status">
+        <strong>پیامت ارسال شد.</strong>
+        <p>آگهی‌دهنده می‌تواند آن را در صندوق پیام‌هایش مشاهده کند.</p>
+        <Link href="/my/messages">مشاهده صندوق پیام‌ها</Link>
+      </div>
+    );
+  }
+
+  return (
+    <form className="hd-inquiry-form" onSubmit={send}>
+      <h3>پیام به آگهی‌دهنده</h3>
+      <p>
+        درباره شرایط بازدید یا اطلاعات بیشتر ملک سؤال بپرس.
+      </p>
+
+      <label htmlFor="inquiry-message">متن پیام</label>
+
+      <textarea
+        id="inquiry-message"
+        value={message}
+        onChange={(event) => setMessage(event.target.value)}
+        minLength={20}
+        maxLength={2000}
+        required
+        rows={5}
+        placeholder="سلام، درباره این ملک و امکان بازدید سؤال داشتم..."
+        disabled={busy || loginRequired}
+      />
+
+      <small>
+        {message.length.toLocaleString("fa-IR")} / ۲۰۰۰ کاراکتر
+      </small>
+
+      {error && (
+        <p className="hd-inquiry-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {loginRequired ? (
+        <Link
+          href={`/login?next=${encodeURIComponent(
+            `/listings/${listingId}`
+          )}`}
+          className="hd-action-primary"
+        >
+          برای ارسال پیام وارد شوید
+        </Link>
+      ) : (
+        <button
+          type="submit"
+          className="hd-action-primary"
+          disabled={busy || message.trim().length < 20}
+        >
+          {busy ? "در حال ارسال..." : "ارسال پیام"}
+        </button>
+      )}
+    </form>
+  );
+}
+
+===========================================================================
+FILE: app\listings\[id]\PropertyGallery.tsx
+===========================================================================
+"use client";
+
+import Image from "next/image";
+import { useCallback, useEffect, useState } from "react";
+
+type Props = { title: string; images: string[] };
+
+export default function PropertyGallery({ title, images }: Props) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+  const previous = useCallback(() => setActiveIndex((index) => (index - 1 + images.length) % images.length), [images.length]);
+  const next = useCallback(() => setActiveIndex((index) => (index + 1) % images.length), [images.length]);
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeLightbox();
+      if (event.key === "ArrowLeft") next();
+      if (event.key === "ArrowRight") previous();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [lightboxOpen, closeLightbox, next, previous]);
+
+  if (images.length === 0) {
+    return <div className="hd-gallery-empty" role="img" aria-label="تصویر ملک موجود نیست"><span aria-hidden="true">⌂</span><strong>خانه‌یار</strong><p>هنوز تصویری برای این ملک ثبت نشده است.</p></div>;
+  }
+
+  const selected = images[activeIndex] ?? images[0];
+
+  return <>
+    <section className="hd-gallery" aria-label="گالری تصاویر ملک">
+      <div className="hd-gallery-main">
+        <button type="button" className="hd-gallery-open" onClick={() => setLightboxOpen(true)} aria-label="نمایش تصویر در اندازه بزرگ">
+          <Image key={selected} src={selected} alt={`${title} - تصویر ${activeIndex + 1}`} fill unoptimized priority={activeIndex === 0} sizes="(max-width: 900px) 100vw, 760px" className="hd-gallery-image" />
+        </button>
+        <div className="hd-gallery-counter">{(activeIndex + 1).toLocaleString("fa-IR")} / {images.length.toLocaleString("fa-IR")}</div>
+        <button type="button" className="hd-gallery-fullscreen" onClick={() => setLightboxOpen(true)} aria-label="باز کردن گالری تمام صفحه">⛶ نمایش بزرگ</button>
+        {images.length > 1 && <div className="hd-gallery-arrows">
+          <button type="button" aria-label="تصویر قبلی" onClick={previous}>→</button>
+          <button type="button" aria-label="تصویر بعدی" onClick={next}>←</button>
+        </div>}
+      </div>
+      {images.length > 1 && <div className="hd-thumbnails" aria-label="انتخاب تصویر">
+        {images.map((url, index) => <button type="button" key={`${url}-${index}`} onClick={() => setActiveIndex(index)} className={index === activeIndex ? "hd-thumbnail hd-thumbnail-active" : "hd-thumbnail"} aria-label={`نمایش تصویر ${index + 1}`} aria-pressed={index === activeIndex}>
+          <Image src={url} alt="" fill unoptimized sizes="90px" className="hd-thumbnail-image" />
+        </button>)}
+      </div>}
+    </section>
+    {lightboxOpen && <div className="hd-lightbox" role="dialog" aria-modal="true" aria-label={`گالری تصاویر ${title}`} onClick={(event) => { if (event.target === event.currentTarget) closeLightbox(); }}>
+      <button type="button" className="hd-lightbox-close" onClick={closeLightbox} aria-label="بستن گالری">×</button>
+      <div className="hd-lightbox-count">{(activeIndex + 1).toLocaleString("fa-IR")} / {images.length.toLocaleString("fa-IR")}</div>
+      {images.length > 1 && <button type="button" className="hd-lightbox-arrow hd-lightbox-prev" onClick={previous} aria-label="تصویر قبلی">→</button>}
+      <div className="hd-lightbox-image"><Image src={selected} alt={`${title} - تصویر ${activeIndex + 1}`} fill unoptimized sizes="100vw" /></div>
+      {images.length > 1 && <button type="button" className="hd-lightbox-arrow hd-lightbox-next" onClick={next} aria-label="تصویر بعدی">←</button>}
+    </div>}
+  </>;
+}
+
+export function ShareListing() {
+  const [copied, setCopied] = useState(false);
+  async function share() {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: document.title, url: window.location.href });
+        return;
+      }
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch { setCopied(false); }
+  }
+  return <button type="button" onClick={share} className="hd-share" aria-label="اشتراک‌گذاری لینک آگهی">{copied ? "✓ لینک کپی شد" : "↗ اشتراک‌گذاری"}</button>;
+}
+

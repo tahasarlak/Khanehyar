@@ -1,0 +1,1712 @@
+
+==========================================================================================
+FILE: apps\web\app\api\listings\route.ts
+==========================================================================================
+   1: import { NextResponse } from "next/server";
+   2: import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../src/lib/rate-limit";
+   3: import { prisma } from "../../../src/lib/prisma";
+   4: import { getCurrentUser } from "../../../src/lib/auth";
+   5: import { listingSchema } from "@real-estate/shared";
+   6: 
+   7: export async function POST(request: Request) {
+   8:   const limit = await checkRateLimit("create-listing", getRequestIdentity(request));
+   9:   if (!limit.allowed) {
+  10:     return rateLimitResponse(limit.retryAfterSeconds);
+  11:   }
+  12:   try {
+  13:     // Prevent cross-origin browser submissions.
+  14:     const origin = request.headers.get("origin");
+  15:     const requestOrigin = new URL(request.url).origin;
+  16: 
+  17:     if (!origin || origin !== requestOrigin) {
+  18:       return NextResponse.json(
+  19:         { error: "مبدأ درخواست معتبر نیست." },
+  20:         { status: 403 },
+  21:       );
+  22:     }
+  23: 
+  24:     // Ownership must come from the verified session.
+  25:     const user = await getCurrentUser();
+  26: 
+  27:     if (!user) {
+  28:       return NextResponse.json(
+  29:         { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+  30:         { status: 401 },
+  31:       );
+  32:     }
+  33: 
+  34:     const contentType = request.headers.get("content-type") ?? "";
+  35: 
+  36:     if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+  37:       return NextResponse.json(
+  38:         { error: "فرمت درخواست باید FormData باشد." },
+  39:         { status: 415 },
+  40:       );
+  41:     }
+  42: 
+  43:     let formData: FormData;
+  44: 
+  45:     try {
+  46:       formData = await request.formData();
+  47:     } catch {
+  48:       return NextResponse.json(
+  49:         { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+  50:         { status: 400 },
+  51:       );
+  52:     }
+  53: 
+  54:     const rawInput = {
+  55:       title: String(formData.get("title") ?? ""),
+  56:       description: String(formData.get("description") ?? ""),
+  57:       listingType: String(formData.get("listingType") ?? ""),
+  58:       propertyType: String(formData.get("propertyType") ?? ""),
+  59:       price: Number(formData.get("price")),
+  60:       currency: String(formData.get("currency") ?? "RUB"),
+  61:       area: Number(formData.get("area")),
+  62:       rooms:
+  63:         formData.get("rooms") === null || formData.get("rooms") === ""
+  64:           ? null
+  65:           : Number(formData.get("rooms")),
+  66:       city: String(formData.get("city") ?? ""),
+  67:       address: String(formData.get("address") ?? "").trim() || null,
+  68:       latitude: null,
+  69:       longitude: null,
+  70:       imageUrls: [],
+  71:     };
+  72: 
+  73:     const validation = listingSchema.safeParse(rawInput);
+  74: 
+  75:     if (!validation.success) {
+  76:       return NextResponse.json(
+  77:         {
+  78:           error: "اطلاعات فرم معتبر نیست.",
+  79:           details: validation.error.flatten(),
+  80:         },
+  81:         { status: 400 },
+  82:       );
+  83:     }
+  84: 
+  85:     const floorValue = formData.get("floor");
+  86:     const totalFloorsValue = formData.get("totalFloors");
+  87: 
+  88:     const floor =
+  89:       floorValue === null || floorValue === ""
+  90:         ? null
+  91:         : Number(floorValue);
+  92: 
+  93:     const totalFloors =
+  94:       totalFloorsValue === null || totalFloorsValue === ""
+  95:         ? null
+  96:         : Number(totalFloorsValue);
+  97: 
+  98:     if (
+  99:       (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+ 100:       (totalFloors !== null &&
+ 101:         (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+ 102:       (floor !== null &&
+ 103:         totalFloors !== null &&
+ 104:         floor > totalFloors)
+ 105:     ) {
+ 106:       return NextResponse.json(
+ 107:         { error: "اطلاعات طبقه معتبر نیست." },
+ 108:         { status: 400 },
+ 109:       );
+ 110:     }
+ 111: 
+ 112:     const listing = await prisma.listing.create({
+ 113:       data: {
+ 114:         title: validation.data.title,
+ 115:         description: validation.data.description,
+ 116:         listingType: validation.data.listingType,
+ 117:         propertyType: validation.data.propertyType,
+ 118:         price: validation.data.price,
+ 119:         currency: validation.data.currency,
+ 120:         area: validation.data.area,
+ 121:         rooms: validation.data.rooms,
+ 122:         city: validation.data.city,
+ 123:         address: validation.data.address,
+ 124:         latitude: validation.data.latitude,
+ 125:         longitude: validation.data.longitude,
+ 126:         floor,
+ 127:         totalFloors,
+ 128:         ownerId: user.id,
+ 129:       },
+ 130:       select: {
+ 131:         id: true,
+ 132:         title: true,
+ 133:         status: true,
+ 134:         ownerId: true,
+ 135:         createdAt: true,
+ 136:       },
+ 137:     });
+ 138: 
+ 139:     return NextResponse.json(
+ 140:       {
+ 141:         message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+ 142:         listing,
+ 143:       },
+ 144:       { status: 201 },
+ 145:     );
+ 146:   } catch (error) {
+ 147:     console.error("Create listing failed:", error);
+ 148: 
+ 149:     return NextResponse.json(
+ 150:       { error: "خطای داخلی هنگام ثبت آگهی." },
+ 151:       { status: 500 },
+ 152:     );
+ 153:   }
+ 154: }
+
+==========================================================================================
+FILE: apps\web\app\api\my\listings\route.ts
+==========================================================================================
+   1: import { NextResponse } from "next/server";
+   2: import { getCurrentUser } from "../../../../src/lib/auth";
+   3: import { prisma } from "../../../../src/lib/prisma";
+   4: 
+   5: export async function GET() {
+   6:   const user = await getCurrentUser();
+   7: 
+   8:   if (!user) {
+   9:     return NextResponse.json(
+  10:       { error: "ابتدا وارد حساب شوید." },
+  11:       {
+  12:         status: 401,
+  13:         headers: { "Cache-Control": "no-store" },
+  14:       },
+  15:     );
+  16:   }
+  17: 
+  18:   const listings = await prisma.listing.findMany({
+  19:     where: { ownerId: user.id },
+  20:     orderBy: { createdAt: "desc" },
+  21:     take: 100,
+  22:     select: {
+  23:       id: true,
+  24:       title: true,
+  25:       city: true,
+  26:       status: true,
+  27:       listingType: true,
+  28:       propertyType: true,
+  29:       price: true,
+  30:       currency: true,
+  31:       createdAt: true,
+  32:       reviews: {
+  33:         orderBy: { createdAt: "desc" },
+  34:         take: 1,
+  35:         select: {
+  36:           decision: true,
+  37:           reason: true,
+  38:           createdAt: true,
+  39:         },
+  40:       },
+  41:     },
+  42:   });
+  43: 
+  44:   return NextResponse.json(
+  45:     {
+  46:       listings: listings.map((listing) => ({
+  47:         ...listing,
+  48:         price: listing.price.toString(),
+  49:       })),
+  50:     },
+  51:     { headers: { "Cache-Control": "no-store" } },
+  52:   );
+  53: }
+
+==========================================================================================
+FILE: apps\web\app\api\my\listings\[id]\route.ts
+==========================================================================================
+   1: import { NextResponse } from "next/server";
+   2: import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../../../src/lib/rate-limit";
+   3: import { getCurrentUser } from "../../../../../src/lib/auth";
+   4: import { prisma } from "../../../../../src/lib/prisma";
+   5: 
+   6: type Context = {
+   7:   params: Promise<{ id: string }>;
+   8: };
+   9: 
+  10: export async function DELETE(request: Request, context: Context) {
+  11:   const limit = await checkRateLimit(
+  12:     "delete-own-listing",
+  13:     getRequestIdentity(request),
+  14:   );
+  15: 
+  16:   if (!limit.allowed) {
+  17:     return rateLimitResponse(limit.retryAfterSeconds);
+  18:   }
+  19:   const origin = request.headers.get("origin");
+  20:   const requestOrigin = new URL(request.url).origin;
+  21: 
+  22:   if (!origin || origin !== requestOrigin) {
+  23:     return NextResponse.json(
+  24:       { error: "مبدأ درخواست معتبر نیست." },
+  25:       { status: 403 },
+  26:     );
+  27:   }
+  28: 
+  29:   const user = await getCurrentUser();
+  30: 
+  31:   if (!user) {
+  32:     return NextResponse.json(
+  33:       { error: "ابتدا وارد حساب شوید." },
+  34:       { status: 401 },
+  35:     );
+  36:   }
+  37: 
+  38:   const { id } = await context.params;
+  39: 
+  40:   if (!id || id.length > 100) {
+  41:     return NextResponse.json(
+  42:       { error: "شناسه آگهی معتبر نیست." },
+  43:       { status: 400 },
+  44:     );
+  45:   }
+  46: 
+  47:   const result = await prisma.listing.deleteMany({
+  48:     where: {
+  49:       id,
+  50:       ownerId: user.id,
+  51:     },
+  52:   });
+  53: 
+  54:   if (result.count === 0) {
+  55:     return NextResponse.json(
+  56:       { error: "آگهی پیدا نشد یا اجازه حذف آن را ندارید." },
+  57:       { status: 404 },
+  58:     );
+  59:   }
+  60: 
+  61:   return NextResponse.json({
+  62:     message: "آگهی با موفقیت حذف شد.",
+  63:   });
+  64: }
+  65: 
+  66: import { listingSchema } from "@real-estate/shared";
+  67: 
+  68: export async function GET(_request: Request, context: Context) {
+  69:   const user = await getCurrentUser();
+  70: 
+  71:   if (!user) {
+  72:     return NextResponse.json(
+  73:       { error: "ابتدا وارد حساب شوید." },
+  74:       { status: 401, headers: { "Cache-Control": "no-store" } },
+  75:     );
+  76:   }
+  77: 
+  78:   const { id } = await context.params;
+  79: 
+  80:   if (!id || id.length > 100) {
+  81:     return NextResponse.json(
+  82:       { error: "شناسه نامعتبر است." },
+  83:       { status: 400 },
+  84:     );
+  85:   }
+  86: 
+  87:   const listing = await prisma.listing.findFirst({
+  88:     where: { id, ownerId: user.id },
+  89:     select: {
+  90:       id: true,
+  91:       title: true,
+  92:       description: true,
+  93:       listingType: true,
+  94:       propertyType: true,
+  95:       price: true,
+  96:       currency: true,
+  97:       area: true,
+  98:       rooms: true,
+  99:       floor: true,
+ 100:       totalFloors: true,
+ 101:       city: true,
+ 102:       address: true,
+ 103:       latitude: true,
+ 104:       longitude: true,
+ 105:       status: true,
+ 106:     },
+ 107:   });
+ 108: 
+ 109:   if (!listing) {
+ 110:     return NextResponse.json(
+ 111:       { error: "آگهی پیدا نشد." },
+ 112:       { status: 404 },
+ 113:     );
+ 114:   }
+ 115: 
+ 116:   return NextResponse.json(
+ 117:     {
+ 118:       listing: {
+ 119:         ...listing,
+ 120:         price: listing.price.toString(),
+ 121:         area: listing.area.toString(),
+ 122:       },
+ 123:     },
+ 124:     { headers: { "Cache-Control": "no-store" } },
+ 125:   );
+ 126: }
+ 127: 
+ 128: export async function PATCH(request: Request, context: Context) {
+ 129:   const limit = await checkRateLimit(
+ 130:     "update-own-listing",
+ 131:     getRequestIdentity(request),
+ 132:   );
+ 133: 
+ 134:   if (!limit.allowed) {
+ 135:     return rateLimitResponse(limit.retryAfterSeconds);
+ 136:   }
+ 137:   const origin = request.headers.get("origin");
+ 138:   const requestOrigin = new URL(request.url).origin;
+ 139: 
+ 140:   if (!origin || origin !== requestOrigin) {
+ 141:     return NextResponse.json(
+ 142:       { error: "مبدأ درخواست معتبر نیست." },
+ 143:       { status: 403 },
+ 144:     );
+ 145:   }
+ 146: 
+ 147:   const user = await getCurrentUser();
+ 148: 
+ 149:   if (!user) {
+ 150:     return NextResponse.json(
+ 151:       { error: "ابتدا وارد حساب شوید." },
+ 152:       { status: 401 },
+ 153:     );
+ 154:   }
+ 155: 
+ 156:   const { id } = await context.params;
+ 157: 
+ 158:   if (!id || id.length > 100) {
+ 159:     return NextResponse.json(
+ 160:       { error: "شناسه نامعتبر است." },
+ 161:       { status: 400 },
+ 162:     );
+ 163:   }
+ 164: 
+ 165:   if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
+ 166:     return NextResponse.json(
+ 167:       { error: "فرمت درخواست معتبر نیست." },
+ 168:       { status: 415 },
+ 169:     );
+ 170:   }
+ 171: 
+ 172:   let body: unknown;
+ 173: 
+ 174:   try {
+ 175:     body = await request.json();
+ 176:   } catch {
+ 177:     return NextResponse.json(
+ 178:       { error: "JSON معتبر نیست." },
+ 179:       { status: 400 },
+ 180:     );
+ 181:   }
+ 182: 
+ 183:   if (typeof body !== "object" || body === null || Array.isArray(body)) {
+ 184:     return NextResponse.json(
+ 185:       { error: "اطلاعات درخواست معتبر نیست." },
+ 186:       { status: 400 },
+ 187:     );
+ 188:   }
+ 189: 
+ 190:   const input = body as Record<string, unknown>;
+ 191:   const allowedKeys = new Set([
+ 192:     "title", "description", "listingType", "propertyType",
+ 193:     "price", "currency", "area", "rooms", "city", "address",
+ 194:     "latitude", "longitude", "floor", "totalFloors",
+ 195:   ]);
+ 196: 
+ 197:   if (Object.keys(input).some((key) => !allowedKeys.has(key))) {
+ 198:     return NextResponse.json(
+ 199:       { error: "فیلد غیرمجاز در درخواست وجود دارد." },
+ 200:       { status: 400 },
+ 201:     );
+ 202:   }
+ 203: 
+ 204:   const validation = listingSchema.safeParse({
+ 205:     ...input,
+ 206:     imageUrls: [],
+ 207:   });
+ 208: 
+ 209:   if (!validation.success) {
+ 210:     return NextResponse.json(
+ 211:       {
+ 212:         error: "اطلاعات فرم معتبر نیست.",
+ 213:         details: validation.error.flatten(),
+ 214:       },
+ 215:       { status: 400 },
+ 216:     );
+ 217:   }
+ 218: 
+ 219:   const { floor, totalFloors } = input;
+ 220: 
+ 221:   const validFloor =
+ 222:     floor === null ||
+ 223:     (typeof floor === "number" && Number.isInteger(floor) && floor >= 0);
+ 224: 
+ 225:   const validTotalFloors =
+ 226:     totalFloors === null ||
+ 227:     (typeof totalFloors === "number" &&
+ 228:       Number.isInteger(totalFloors) && totalFloors >= 1);
+ 229: 
+ 230:   if (
+ 231:     !validFloor ||
+ 232:     !validTotalFloors ||
+ 233:     floor === undefined ||
+ 234:     totalFloors === undefined ||
+ 235:     (typeof floor === "number" &&
+ 236:       typeof totalFloors === "number" &&
+ 237:       floor > totalFloors)
+ 238:   ) {
+ 239:     return NextResponse.json(
+ 240:       { error: "اطلاعات طبقه معتبر نیست." },
+ 241:       { status: 400 },
+ 242:     );
+ 243:   }
+ 244: 
+ 245:   const data = validation.data;
+ 246: 
+ 247:   const result = await prisma.listing.updateMany({
+ 248:     where: { id, ownerId: user.id },
+ 249:     data: {
+ 250:       title: data.title,
+ 251:       description: data.description,
+ 252:       listingType: data.listingType,
+ 253:       propertyType: data.propertyType,
+ 254:       price: data.price,
+ 255:       currency: data.currency,
+ 256:       area: data.area,
+ 257:       rooms: data.rooms,
+ 258:       city: data.city,
+ 259:       address: data.address,
+ 260:       latitude: data.latitude,
+ 261:       longitude: data.longitude,
+ 262:       floor: floor as number | null,
+ 263:       totalFloors: totalFloors as number | null,
+ 264:       status: "PENDING",
+ 265:     },
+ 266:   });
+ 267: 
+ 268:   if (result.count === 0) {
+ 269:     return NextResponse.json(
+ 270:       { error: "آگهی پیدا نشد یا متعلق به شما نیست." },
+ 271:       { status: 404 },
+ 272:     );
+ 273:   }
+ 274: 
+ 275:   return NextResponse.json({
+ 276:     message: "تغییرات ذخیره شد و آگهی منتظر تأیید مجدد است.",
+ 277:     id,
+ 278:     status: "PENDING",
+ 279:   });
+ 280: }
+
+==========================================================================================
+FILE: apps\web\app\api\listings\[id]\inquiries\route.ts
+==========================================================================================
+   1: import { NextRequest, NextResponse } from "next/server";
+   2: import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
+   3: import { prisma } from "@/src/lib/prisma";
+   4: import { getCurrentUser } from "@/src/lib/auth";
+   5: 
+   6: type Context = {
+   7:   params: Promise<{ id: string }>;
+   8: };
+   9: 
+  10: export async function POST(request: NextRequest, context: Context) {
+  11:   const limit = await checkRateLimit(
+  12:     "create-inquiry",
+  13:     getRequestIdentity(request),
+  14:   );
+  15: 
+  16:   if (!limit.allowed) {
+  17:     return rateLimitResponse(limit.retryAfterSeconds);
+  18:   }
+  19:   const origin = request.headers.get("origin");
+  20: 
+  21:   if (origin !== request.nextUrl.origin) {
+  22:     return NextResponse.json(
+  23:       { error: "مبدأ درخواست معتبر نیست." },
+  24:       { status: 403 }
+  25:     );
+  26:   }
+  27: 
+  28:   const user = await getCurrentUser();
+  29: 
+  30:   if (!user) {
+  31:     return NextResponse.json(
+  32:       { error: "ابتدا وارد حساب شوید." },
+  33:       { status: 401 }
+  34:     );
+  35:   }
+  36: 
+  37:   const { id } = await context.params;
+  38: 
+  39:   if (!id || id.length > 100) {
+  40:     return NextResponse.json(
+  41:       { error: "شناسه آگهی نامعتبر است." },
+  42:       { status: 400 }
+  43:     );
+  44:   }
+  45: 
+  46:   const contentLength = Number(request.headers.get("content-length") || 0);
+  47: 
+  48:   if (contentLength > 4096) {
+  49:     return NextResponse.json(
+  50:       { error: "درخواست بیش‌ازحد بزرگ است." },
+  51:       { status: 413 }
+  52:     );
+  53:   }
+  54: 
+  55:   let body: unknown;
+  56: 
+  57:   try {
+  58:     body = await request.json();
+  59:   } catch {
+  60:     return NextResponse.json(
+  61:       { error: "ساختار پیام نامعتبر است." },
+  62:       { status: 400 }
+  63:     );
+  64:   }
+  65: 
+  66:   if (
+  67:     !body ||
+  68:     typeof body !== "object" ||
+  69:     !("message" in body) ||
+  70:     typeof body.message !== "string"
+  71:   ) {
+  72:     return NextResponse.json(
+  73:       { error: "متن پیام الزامی است." },
+  74:       { status: 400 }
+  75:     );
+  76:   }
+  77: 
+  78:   const message = body.message.trim();
+  79: 
+  80:   if (message.length < 20 || message.length > 2000) {
+  81:     return NextResponse.json(
+  82:       { error: "متن پیام باید بین ۲۰ تا ۲۰۰۰ کاراکتر باشد." },
+  83:       { status: 400 }
+  84:     );
+  85:   }
+  86: 
+  87:   const listing = await prisma.listing.findFirst({
+  88:     where: { id, status: "PUBLISHED" },
+  89:     select: { id: true, ownerId: true },
+  90:   });
+  91: 
+  92:   if (!listing) {
+  93:     return NextResponse.json(
+  94:       { error: "آگهی در دسترس نیست." },
+  95:       { status: 404 }
+  96:     );
+  97:   }
+  98: 
+  99:   if (listing.ownerId === user.id) {
+ 100:     return NextResponse.json(
+ 101:       { error: "نمی‌توانید برای آگهی خودتان پیام بفرستید." },
+ 102:       { status: 400 }
+ 103:     );
+ 104:   }
+ 105: 
+ 106:   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+ 107: 
+ 108:   const recentMessages = await prisma.inquiry.count({
+ 109:     where: {
+ 110:       senderId: user.id,
+ 111:       createdAt: { gte: oneHourAgo },
+ 112:     },
+ 113:   });
+ 114: 
+ 115:   if (recentMessages >= 5) {
+ 116:     return NextResponse.json(
+ 117:       { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+ 118:       { status: 429 }
+ 119:     );
+ 120:   }
+ 121: 
+ 122:   await prisma.inquiry.create({
+ 123:     data: {
+ 124:       listingId: listing.id,
+ 125:       senderId: user.id,
+ 126:       recipientId: listing.ownerId,
+ 127:       message,
+ 128:     },
+ 129:   });
+ 130: 
+ 131:   return NextResponse.json(
+ 132:     { success: true, message: "پیام با موفقیت ارسال شد." },
+ 133:     { status: 201 }
+ 134:   );
+ 135: }
+
+==========================================================================================
+FILE: apps\web\app\listings\new\page.tsx
+==========================================================================================
+   1: "use client";
+   2: 
+   3: import Link from "next/link";
+   4: import { useState, type FormEvent } from "react";
+   5: import "./new-listing.css";
+   6: 
+   7: export default function NewListingPage() {
+   8:   const [submitting, setSubmitting] = useState(false);
+   9:   const [message, setMessage] = useState("");
+  10:   const [error, setError] = useState("");
+  11: 
+  12:   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  13:     event.preventDefault();
+  14: 
+  15:     const form = event.currentTarget;
+  16:     setSubmitting(true);
+  17:     setMessage("");
+  18:     setError("");
+  19: 
+  20:     try {
+  21:       const formData = new FormData(form);
+  22:       const response = await fetch("/api/listings", {
+  23:         method: "POST",
+  24:         body: formData,
+  25:       });
+  26: 
+  27:       const result = await response.json();
+  28: 
+  29:       if (!response.ok) {
+  30:         setError(
+  31:           typeof result.error === "string"
+  32:             ? result.error
+  33:             : "ثبت آگهی انجام نشد. اطلاعات را بررسی کن.",
+  34:         );
+  35:         return;
+  36:       }
+  37: 
+  38:       setMessage(
+  39:         `${result.message} کد آگهی: ${result.listing.id}`,
+  40:       );
+  41:       form.reset();
+  42:     } catch {
+  43:       setError("ارتباط با سرور برقرار نشد. دوباره تلاش کن.");
+  44:     } finally {
+  45:       setSubmitting(false);
+  46:     }
+  47:   }
+  48: 
+  49:   return (
+  50:     <div className="nl-page" dir="rtl">
+  51:       <div className="nl-heading">
+  52:         <div>
+  53:           <span className="nl-eyebrow">مدیریت املاک</span>
+  54:           <h1>ثبت آگهی جدید</h1>
+  55:           <p>
+  56:             مشخصات ملک را وارد کن تا آگهی برای بررسی و انتشار ثبت شود.
+  57:           </p>
+  58:         </div>
+  59: 
+  60:         <Link href="/dashboard/listings" className="nl-back">
+  61:           بازگشت به آگهی‌های من
+  62:         </Link>
+  63:       </div>
+  64: 
+  65:       <div className="nl-notice">
+  66:         <span className="nl-notice-icon" aria-hidden="true">i</span>
+  67:         <div>
+  68:           <strong>قبل از ثبت آگهی</strong>
+  69:           <p>
+  70:             اطلاعات و قیمت را با دقت وارد کن. فیلدهای ستاره‌دار الزامی هستند.
+  71:           </p>
+  72:         </div>
+  73:       </div>
+  74: 
+  75:       <form onSubmit={handleSubmit} className="nl-form">
+  76:         <section className="nl-section">
+  77:           <div className="nl-section-heading">
+  78:             <span className="nl-section-number">۱</span>
+  79:             <div>
+  80:               <h2>اطلاعات اصلی ملک</h2>
+  81:               <p>عنوان، نوع معامله و موقعیت ملک را مشخص کن.</p>
+  82:             </div>
+  83:           </div>
+  84: 
+  85:           <div className="nl-grid">
+  86:             <label className="nl-field">
+  87:               عنوان آگهی *
+  88:               <input
+  89:                 name="title"
+  90:                 required
+  91:                 minLength={5}
+  92:                 maxLength={120}
+  93:                 placeholder="مثلاً آپارتمان دوخوابه نزدیک مترو"
+  94:               />
+  95:             </label>
+  96: 
+  97:             <label className="nl-field">
+  98:               نوع معامله *
+  99:               <select name="listingType" required defaultValue="SALE">
+ 100:                 <option value="SALE">فروش</option>
+ 101:                 <option value="RENT">اجاره</option>
+ 102:               </select>
+ 103:             </label>
+ 104: 
+ 105:             <label className="nl-field">
+ 106:               نوع ملک *
+ 107:               <select name="propertyType" required defaultValue="APARTMENT">
+ 108:                 <option value="APARTMENT">آپارتمان</option>
+ 109:                 <option value="HOUSE">خانه</option>
+ 110:                 <option value="VILLA">ویلا</option>
+ 111:                 <option value="LAND">زمین</option>
+ 112:                 <option value="COMMERCIAL">تجاری</option>
+ 113:               </select>
+ 114:             </label>
+ 115: 
+ 116:             <label className="nl-field">
+ 117:               شهر *
+ 118:               <input
+ 119:                 name="city"
+ 120:                 required
+ 121:                 minLength={2}
+ 122:                 maxLength={100}
+ 123:                 placeholder="نام شهر"
+ 124:               />
+ 125:             </label>
+ 126: 
+ 127:             <label className="nl-field nl-full">
+ 128:               توضیحات ملک *
+ 129:               <textarea
+ 130:                 name="description"
+ 131:                 required
+ 132:                 minLength={20}
+ 133:                 maxLength={5000}
+ 134:                 rows={5}
+ 135:                 placeholder="درباره موقعیت، امکانات، وضعیت و ویژگی‌های ملک بنویس..."
+ 136:               />
+ 137:             </label>
+ 138:           </div>
+ 139:         </section>
+ 140: 
+ 141:         <section className="nl-section">
+ 142:           <div className="nl-section-heading">
+ 143:             <span className="nl-section-number">۲</span>
+ 144:             <div>
+ 145:               <h2>قیمت و مشخصات</h2>
+ 146:               <p>اطلاعات مالی و جزئیات ساختمان را وارد کن.</p>
+ 147:             </div>
+ 148:           </div>
+ 149: 
+ 150:           <div className="nl-grid">
+ 151:             <label className="nl-field">
+ 152:               قیمت *
+ 153:               <input
+ 154:                 name="price"
+ 155:                 type="number"
+ 156:                 required
+ 157:                 min="0.01"
+ 158:                 step="0.01"
+ 159:                 placeholder="مبلغ قیمت"
+ 160:               />
+ 161:             </label>
+ 162: 
+ 163:             <label className="nl-field">
+ 164:               واحد پول *
+ 165:               <select name="currency" required defaultValue="RUB">
+ 166:                 <option value="RUB">روبل روسیه (RUB)</option>
+ 167:                 <option value="IRR">ریال ایران (IRR)</option>
+ 168:                 <option value="USD">دلار آمریکا (USD)</option>
+ 169:               </select>
+ 170:             </label>
+ 171: 
+ 172:             <label className="nl-field">
+ 173:               مساحت (متر مربع) *
+ 174:               <input
+ 175:                 name="area"
+ 176:                 type="number"
+ 177:                 required
+ 178:                 min="0.01"
+ 179:                 step="0.01"
+ 180:                 placeholder="مثلاً ۸۶"
+ 181:               />
+ 182:             </label>
+ 183: 
+ 184:             <label className="nl-field">
+ 185:               تعداد اتاق
+ 186:               <input
+ 187:                 name="rooms"
+ 188:                 type="number"
+ 189:                 min="0"
+ 190:                 step="1"
+ 191:                 placeholder="مثلاً ۳"
+ 192:               />
+ 193:             </label>
+ 194: 
+ 195:             <label className="nl-field">
+ 196:               طبقه
+ 197:               <input
+ 198:                 name="floor"
+ 199:                 type="number"
+ 200:                 min="0"
+ 201:                 step="1"
+ 202:                 placeholder="مثلاً ۴"
+ 203:               />
+ 204:             </label>
+ 205: 
+ 206:             <label className="nl-field">
+ 207:               تعداد کل طبقات ساختمان
+ 208:               <input
+ 209:                 name="totalFloors"
+ 210:                 type="number"
+ 211:                 min="1"
+ 212:                 step="1"
+ 213:                 placeholder="مثلاً ۹"
+ 214:               />
+ 215:             </label>
+ 216: 
+ 217:             <label className="nl-field nl-full">
+ 218:               آدرس دقیق
+ 219:               <input
+ 220:                 name="address"
+ 221:                 maxLength={300}
+ 222:                 placeholder="خیابان، منطقه یا نشانی ملک (اختیاری)"
+ 223:               />
+ 224:             </label>
+ 225:           </div>
+ 226:         </section>
+ 227: 
+ 228:         {message && (
+ 229:           <div className="nl-message nl-success" role="status">
+ 230:             {message}
+ 231:           </div>
+ 232:         )}
+ 233: 
+ 234:         {error && (
+ 235:           <div className="nl-message nl-error" role="alert">
+ 236:             {error}
+ 237:           </div>
+ 238:         )}
+ 239: 
+ 240:         <div className="nl-actions">
+ 241:           <button
+ 242:             type="submit"
+ 243:             disabled={submitting}
+ 244:             className="nl-submit"
+ 245:           >
+ 246:             {submitting ? "در حال ثبت آگهی..." : "ثبت آگهی"}
+ 247:           </button>
+ 248: 
+ 249:           <Link href="/dashboard/listings" className="nl-cancel">
+ 250:             انصراف
+ 251:           </Link>
+ 252:         </div>
+ 253:       </form>
+ 254:     </div>
+ 255:   );
+ 256: }
+
+==========================================================================================
+FILE: apps\web\app\dashboard\listings\[id]\edit\EditListingForm.tsx
+==========================================================================================
+   1: "use client";
+   2: 
+   3: import { useEffect, useState, type FormEvent } from "react";
+   4: import { useParams, useRouter } from "next/navigation";
+   5: import Link from "next/link";
+   6: 
+   7: type Property = {
+   8:   id: string;
+   9:   title: string;
+  10:   description: string;
+  11:   listingType: "SALE" | "RENT";
+  12:   propertyType: "APARTMENT" | "HOUSE" | "VILLA" | "LAND" | "COMMERCIAL";
+  13:   price: string;
+  14:   currency: string;
+  15:   area: string;
+  16:   rooms: number | null;
+  17:   city: string;
+  18:   address: string | null;
+  19:   latitude: number | null;
+  20:   longitude: number | null;
+  21:   floor: number | null;
+  22:   totalFloors: number | null;
+  23: };
+  24: 
+  25: export default function EditListingForm() {
+  26:   const params = useParams<{ id: string }>();
+  27:   const router = useRouter();
+  28: 
+  29:   const [form, setForm] = useState<Property | null>(null);
+  30:   const [loading, setLoading] = useState(true);
+  31:   const [saving, setSaving] = useState(false);
+  32:   const [error, setError] = useState("");
+  33: 
+  34:   useEffect(() => {
+  35:     const controller = new AbortController();
+  36: 
+  37:     async function load() {
+  38:       try {
+  39:         const response = await fetch(
+  40:           `/api/my/listings/${encodeURIComponent(params.id)}`,
+  41:           { cache: "no-store", signal: controller.signal },
+  42:         );
+  43: 
+  44:         if (!response.ok) {
+  45:           throw new Error(
+  46:             response.status === 401
+  47:               ? "ابتدا وارد حساب شوید."
+  48:               : "آگهی پیدا نشد یا دسترسی ندارید.",
+  49:           );
+  50:         }
+  51: 
+  52:         const data: { listing: Property } = await response.json();
+  53: 
+  54:         if (!controller.signal.aborted) {
+  55:           setForm(data.listing);
+  56:         }
+  57:       } catch (err) {
+  58:         if (!controller.signal.aborted) {
+  59:           setError(err instanceof Error ? err.message : "خطایی رخ داد.");
+  60:         }
+  61:       } finally {
+  62:         if (!controller.signal.aborted) {
+  63:           setLoading(false);
+  64:         }
+  65:       }
+  66:     }
+  67: 
+  68:     void load();
+  69:     return () => controller.abort();
+  70:   }, [params.id]);
+  71: 
+  72:   function update<K extends keyof Property>(key: K, value: Property[K]) {
+  73:     setForm((previous) =>
+  74:       previous ? { ...previous, [key]: value } : previous,
+  75:     );
+  76:   }
+  77: 
+  78:   async function submit(event: FormEvent<HTMLFormElement>) {
+  79:     event.preventDefault();
+  80:     if (!form || saving) return;
+  81: 
+  82:     setSaving(true);
+  83:     setError("");
+  84: 
+  85:     const payload = {
+  86:       title: form.title,
+  87:       description: form.description,
+  88:       listingType: form.listingType,
+  89:       propertyType: form.propertyType,
+  90:       price: Number(form.price),
+  91:       currency: form.currency.toUpperCase(),
+  92:       area: Number(form.area),
+  93:       rooms: form.rooms,
+  94:       city: form.city,
+  95:       address: form.address,
+  96:       latitude: form.latitude,
+  97:       longitude: form.longitude,
+  98:       floor: form.floor,
+  99:       totalFloors: form.totalFloors,
+ 100:     };
+ 101: 
+ 102:     try {
+ 103:       const response = await fetch(
+ 104:         `/api/my/listings/${encodeURIComponent(params.id)}`,
+ 105:         {
+ 106:           method: "PATCH",
+ 107:           headers: { "Content-Type": "application/json" },
+ 108:           body: JSON.stringify(payload),
+ 109:         },
+ 110:       );
+ 111: 
+ 112:       const data = await response.json();
+ 113: 
+ 114:       if (!response.ok) {
+ 115:         throw new Error(data.error || "ذخیره تغییرات ناموفق بود.");
+ 116:       }
+ 117: 
+ 118:       router.push("/dashboard/listings");
+ 119:       router.refresh();
+ 120:     } catch (err) {
+ 121:       setError(err instanceof Error ? err.message : "خطایی رخ داد.");
+ 122:     } finally {
+ 123:       setSaving(false);
+ 124:     }
+ 125:   }
+ 126: 
+ 127:   if (loading) {
+ 128:     return (
+ 129:       <main dir="rtl" className="mx-auto max-w-3xl p-8">
+ 130:         در حال دریافت اطلاعات آگهی...
+ 131:       </main>
+ 132:     );
+ 133:   }
+ 134: 
+ 135:   if (!form) {
+ 136:     return (
+ 137:       <main dir="rtl" className="mx-auto max-w-3xl p-8">
+ 138:         <p role="alert" className="text-red-700">{error}</p>
+ 139:         <Link href="/dashboard/listings" className="mt-5 inline-block text-emerald-700">
+ 140:           بازگشت به آگهی‌های من
+ 141:         </Link>
+ 142:       </main>
+ 143:     );
+ 144:   }
+ 145: 
+ 146:   const inputClass =
+ 147:     "w-full rounded-lg border border-slate-300 bg-white px-3 py-3 text-slate-900";
+ 148: 
+ 149:   return (
+ 150:     <main dir="rtl" className="min-h-screen bg-slate-50 px-4 py-10">
+ 151:       <div className="mx-auto max-w-3xl rounded-2xl bg-white p-6 shadow-sm md:p-8">
+ 152:         <h1 className="text-2xl font-bold text-emerald-800">
+ 153:           ویرایش آگهی
+ 154:         </h1>
+ 155:         <p className="mb-7 mt-2 text-sm text-slate-600">
+ 156:           پس از ذخیره، آگهی برای تأیید مجدد مدیر ارسال می‌شود.
+ 157:         </p>
+ 158: 
+ 159:         <form onSubmit={submit} className="grid gap-5 md:grid-cols-2">
+ 160:           <label className="md:col-span-2">
+ 161:             عنوان آگهی
+ 162:             <input
+ 163:               required
+ 164:               maxLength={120}
+ 165:               className={inputClass}
+ 166:               value={form.title}
+ 167:               onChange={(e) => update("title", e.target.value)}
+ 168:             />
+ 169:           </label>
+ 170: 
+ 171:           <label className="md:col-span-2">
+ 172:             توضیحات
+ 173:             <textarea
+ 174:               required
+ 175:               rows={5}
+ 176:               className={inputClass}
+ 177:               value={form.description}
+ 178:               onChange={(e) => update("description", e.target.value)}
+ 179:             />
+ 180:           </label>
+ 181: 
+ 182:           <label>
+ 183:             نوع آگهی
+ 184:             <select
+ 185:               className={inputClass}
+ 186:               value={form.listingType}
+ 187:               onChange={(e) =>
+ 188:                 update("listingType", e.target.value as Property["listingType"])
+ 189:               }
+ 190:             >
+ 191:               <option value="SALE">فروش</option>
+ 192:               <option value="RENT">اجاره</option>
+ 193:             </select>
+ 194:           </label>
+ 195: 
+ 196:           <label>
+ 197:             نوع ملک
+ 198:             <select
+ 199:               className={inputClass}
+ 200:               value={form.propertyType}
+ 201:               onChange={(e) =>
+ 202:                 update("propertyType", e.target.value as Property["propertyType"])
+ 203:               }
+ 204:             >
+ 205:               <option value="APARTMENT">آپارتمان</option>
+ 206:               <option value="HOUSE">خانه</option>
+ 207:               <option value="VILLA">ویلا</option>
+ 208:               <option value="LAND">زمین</option>
+ 209:               <option value="COMMERCIAL">تجاری</option>
+ 210:             </select>
+ 211:           </label>
+ 212: 
+ 213:           <label>
+ 214:             قیمت
+ 215:             <input
+ 216:               type="number"
+ 217:               min="0"
+ 218:               step="0.01"
+ 219:               required
+ 220:               dir="ltr"
+ 221:               className={inputClass}
+ 222:               value={form.price}
+ 223:               onChange={(e) => update("price", e.target.value)}
+ 224:             />
+ 225:           </label>
+ 226: 
+ 227:           <label>
+ 228:             واحد پول
+ 229:             <input
+ 230:               required
+ 231:               maxLength={3}
+ 232:               minLength={3}
+ 233:               dir="ltr"
+ 234:               className={inputClass}
+ 235:               value={form.currency}
+ 236:               onChange={(e) => update("currency", e.target.value)}
+ 237:             />
+ 238:           </label>
+ 239: 
+ 240:           <label>
+ 241:             متراژ
+ 242:             <input
+ 243:               type="number"
+ 244:               min="0"
+ 245:               step="0.01"
+ 246:               required
+ 247:               dir="ltr"
+ 248:               className={inputClass}
+ 249:               value={form.area}
+ 250:               onChange={(e) => update("area", e.target.value)}
+ 251:             />
+ 252:           </label>
+ 253: 
+ 254:           <label>
+ 255:             تعداد اتاق
+ 256:             <input
+ 257:               type="number"
+ 258:               min="0"
+ 259:               step="1"
+ 260:               dir="ltr"
+ 261:               className={inputClass}
+ 262:               value={form.rooms ?? ""}
+ 263:               onChange={(e) =>
+ 264:                 update("rooms", e.target.value === "" ? null : Number(e.target.value))
+ 265:               }
+ 266:             />
+ 267:           </label>
+ 268: 
+ 269:           <label>
+ 270:             شهر
+ 271:             <input
+ 272:               required
+ 273:               className={inputClass}
+ 274:               value={form.city}
+ 275:               onChange={(e) => update("city", e.target.value)}
+ 276:             />
+ 277:           </label>
+ 278: 
+ 279:           <label>
+ 280:             آدرس
+ 281:             <input
+ 282:               className={inputClass}
+ 283:               value={form.address ?? ""}
+ 284:               onChange={(e) => update("address", e.target.value || null)}
+ 285:             />
+ 286:           </label>
+ 287: 
+ 288:           <label>
+ 289:             طبقه
+ 290:             <input
+ 291:               type="number"
+ 292:               min="0"
+ 293:               step="1"
+ 294:               dir="ltr"
+ 295:               className={inputClass}
+ 296:               value={form.floor ?? ""}
+ 297:               onChange={(e) =>
+ 298:                 update("floor", e.target.value === "" ? null : Number(e.target.value))
+ 299:               }
+ 300:             />
+ 301:           </label>
+ 302: 
+ 303:           <label>
+ 304:             تعداد کل طبقات
+ 305:             <input
+ 306:               type="number"
+ 307:               min="1"
+ 308:               step="1"
+ 309:               dir="ltr"
+ 310:               className={inputClass}
+ 311:               value={form.totalFloors ?? ""}
+ 312:               onChange={(e) =>
+ 313:                 update(
+ 314:                   "totalFloors",
+ 315:                   e.target.value === "" ? null : Number(e.target.value),
+ 316:                 )
+ 317:               }
+ 318:             />
+ 319:           </label>
+ 320: 
+ 321:           {error && (
+ 322:             <p role="alert" className="md:col-span-2 text-red-700">
+ 323:               {error}
+ 324:             </p>
+ 325:           )}
+ 326: 
+ 327:           <div className="flex flex-wrap gap-3 md:col-span-2">
+ 328:             <button
+ 329:               type="submit"
+ 330:               disabled={saving}
+ 331:               className="rounded-lg bg-emerald-700 px-6 py-3 font-bold text-white disabled:opacity-50"
+ 332:             >
+ 333:               {saving ? "در حال ذخیره..." : "ذخیره تغییرات"}
+ 334:             </button>
+ 335: 
+ 336:             <Link
+ 337:               href="/dashboard/listings"
+ 338:               className="rounded-lg border border-slate-300 px-6 py-3"
+ 339:             >
+ 340:               انصراف
+ 341:             </Link>
+ 342:           </div>
+ 343:         </form>
+ 344:       </div>
+ 345:     </main>
+ 346:   );
+ 347: }
+
+==========================================================================================
+FILE: apps\web\app\listings\[id]\InquiryForm.tsx
+==========================================================================================
+   1: "use client";
+   2: 
+   3: import Link from "next/link";
+   4: import { useState } from "react";
+   5: 
+   6: export default function InquiryForm({
+   7:   listingId,
+   8: }: {
+   9:   listingId: string;
+  10: }) {
+  11:   const [message, setMessage] = useState("");
+  12:   const [busy, setBusy] = useState(false);
+  13:   const [success, setSuccess] = useState(false);
+  14:   const [error, setError] = useState("");
+  15:   const [loginRequired, setLoginRequired] = useState(false);
+  16: 
+  17:   async function send(event: React.FormEvent<HTMLFormElement>) {
+  18:     event.preventDefault();
+  19: 
+  20:     if (busy) return;
+  21: 
+  22:     setError("");
+  23:     setBusy(true);
+  24: 
+  25:     try {
+  26:       const response = await fetch(
+  27:         `/api/listings/${encodeURIComponent(listingId)}/inquiries`,
+  28:         {
+  29:           method: "POST",
+  30:           credentials: "same-origin",
+  31:           headers: { "Content-Type": "application/json" },
+  32:           body: JSON.stringify({ message }),
+  33:         }
+  34:       );
+  35: 
+  36:       if (response.status === 401) {
+  37:         setLoginRequired(true);
+  38:         return;
+  39:       }
+  40: 
+  41:       const data = (await response.json()) as {
+  42:         error?: string;
+  43:       };
+  44: 
+  45:       if (!response.ok) {
+  46:         setError(data.error || "ارسال پیام ناموفق بود.");
+  47:         return;
+  48:       }
+  49: 
+  50:       setSuccess(true);
+  51:       setMessage("");
+  52:     } catch {
+  53:       setError("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.");
+  54:     } finally {
+  55:       setBusy(false);
+  56:     }
+  57:   }
+  58: 
+  59:   if (success) {
+  60:     return (
+  61:       <div className="hd-inquiry-success" role="status">
+  62:         <strong>پیامت ارسال شد.</strong>
+  63:         <p>آگهی‌دهنده می‌تواند آن را در صندوق پیام‌هایش مشاهده کند.</p>
+  64:         <Link href="/my/messages">مشاهده صندوق پیام‌ها</Link>
+  65:       </div>
+  66:     );
+  67:   }
+  68: 
+  69:   return (
+  70:     <form className="hd-inquiry-form" onSubmit={send}>
+  71:       <h3>پیام به آگهی‌دهنده</h3>
+  72:       <p>
+  73:         درباره شرایط بازدید یا اطلاعات بیشتر ملک سؤال بپرس.
+  74:       </p>
+  75: 
+  76:       <label htmlFor="inquiry-message">متن پیام</label>
+  77: 
+  78:       <textarea
+  79:         id="inquiry-message"
+  80:         value={message}
+  81:         onChange={(event) => setMessage(event.target.value)}
+  82:         minLength={20}
+  83:         maxLength={2000}
+  84:         required
+  85:         rows={5}
+  86:         placeholder="سلام، درباره این ملک و امکان بازدید سؤال داشتم..."
+  87:         disabled={busy || loginRequired}
+  88:       />
+  89: 
+  90:       <small>
+  91:         {message.length.toLocaleString("fa-IR")} / ۲۰۰۰ کاراکتر
+  92:       </small>
+  93: 
+  94:       {error && (
+  95:         <p className="hd-inquiry-error" role="alert">
+  96:           {error}
+  97:         </p>
+  98:       )}
+  99: 
+ 100:       {loginRequired ? (
+ 101:         <Link
+ 102:           href={`/login?next=${encodeURIComponent(
+ 103:             `/listings/${listingId}`
+ 104:           )}`}
+ 105:           className="hd-action-primary"
+ 106:         >
+ 107:           برای ارسال پیام وارد شوید
+ 108:         </Link>
+ 109:       ) : (
+ 110:         <button
+ 111:           type="submit"
+ 112:           className="hd-action-primary"
+ 113:           disabled={busy || message.trim().length < 20}
+ 114:         >
+ 115:           {busy ? "در حال ارسال..." : "ارسال پیام"}
+ 116:         </button>
+ 117:       )}
+ 118:     </form>
+ 119:   );
+ 120: }
+
+==========================================================================================
+FILE: apps\web\app\listings\[id]\PropertyGallery.tsx
+==========================================================================================
+   1: "use client";
+   2: 
+   3: import Image from "next/image";
+   4: import { useCallback, useEffect, useState } from "react";
+   5: 
+   6: type Props = { title: string; images: string[] };
+   7: 
+   8: export default function PropertyGallery({ title, images }: Props) {
+   9:   const [activeIndex, setActiveIndex] = useState(0);
+  10:   const [lightboxOpen, setLightboxOpen] = useState(false);
+  11: 
+  12:   const closeLightbox = useCallback(() => setLightboxOpen(false), []);
+  13:   const previous = useCallback(() => setActiveIndex((index) => (index - 1 + images.length) % images.length), [images.length]);
+  14:   const next = useCallback(() => setActiveIndex((index) => (index + 1) % images.length), [images.length]);
+  15: 
+  16:   useEffect(() => {
+  17:     if (!lightboxOpen) return;
+  18:     const onKeyDown = (event: KeyboardEvent) => {
+  19:       if (event.key === "Escape") closeLightbox();
+  20:       if (event.key === "ArrowLeft") next();
+  21:       if (event.key === "ArrowRight") previous();
+  22:     };
+  23:     window.addEventListener("keydown", onKeyDown);
+  24:     document.body.style.overflow = "hidden";
+  25:     return () => {
+  26:       window.removeEventListener("keydown", onKeyDown);
+  27:       document.body.style.overflow = "";
+  28:     };
+  29:   }, [lightboxOpen, closeLightbox, next, previous]);
+  30: 
+  31:   if (images.length === 0) {
+  32:     return <div className="hd-gallery-empty" role="img" aria-label="تصویر ملک موجود نیست"><span aria-hidden="true">⌂</span><strong>خانه‌یار</strong><p>هنوز تصویری برای این ملک ثبت نشده است.</p></div>;
+  33:   }
+  34: 
+  35:   const selected = images[activeIndex] ?? images[0];
+  36: 
+  37:   return <>
+  38:     <section className="hd-gallery" aria-label="گالری تصاویر ملک">
+  39:       <div className="hd-gallery-main">
+  40:         <button type="button" className="hd-gallery-open" onClick={() => setLightboxOpen(true)} aria-label="نمایش تصویر در اندازه بزرگ">
+  41:           <Image key={selected} src={selected} alt={`${title} - تصویر ${activeIndex + 1}`} fill unoptimized priority={activeIndex === 0} sizes="(max-width: 900px) 100vw, 760px" className="hd-gallery-image" />
+  42:         </button>
+  43:         <div className="hd-gallery-counter">{(activeIndex + 1).toLocaleString("fa-IR")} / {images.length.toLocaleString("fa-IR")}</div>
+  44:         <button type="button" className="hd-gallery-fullscreen" onClick={() => setLightboxOpen(true)} aria-label="باز کردن گالری تمام صفحه">⛶ نمایش بزرگ</button>
+  45:         {images.length > 1 && <div className="hd-gallery-arrows">
+  46:           <button type="button" aria-label="تصویر قبلی" onClick={previous}>→</button>
+  47:           <button type="button" aria-label="تصویر بعدی" onClick={next}>←</button>
+  48:         </div>}
+  49:       </div>
+  50:       {images.length > 1 && <div className="hd-thumbnails" aria-label="انتخاب تصویر">
+  51:         {images.map((url, index) => <button type="button" key={`${url}-${index}`} onClick={() => setActiveIndex(index)} className={index === activeIndex ? "hd-thumbnail hd-thumbnail-active" : "hd-thumbnail"} aria-label={`نمایش تصویر ${index + 1}`} aria-pressed={index === activeIndex}>
+  52:           <Image src={url} alt="" fill unoptimized sizes="90px" className="hd-thumbnail-image" />
+  53:         </button>)}
+  54:       </div>}
+  55:     </section>
+  56:     {lightboxOpen && <div className="hd-lightbox" role="dialog" aria-modal="true" aria-label={`گالری تصاویر ${title}`} onClick={(event) => { if (event.target === event.currentTarget) closeLightbox(); }}>
+  57:       <button type="button" className="hd-lightbox-close" onClick={closeLightbox} aria-label="بستن گالری">×</button>
+  58:       <div className="hd-lightbox-count">{(activeIndex + 1).toLocaleString("fa-IR")} / {images.length.toLocaleString("fa-IR")}</div>
+  59:       {images.length > 1 && <button type="button" className="hd-lightbox-arrow hd-lightbox-prev" onClick={previous} aria-label="تصویر قبلی">→</button>}
+  60:       <div className="hd-lightbox-image"><Image src={selected} alt={`${title} - تصویر ${activeIndex + 1}`} fill unoptimized sizes="100vw" /></div>
+  61:       {images.length > 1 && <button type="button" className="hd-lightbox-arrow hd-lightbox-next" onClick={next} aria-label="تصویر بعدی">←</button>}
+  62:     </div>}
+  63:   </>;
+  64: }
+  65: 
+  66: export function ShareListing() {
+  67:   const [copied, setCopied] = useState(false);
+  68:   async function share() {
+  69:     try {
+  70:       if (navigator.share) {
+  71:         await navigator.share({ title: document.title, url: window.location.href });
+  72:         return;
+  73:       }
+  74:       await navigator.clipboard.writeText(window.location.href);
+  75:       setCopied(true);
+  76:       window.setTimeout(() => setCopied(false), 2200);
+  77:     } catch { setCopied(false); }
+  78:   }
+  79:   return <button type="button" onClick={share} className="hd-share" aria-label="اشتراک‌گذاری لینک آگهی">{copied ? "✓ لینک کپی شد" : "↗ اشتراک‌گذاری"}</button>;
+  80: }
+
+==========================================================================================
+FILE: packages\shared\src\listing-schema.ts
+==========================================================================================
+   1: import { z } from "zod";
+   2: 
+   3: export const listingSchema = z.object({
+   4:   title: z.string().trim().min(5, "عنوان باید حداقل ۵ کاراکتر باشد").max(120),
+   5:   description: z.string().trim().min(20, "توضیحات باید حداقل ۲۰ کاراکتر باشد").max(5000),
+   6: 
+   7:   listingType: z.enum(["SALE", "RENT"]),
+   8:   propertyType: z.enum([
+   9:     "APARTMENT",
+  10:     "HOUSE",
+  11:     "VILLA",
+  12:     "LAND",
+  13:     "COMMERCIAL",
+  14:   ]),
+  15: 
+  16:   price: z.number().positive("قیمت باید بیشتر از صفر باشد"),
+  17:   currency: z.string().trim().length(3),
+  18: 
+  19:   area: z.number().positive("مساحت باید بیشتر از صفر باشد"),
+  20:   rooms: z.number().int().nonnegative().nullable(),
+  21: 
+  22:   city: z.string().trim().min(2).max(100),
+  23:   address: z.string().trim().max(300).nullable(),
+  24: 
+  25:   latitude: z.number().min(-90).max(90).nullable(),
+  26:   longitude: z.number().min(-180).max(180).nullable(),
+  27: 
+  28:   yearBuilt: z.number().int().min(1000).max(2200).nullable().optional(),
+  29:   bathrooms: z.number().int().nonnegative().nullable().optional(),
+  30:   parkingSpaces: z.number().int().nonnegative().nullable().optional(),
+  31:   hasElevator: z.boolean().nullable().optional(),
+  32:   hasStorage: z.boolean().nullable().optional(),
+  33:   heatingType: z.string().trim().max(80).nullable().optional(),
+  34:   coolingType: z.string().trim().max(80).nullable().optional(),
+  35:   documentType: z.string().trim().max(100).nullable().optional(),
+  36:   orientation: z.string().trim().max(50).nullable().optional(),
+  37:   naturalLight: z.string().trim().max(50).nullable().optional(),
+  38:   furnished: z.boolean().nullable().optional(),
+  39:   readyToMove: z.boolean().nullable().optional(),
+  40:   balcony: z.boolean().nullable().optional(),
+  41:   terrace: z.boolean().nullable().optional(),
+  42:   garden: z.boolean().nullable().optional(),
+  43:   amenities: z.array(z.string().trim().min(1).max(80)).max(30).default([]),
+  44:   monthlyRent: z.number().positive().nullable().optional(),
+  45:   deposit: z.number().nonnegative().nullable().optional(),
+  46:   allowDepositConversion: z.boolean().default(false),
+  47:   advertiserType: z.enum(["UNSPECIFIED", "OWNER", "AGENT", "BUILDER"]).default("UNSPECIFIED"),
+  48:   showExactLocation: z.boolean().default(false),
+  49:   imageUrls: z.array(z.url()).max(30).default([]),
+  50: });
+  51: 
+  52: export type CreateListingInput = z.infer<typeof listingSchema>;
+
+==========================================================================================
+FILE: apps\web\prisma\schema.prisma
+==========================================================================================
+   1: // Real Estate Platform - Database Schema
+   2: 
+   3: generator client {
+   4:   provider = "prisma-client-js"
+   5: }
+   6: 
+   7: datasource db {
+   8:   provider = "postgresql"
+   9:   url      = env("DATABASE_URL")
+  10: }
+  11: 
+  12: enum UserRole {
+  13:   USER
+  14:   ADMIN
+  15: }
+  16: 
+  17: enum ListingType {
+  18:   SALE
+  19:   RENT
+  20: }
+  21: 
+  22: enum PropertyType {
+  23:   APARTMENT
+  24:   HOUSE
+  25:   VILLA
+  26:   LAND
+  27:   COMMERCIAL
+  28: }
+  29: 
+  30: enum ListingStatus {
+  31:   PENDING
+  32:   PUBLISHED
+  33:   REJECTED
+  34:   ARCHIVED
+  35: }
+  36: 
+  37: model User {
+  38:   sentInquiries Inquiry[] @relation("InquirySender")
+  39:   receivedInquiries Inquiry[] @relation("InquiryRecipient")
+  40:   reviews ListingReview[]
+  41:   id           String     @id @default(cuid())
+  42:   name         String?
+  43:   avatarUrl    String?    @db.VarChar(2048)
+  44:   email        String     @unique
+  45:   phone        String?    @unique
+  46:   passwordHash String
+  47:   role         UserRole   @default(USER)
+  48: 
+  49:   listings     Listing[]
+  50:   favorites    Favorite[]
+  51: 
+  52:   createdAt    DateTime   @default(now())
+  53:   updatedAt    DateTime   @updatedAt
+  54: }
+  55: 
+  56: model Listing {
+  57:   inquiries Inquiry[]
+  58:   reviews ListingReview[]
+  59:   id           String        @id @default(cuid())
+  60:   title        String        @db.VarChar(120)
+  61:   description  String        @db.Text
+  62:   listingType  ListingType
+  63:   propertyType PropertyType
+  64:   status       ListingStatus @default(PENDING)
+  65: 
+  66:   price        Decimal       @db.Decimal(14, 2)
+  67:   currency     String        @default("RUB") @db.VarChar(3)
+  68:   area         Decimal       @db.Decimal(10, 2)
+  69:   rooms        Int?
+  70:   floor        Int?
+  71:   totalFloors  Int?
+  72: 
+  73:   yearBuilt              Int?
+  74:   bathrooms              Int?
+  75:   parkingSpaces          Int?
+  76:   hasElevator            Boolean?
+  77:   hasStorage             Boolean?
+  78:   heatingType            String?   @db.VarChar(80)
+  79:   coolingType            String?   @db.VarChar(80)
+  80:   documentType           String?   @db.VarChar(100)
+  81:   orientation            String?   @db.VarChar(50)
+  82:   naturalLight           String?   @db.VarChar(50)
+  83:   furnished              Boolean?
+  84:   readyToMove            Boolean?
+  85:   balcony                Boolean?
+  86:   terrace                Boolean?
+  87:   garden                 Boolean?
+  88:   amenities              String[]  @default([])
+  89:   monthlyRent            Decimal?  @db.Decimal(14, 2)
+  90:   deposit                Decimal?  @db.Decimal(14, 2)
+  91:   allowDepositConversion Boolean   @default(false)
+  92:   advertiserType         String?   @db.VarChar(20)
+  93:   showExactLocation      Boolean   @default(false)
+  94: 
+  95:   city         String        @db.VarChar(100)
+  96:   address      String?       @db.VarChar(300)
+  97:   latitude     Float?
+  98:   longitude    Float?
+  99: 
+ 100:   ownerId      String
+ 101:   owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+ 102: 
+ 103:   images       ListingImage[]
+ 104:   favorites    Favorite[]
+ 105: 
+ 106:   createdAt    DateTime      @default(now())
+ 107:   updatedAt    DateTime      @updatedAt
+ 108: 
+ 109:   @@index([status, createdAt])
+ 110:   @@index([city, status])
+ 111:   @@index([listingType, propertyType, status])
+ 112:   @@index([price])
+ 113:   @@index([ownerId])
+ 114: }
+ 115: 
+ 116: model ListingImage {
+ 117:   id        String   @id @default(cuid())
+ 118:   url       String   @db.VarChar(2048)
+ 119:   sortOrder Int      @default(0)
+ 120:   label     String?  @db.VarChar(50)
+ 121:   altText   String?  @db.VarChar(200)
+ 122: 
+ 123:   listingId String
+ 124:   listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+ 125: 
+ 126:   createdAt DateTime @default(now())
+ 127: 
+ 128:   @@index([listingId, sortOrder])
+ 129: }
+ 130: 
+ 131: model Favorite {
+ 132:   id        String   @id @default(cuid())
+ 133:   userId    String
+ 134:   listingId String
+ 135: 
+ 136:   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 137:   listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+ 138: 
+ 139:   createdAt DateTime @default(now())
+ 140: 
+ 141:   @@unique([userId, listingId])
+ 142:   @@index([listingId])
+ 143: }
+ 144: 
+ 145: 
+ 146: enum ReviewDecision {
+ 147:   PUBLISHED
+ 148:   REJECTED
+ 149: }
+ 150: 
+ 151: model ListingReview {
+ 152:   id         String         @id @default(cuid())
+ 153:   listingId  String
+ 154:   reviewerId String?
+ 155:   decision   ReviewDecision
+ 156:   reason     String?        @db.VarChar(1000)
+ 157:   createdAt  DateTime       @default(now())
+ 158: 
+ 159:   listing    Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+ 160:   reviewer   User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+ 161: 
+ 162:   @@index([listingId, createdAt])
+ 163:   @@index([reviewerId])
+ 164: }
+ 165: 
+ 166: 
+ 167: model Inquiry {
+ 168:   id          String   @id @default(cuid())
+ 169:   listingId   String
+ 170:   senderId    String
+ 171:   recipientId String
+ 172:   message     String   @db.VarChar(2000)
+ 173:   kind        String   @default("MESSAGE") @db.VarChar(20)
+ 174:   preferredVisitAt DateTime?
+ 175:   isRead      Boolean  @default(false)
+ 176:   createdAt   DateTime @default(now())
+ 177: 
+ 178:   listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+ 179:   sender    User    @relation("InquirySender", fields: [senderId], references: [id], onDelete: Cascade)
+ 180:   recipient User    @relation("InquiryRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+ 181: 
+ 182:   @@index([recipientId, createdAt])
+ 183:   @@index([senderId, createdAt])
+ 184:   @@index([listingId])
+ 185: }
+ 186: 
+ 187: // Shared PostgreSQL-backed API rate-limit buckets.
+ 188: model RateLimitBucket {
+ 189:   key       String   @id @db.VarChar(64)
+ 190:   count     Int      @default(1)
+ 191:   resetAt   DateTime
+ 192:   updatedAt DateTime @updatedAt
+ 193: 
+ 194:   @@index([resetAt])
+ 195: }

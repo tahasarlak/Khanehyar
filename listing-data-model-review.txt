@@ -1,0 +1,5527 @@
+
+===========================================================================
+FILE: backups\stage2-rate-limit-20261017-231544\apps\web\prisma\schema.prisma
+===========================================================================
+// Real Estate Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  sentInquiries Inquiry[] @relation("InquirySender")
+  receivedInquiries Inquiry[] @relation("InquiryRecipient")
+  reviews ListingReview[]
+  id           String     @id @default(cuid())
+  name         String?
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+
+  listings     Listing[]
+  favorites    Favorite[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Listing {
+  inquiries Inquiry[]
+  reviews ListingReview[]
+  id           String        @id @default(cuid())
+  title        String        @db.VarChar(120)
+  description  String        @db.Text
+  listingType  ListingType
+  propertyType PropertyType
+  status       ListingStatus @default(PENDING)
+
+  price        Decimal       @db.Decimal(14, 2)
+  currency     String        @default("RUB") @db.VarChar(3)
+  area         Decimal       @db.Decimal(10, 2)
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?
+
+  city         String        @db.VarChar(100)
+  address      String?       @db.VarChar(300)
+  latitude     Float?
+  longitude    Float?
+
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images       ListingImage[]
+  favorites    Favorite[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([city, status])
+  @@index([listingType, propertyType, status])
+  @@index([price])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  url       String   @db.VarChar(2048)
+  sortOrder Int      @default(0)
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+
+enum ReviewDecision {
+  PUBLISHED
+  REJECTED
+}
+
+model ListingReview {
+  id         String         @id @default(cuid())
+  listingId  String
+  reviewerId String?
+  decision   ReviewDecision
+  reason     String?        @db.VarChar(1000)
+  createdAt  DateTime       @default(now())
+
+  listing    Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, createdAt])
+  @@index([reviewerId])
+}
+
+
+model Inquiry {
+  id          String   @id @default(cuid())
+  listingId   String
+  senderId    String
+  recipientId String
+  message     String   @db.VarChar(2000)
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  sender    User    @relation("InquirySender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User    @relation("InquiryRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([listingId])
+}
+
+===========================================================================
+FILE: backups\review-20261017-061129\schema.prisma
+===========================================================================
+// Real Estate Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String?
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+
+  listings     Listing[]
+  favorites    Favorite[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Listing {
+  id           String        @id @default(cuid())
+  title        String        @db.VarChar(120)
+  description  String        @db.Text
+  listingType  ListingType
+  propertyType PropertyType
+  status       ListingStatus @default(PENDING)
+
+  price        Decimal       @db.Decimal(14, 2)
+  currency     String        @default("RUB") @db.VarChar(3)
+  area         Decimal       @db.Decimal(10, 2)
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?
+
+  city         String        @db.VarChar(100)
+  address      String?       @db.VarChar(300)
+  latitude     Float?
+  longitude    Float?
+
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images       ListingImage[]
+  favorites    Favorite[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([city, status])
+  @@index([listingType, propertyType, status])
+  @@index([price])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  url       String   @db.VarChar(2048)
+  sortOrder Int      @default(0)
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+
+===========================================================================
+FILE: backups\repair-20261017-061504\schema.prisma
+===========================================================================
+// Real Estate Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  reviews ListingReview[]
+  id           String     @id @default(cuid())
+  name         String?
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+
+  listings     Listing[]
+  favorites    Favorite[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Listing {
+  reviews ListingReview[]
+  id           String        @id @default(cuid())
+  title        String        @db.VarChar(120)
+  description  String        @db.Text
+  listingType  ListingType
+  propertyType PropertyType
+  status       ListingStatus @default(PENDING)
+
+  price        Decimal       @db.Decimal(14, 2)
+  currency     String        @default("RUB") @db.VarChar(3)
+  area         Decimal       @db.Decimal(10, 2)
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?
+
+  city         String        @db.VarChar(100)
+  address      String?       @db.VarChar(300)
+  latitude     Float?
+  longitude    Float?
+
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images       ListingImage[]
+  favorites    Favorite[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([city, status])
+  @@index([listingType, propertyType, status])
+  @@index([price])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  url       String   @db.VarChar(2048)
+  sortOrder Int      @default(0)
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+
+enum ReviewDecision {
+  PUBLISHED
+  REJECTED
+}
+
+model ListingReview {
+  id         String         @id @default(cuid())
+  listingId  String
+  reviewerId String?
+  decision   ReviewDecision
+  reason     String?        @db.VarChar(1000)
+  createdAt  DateTime       @default(now())
+
+  listing    Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, createdAt])
+  @@index([reviewerId])
+}
+
+
+===========================================================================
+FILE: backups\repair-20261017-061332\schema.prisma
+===========================================================================
+// Real Estate Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String?
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+
+  listings     Listing[]
+  favorites    Favorite[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Listing {
+  id           String        @id @default(cuid())
+  title        String        @db.VarChar(120)
+  description  String        @db.Text
+  listingType  ListingType
+  propertyType PropertyType
+  status       ListingStatus @default(PENDING)
+
+  price        Decimal       @db.Decimal(14, 2)
+  currency     String        @default("RUB") @db.VarChar(3)
+  area         Decimal       @db.Decimal(10, 2)
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?
+
+  city         String        @db.VarChar(100)
+  address      String?       @db.VarChar(300)
+  latitude     Float?
+  longitude    Float?
+
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images       ListingImage[]
+  favorites    Favorite[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([city, status])
+  @@index([listingType, propertyType, status])
+  @@index([price])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  url       String   @db.VarChar(2048)
+  sortOrder Int      @default(0)
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+
+enum ReviewDecision {
+  PUBLISHED
+  REJECTED
+}
+
+model ListingReview {
+  id         String         @id @default(cuid())
+  listingId  String
+  reviewerId String?
+  decision   ReviewDecision
+  reason     String?        @db.VarChar(1000)
+  createdAt  DateTime       @default(now())
+
+  listing    Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, createdAt])
+  @@index([reviewerId])
+}
+
+
+===========================================================================
+FILE: backups\listing-details-schema-20261019-215613\schema.prisma
+===========================================================================
+// Real Estate Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  sentInquiries Inquiry[] @relation("InquirySender")
+  receivedInquiries Inquiry[] @relation("InquiryRecipient")
+  reviews ListingReview[]
+  id           String     @id @default(cuid())
+  name         String?
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+
+  listings     Listing[]
+  favorites    Favorite[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Listing {
+  inquiries Inquiry[]
+  reviews ListingReview[]
+  id           String        @id @default(cuid())
+  title        String        @db.VarChar(120)
+  description  String        @db.Text
+  listingType  ListingType
+  propertyType PropertyType
+  status       ListingStatus @default(PENDING)
+
+  price        Decimal       @db.Decimal(14, 2)
+  currency     String        @default("RUB") @db.VarChar(3)
+  area         Decimal       @db.Decimal(10, 2)
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?
+
+  city         String        @db.VarChar(100)
+  address      String?       @db.VarChar(300)
+  latitude     Float?
+  longitude    Float?
+
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images       ListingImage[]
+  favorites    Favorite[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([city, status])
+  @@index([listingType, propertyType, status])
+  @@index([price])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  url       String   @db.VarChar(2048)
+  sortOrder Int      @default(0)
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+
+enum ReviewDecision {
+  PUBLISHED
+  REJECTED
+}
+
+model ListingReview {
+  id         String         @id @default(cuid())
+  listingId  String
+  reviewerId String?
+  decision   ReviewDecision
+  reason     String?        @db.VarChar(1000)
+  createdAt  DateTime       @default(now())
+
+  listing    Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, createdAt])
+  @@index([reviewerId])
+}
+
+
+model Inquiry {
+  id          String   @id @default(cuid())
+  listingId   String
+  senderId    String
+  recipientId String
+  message     String   @db.VarChar(2000)
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  sender    User    @relation("InquirySender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User    @relation("InquiryRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([listingId])
+}
+
+// Shared PostgreSQL-backed API rate-limit buckets.
+model RateLimitBucket {
+  key       String   @id @db.VarChar(64)
+  count     Int      @default(1)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+
+
+===========================================================================
+FILE: backups\inquiries-20261017-065837\schema.prisma
+===========================================================================
+// Real Estate Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  reviews ListingReview[]
+  id           String     @id @default(cuid())
+  name         String?
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+
+  listings     Listing[]
+  favorites    Favorite[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Listing {
+  reviews ListingReview[]
+  id           String        @id @default(cuid())
+  title        String        @db.VarChar(120)
+  description  String        @db.Text
+  listingType  ListingType
+  propertyType PropertyType
+  status       ListingStatus @default(PENDING)
+
+  price        Decimal       @db.Decimal(14, 2)
+  currency     String        @default("RUB") @db.VarChar(3)
+  area         Decimal       @db.Decimal(10, 2)
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?
+
+  city         String        @db.VarChar(100)
+  address      String?       @db.VarChar(300)
+  latitude     Float?
+  longitude    Float?
+
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images       ListingImage[]
+  favorites    Favorite[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([city, status])
+  @@index([listingType, propertyType, status])
+  @@index([price])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  url       String   @db.VarChar(2048)
+  sortOrder Int      @default(0)
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+
+enum ReviewDecision {
+  PUBLISHED
+  REJECTED
+}
+
+model ListingReview {
+  id         String         @id @default(cuid())
+  listingId  String
+  reviewerId String?
+  decision   ReviewDecision
+  reason     String?        @db.VarChar(1000)
+  createdAt  DateTime       @default(now())
+
+  listing    Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, createdAt])
+  @@index([reviewerId])
+}
+
+
+===========================================================================
+FILE: apps\web\prisma\schema.prisma
+===========================================================================
+// Real Estate Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  sentInquiries Inquiry[] @relation("InquirySender")
+  receivedInquiries Inquiry[] @relation("InquiryRecipient")
+  reviews ListingReview[]
+  id           String     @id @default(cuid())
+  name         String?
+  avatarUrl    String?    @db.VarChar(2048)
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+
+  listings     Listing[]
+  favorites    Favorite[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Listing {
+  inquiries Inquiry[]
+  reviews ListingReview[]
+  id           String        @id @default(cuid())
+  title        String        @db.VarChar(120)
+  description  String        @db.Text
+  listingType  ListingType
+  propertyType PropertyType
+  status       ListingStatus @default(PENDING)
+
+  price        Decimal       @db.Decimal(14, 2)
+  currency     String        @default("RUB") @db.VarChar(3)
+  area         Decimal       @db.Decimal(10, 2)
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?
+
+  yearBuilt              Int?
+  bathrooms              Int?
+  parkingSpaces          Int?
+  hasElevator            Boolean?
+  hasStorage             Boolean?
+  heatingType            String?   @db.VarChar(80)
+  coolingType            String?   @db.VarChar(80)
+  documentType           String?   @db.VarChar(100)
+  orientation            String?   @db.VarChar(50)
+  naturalLight           String?   @db.VarChar(50)
+  furnished              Boolean?
+  readyToMove            Boolean?
+  balcony                Boolean?
+  terrace                Boolean?
+  garden                 Boolean?
+  amenities              String[]  @default([])
+  monthlyRent            Decimal?  @db.Decimal(14, 2)
+  deposit                Decimal?  @db.Decimal(14, 2)
+  allowDepositConversion Boolean   @default(false)
+  advertiserType         String?   @db.VarChar(20)
+  showExactLocation      Boolean   @default(false)
+
+  city         String        @db.VarChar(100)
+  address      String?       @db.VarChar(300)
+  latitude     Float?
+  longitude    Float?
+
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images       ListingImage[]
+  favorites    Favorite[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([city, status])
+  @@index([listingType, propertyType, status])
+  @@index([price])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  url       String   @db.VarChar(2048)
+  sortOrder Int      @default(0)
+  label     String?  @db.VarChar(50)
+  altText   String?  @db.VarChar(200)
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+
+enum ReviewDecision {
+  PUBLISHED
+  REJECTED
+}
+
+model ListingReview {
+  id         String         @id @default(cuid())
+  listingId  String
+  reviewerId String?
+  decision   ReviewDecision
+  reason     String?        @db.VarChar(1000)
+  createdAt  DateTime       @default(now())
+
+  listing    Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, createdAt])
+  @@index([reviewerId])
+}
+
+
+model Inquiry {
+  id          String   @id @default(cuid())
+  listingId   String
+  senderId    String
+  recipientId String
+  message     String   @db.VarChar(2000)
+  kind        String   @default("MESSAGE") @db.VarChar(20)
+  preferredVisitAt DateTime?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  sender    User    @relation("InquirySender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User    @relation("InquiryRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([listingId])
+}
+
+// Shared PostgreSQL-backed API rate-limit buckets.
+model RateLimitBucket {
+  key       String   @id @db.VarChar(64)
+  count     Int      @default(1)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+
+
+===========================================================================
+FILE: packages\shared\src\listing-schema.ts
+===========================================================================
+import { z } from "zod";
+
+export const listingSchema = z.object({
+  title: z.string().trim().min(5, "عنوان باید حداقل ۵ کاراکتر باشد").max(120),
+  description: z.string().trim().min(20, "توضیحات باید حداقل ۲۰ کاراکتر باشد").max(5000),
+
+  listingType: z.enum(["SALE", "RENT"]),
+  propertyType: z.enum([
+    "APARTMENT",
+    "HOUSE",
+    "VILLA",
+    "LAND",
+    "COMMERCIAL",
+  ]),
+
+  price: z.number().positive("قیمت باید بیشتر از صفر باشد"),
+  currency: z.string().trim().length(3),
+
+  area: z.number().positive("مساحت باید بیشتر از صفر باشد"),
+  rooms: z.number().int().nonnegative().nullable(),
+
+  city: z.string().trim().min(2).max(100),
+  address: z.string().trim().max(300).nullable(),
+
+  latitude: z.number().min(-90).max(90).nullable(),
+  longitude: z.number().min(-180).max(180).nullable(),
+
+  yearBuilt: z.number().int().min(1000).max(2200).nullable().optional(),
+  bathrooms: z.number().int().nonnegative().nullable().optional(),
+  parkingSpaces: z.number().int().nonnegative().nullable().optional(),
+  hasElevator: z.boolean().nullable().optional(),
+  hasStorage: z.boolean().nullable().optional(),
+  heatingType: z.string().trim().max(80).nullable().optional(),
+  coolingType: z.string().trim().max(80).nullable().optional(),
+  documentType: z.string().trim().max(100).nullable().optional(),
+  orientation: z.string().trim().max(50).nullable().optional(),
+  naturalLight: z.string().trim().max(50).nullable().optional(),
+  furnished: z.boolean().nullable().optional(),
+  readyToMove: z.boolean().nullable().optional(),
+  balcony: z.boolean().nullable().optional(),
+  terrace: z.boolean().nullable().optional(),
+  garden: z.boolean().nullable().optional(),
+  amenities: z.array(z.string().trim().min(1).max(80)).max(30).default([]),
+  monthlyRent: z.number().positive().nullable().optional(),
+  deposit: z.number().nonnegative().nullable().optional(),
+  allowDepositConversion: z.boolean().default(false),
+  advertiserType: z.enum(["UNSPECIFIED", "OWNER", "AGENT", "BUILDER"]).default("UNSPECIFIED"),
+  showExactLocation: z.boolean().default(false),
+  imageUrls: z.array(z.url()).max(30).default([]),
+});
+
+export type CreateListingInput = z.infer<typeof listingSchema>;
+
+
+===========================================================================
+FILE: backups\stage6-mutation-rate-limit-20261017-232515\apps\web\app\api\my\listings\[id]\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "../../../../../src/lib/auth";
+import { prisma } from "../../../../../src/lib/prisma";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function DELETE(request: Request, context: Context) {
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const result = await prisma.listing.deleteMany({
+    where: {
+      id,
+      ownerId: user.id,
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا اجازه حذف آن را ندارید." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "آگهی با موفقیت حذف شد.",
+  });
+}
+
+import { listingSchema } from "@real-estate/shared";
+
+export async function GET(_request: Request, context: Context) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  const listing = await prisma.listing.findFirst({
+    where: { id, ownerId: user.id },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      listingType: true,
+      propertyType: true,
+      price: true,
+      currency: true,
+      area: true,
+      rooms: true,
+      floor: true,
+      totalFloors: true,
+      city: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+      status: true,
+    },
+  });
+
+  if (!listing) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      listing: {
+        ...listing,
+        price: listing.price.toString(),
+        area: listing.area.toString(),
+      },
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+export async function PATCH(request: Request, context: Context) {
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
+    return NextResponse.json(
+      { error: "فرمت درخواست معتبر نیست." },
+      { status: 415 },
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "JSON معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json(
+      { error: "اطلاعات درخواست معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const input = body as Record<string, unknown>;
+  const allowedKeys = new Set([
+    "title", "description", "listingType", "propertyType",
+    "price", "currency", "area", "rooms", "city", "address",
+    "latitude", "longitude", "floor", "totalFloors",
+  ]);
+
+  if (Object.keys(input).some((key) => !allowedKeys.has(key))) {
+    return NextResponse.json(
+      { error: "فیلد غیرمجاز در درخواست وجود دارد." },
+      { status: 400 },
+    );
+  }
+
+  const validation = listingSchema.safeParse({
+    ...input,
+    imageUrls: [],
+  });
+
+  if (!validation.success) {
+    return NextResponse.json(
+      {
+        error: "اطلاعات فرم معتبر نیست.",
+        details: validation.error.flatten(),
+      },
+      { status: 400 },
+    );
+  }
+
+  const { floor, totalFloors } = input;
+
+  const validFloor =
+    floor === null ||
+    (typeof floor === "number" && Number.isInteger(floor) && floor >= 0);
+
+  const validTotalFloors =
+    totalFloors === null ||
+    (typeof totalFloors === "number" &&
+      Number.isInteger(totalFloors) && totalFloors >= 1);
+
+  if (
+    !validFloor ||
+    !validTotalFloors ||
+    floor === undefined ||
+    totalFloors === undefined ||
+    (typeof floor === "number" &&
+      typeof totalFloors === "number" &&
+      floor > totalFloors)
+  ) {
+    return NextResponse.json(
+      { error: "اطلاعات طبقه معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const data = validation.data;
+
+  const result = await prisma.listing.updateMany({
+    where: { id, ownerId: user.id },
+    data: {
+      title: data.title,
+      description: data.description,
+      listingType: data.listingType,
+      propertyType: data.propertyType,
+      price: data.price,
+      currency: data.currency,
+      area: data.area,
+      rooms: data.rooms,
+      city: data.city,
+      address: data.address,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      floor: floor as number | null,
+      totalFloors: totalFloors as number | null,
+      status: "PENDING",
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا متعلق به شما نیست." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "تغییرات ذخیره شد و آگهی منتظر تأیید مجدد است.",
+    id,
+    status: "PENDING",
+  });
+}
+
+===========================================================================
+FILE: backups\stage4-rate-limit-20261017-232202\apps\web\app\api\my\listings\[id]\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "../../../../../src/lib/auth";
+import { prisma } from "../../../../../src/lib/prisma";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function DELETE(request: Request, context: Context) {
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const result = await prisma.listing.deleteMany({
+    where: {
+      id,
+      ownerId: user.id,
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا اجازه حذف آن را ندارید." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "آگهی با موفقیت حذف شد.",
+  });
+}
+
+import { listingSchema } from "@real-estate/shared";
+
+export async function GET(_request: Request, context: Context) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  const listing = await prisma.listing.findFirst({
+    where: { id, ownerId: user.id },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      listingType: true,
+      propertyType: true,
+      price: true,
+      currency: true,
+      area: true,
+      rooms: true,
+      floor: true,
+      totalFloors: true,
+      city: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+      status: true,
+    },
+  });
+
+  if (!listing) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      listing: {
+        ...listing,
+        price: listing.price.toString(),
+        area: listing.area.toString(),
+      },
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+export async function PATCH(request: Request, context: Context) {
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
+    return NextResponse.json(
+      { error: "فرمت درخواست معتبر نیست." },
+      { status: 415 },
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "JSON معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json(
+      { error: "اطلاعات درخواست معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const input = body as Record<string, unknown>;
+  const allowedKeys = new Set([
+    "title", "description", "listingType", "propertyType",
+    "price", "currency", "area", "rooms", "city", "address",
+    "latitude", "longitude", "floor", "totalFloors",
+  ]);
+
+  if (Object.keys(input).some((key) => !allowedKeys.has(key))) {
+    return NextResponse.json(
+      { error: "فیلد غیرمجاز در درخواست وجود دارد." },
+      { status: 400 },
+    );
+  }
+
+  const validation = listingSchema.safeParse({
+    ...input,
+    imageUrls: [],
+  });
+
+  if (!validation.success) {
+    return NextResponse.json(
+      {
+        error: "اطلاعات فرم معتبر نیست.",
+        details: validation.error.flatten(),
+      },
+      { status: 400 },
+    );
+  }
+
+  const { floor, totalFloors } = input;
+
+  const validFloor =
+    floor === null ||
+    (typeof floor === "number" && Number.isInteger(floor) && floor >= 0);
+
+  const validTotalFloors =
+    totalFloors === null ||
+    (typeof totalFloors === "number" &&
+      Number.isInteger(totalFloors) && totalFloors >= 1);
+
+  if (
+    !validFloor ||
+    !validTotalFloors ||
+    floor === undefined ||
+    totalFloors === undefined ||
+    (typeof floor === "number" &&
+      typeof totalFloors === "number" &&
+      floor > totalFloors)
+  ) {
+    return NextResponse.json(
+      { error: "اطلاعات طبقه معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const data = validation.data;
+
+  const result = await prisma.listing.updateMany({
+    where: { id, ownerId: user.id },
+    data: {
+      title: data.title,
+      description: data.description,
+      listingType: data.listingType,
+      propertyType: data.propertyType,
+      price: data.price,
+      currency: data.currency,
+      area: data.area,
+      rooms: data.rooms,
+      city: data.city,
+      address: data.address,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      floor: floor as number | null,
+      totalFloors: totalFloors as number | null,
+      status: "PENDING",
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا متعلق به شما نیست." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "تغییرات ذخیره شد و آگهی منتظر تأیید مجدد است.",
+    id,
+    status: "PENDING",
+  });
+}
+
+===========================================================================
+FILE: backups\stage4-rate-limit-20261017-232202\apps\web\app\api\listings\[id]\inquiries\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const origin = request.headers.get("origin");
+
+  if (origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const contentLength = Number(request.headers.get("content-length") || 0);
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش‌ازحد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "ساختار پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 20 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "متن پیام باید بین ۲۰ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const listing = await prisma.listing.findFirst({
+    where: { id, status: "PUBLISHED" },
+    select: { id: true, ownerId: true },
+  });
+
+  if (!listing) {
+    return NextResponse.json(
+      { error: "آگهی در دسترس نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (listing.ownerId === user.id) {
+    return NextResponse.json(
+      { error: "نمی‌توانید برای آگهی خودتان پیام بفرستید." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentMessages = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentMessages >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  await prisma.inquiry.create({
+    data: {
+      listingId: listing.id,
+      senderId: user.id,
+      recipientId: listing.ownerId,
+      message,
+    },
+  });
+
+  return NextResponse.json(
+    { success: true, message: "پیام با موفقیت ارسال شد." },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: backups\stage3-api-security-20261017-232058\apps\web\app\api\my\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "../../../../src/lib/auth";
+import { prisma } from "../../../../src/lib/prisma";
+
+export async function GET() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      {
+        status: 401,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
+  }
+
+  const listings = await prisma.listing.findMany({
+    where: { ownerId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    select: {
+      id: true,
+      title: true,
+      city: true,
+      status: true,
+      listingType: true,
+      propertyType: true,
+      price: true,
+      currency: true,
+      createdAt: true,
+      reviews: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          decision: true,
+          reason: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+
+  return NextResponse.json(
+    {
+      listings: listings.map((listing) => ({
+        ...listing,
+        price: listing.price.toString(),
+      })),
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+===========================================================================
+FILE: backups\stage3-api-security-20261017-232058\apps\web\app\api\my\listings\[id]\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "../../../../../src/lib/auth";
+import { prisma } from "../../../../../src/lib/prisma";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function DELETE(request: Request, context: Context) {
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const result = await prisma.listing.deleteMany({
+    where: {
+      id,
+      ownerId: user.id,
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا اجازه حذف آن را ندارید." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "آگهی با موفقیت حذف شد.",
+  });
+}
+
+import { listingSchema } from "@real-estate/shared";
+
+export async function GET(_request: Request, context: Context) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  const listing = await prisma.listing.findFirst({
+    where: { id, ownerId: user.id },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      listingType: true,
+      propertyType: true,
+      price: true,
+      currency: true,
+      area: true,
+      rooms: true,
+      floor: true,
+      totalFloors: true,
+      city: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+      status: true,
+    },
+  });
+
+  if (!listing) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      listing: {
+        ...listing,
+        price: listing.price.toString(),
+        area: listing.area.toString(),
+      },
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+export async function PATCH(request: Request, context: Context) {
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
+    return NextResponse.json(
+      { error: "فرمت درخواست معتبر نیست." },
+      { status: 415 },
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "JSON معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json(
+      { error: "اطلاعات درخواست معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const input = body as Record<string, unknown>;
+  const allowedKeys = new Set([
+    "title", "description", "listingType", "propertyType",
+    "price", "currency", "area", "rooms", "city", "address",
+    "latitude", "longitude", "floor", "totalFloors",
+  ]);
+
+  if (Object.keys(input).some((key) => !allowedKeys.has(key))) {
+    return NextResponse.json(
+      { error: "فیلد غیرمجاز در درخواست وجود دارد." },
+      { status: 400 },
+    );
+  }
+
+  const validation = listingSchema.safeParse({
+    ...input,
+    imageUrls: [],
+  });
+
+  if (!validation.success) {
+    return NextResponse.json(
+      {
+        error: "اطلاعات فرم معتبر نیست.",
+        details: validation.error.flatten(),
+      },
+      { status: 400 },
+    );
+  }
+
+  const { floor, totalFloors } = input;
+
+  const validFloor =
+    floor === null ||
+    (typeof floor === "number" && Number.isInteger(floor) && floor >= 0);
+
+  const validTotalFloors =
+    totalFloors === null ||
+    (typeof totalFloors === "number" &&
+      Number.isInteger(totalFloors) && totalFloors >= 1);
+
+  if (
+    !validFloor ||
+    !validTotalFloors ||
+    floor === undefined ||
+    totalFloors === undefined ||
+    (typeof floor === "number" &&
+      typeof totalFloors === "number" &&
+      floor > totalFloors)
+  ) {
+    return NextResponse.json(
+      { error: "اطلاعات طبقه معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const data = validation.data;
+
+  const result = await prisma.listing.updateMany({
+    where: { id, ownerId: user.id },
+    data: {
+      title: data.title,
+      description: data.description,
+      listingType: data.listingType,
+      propertyType: data.propertyType,
+      price: data.price,
+      currency: data.currency,
+      area: data.area,
+      rooms: data.rooms,
+      city: data.city,
+      address: data.address,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      floor: floor as number | null,
+      totalFloors: totalFloors as number | null,
+      status: "PENDING",
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا متعلق به شما نیست." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "تغییرات ذخیره شد و آگهی منتظر تأیید مجدد است.",
+    id,
+    status: "PENDING",
+  });
+}
+
+===========================================================================
+FILE: backups\stage3-api-security-20261017-232058\apps\web\app\api\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../src/lib/rate-limit";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+export async function POST(request: Request) {
+  const limit = await checkRateLimit("create-listing", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""),
+      propertyType: String(formData.get("propertyType") ?? ""),
+      price: Number(formData.get("price")),
+      currency: String(formData.get("currency") ?? "RUB"),
+      area: Number(formData.get("area")),
+      rooms:
+        formData.get("rooms") === null || formData.get("rooms") === ""
+          ? null
+          : Number(formData.get("rooms")),
+      city: String(formData.get("city") ?? ""),
+      address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null,
+      longitude: null,
+      imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor,
+        totalFloors,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: backups\stage3-api-security-20261017-232058\apps\web\app\api\listings\[id]\inquiries\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const origin = request.headers.get("origin");
+
+  if (origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const contentLength = Number(request.headers.get("content-length") || 0);
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش‌ازحد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "ساختار پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 20 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "متن پیام باید بین ۲۰ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const listing = await prisma.listing.findFirst({
+    where: { id, status: "PUBLISHED" },
+    select: { id: true, ownerId: true },
+  });
+
+  if (!listing) {
+    return NextResponse.json(
+      { error: "آگهی در دسترس نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (listing.ownerId === user.id) {
+    return NextResponse.json(
+      { error: "نمی‌توانید برای آگهی خودتان پیام بفرستید." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentMessages = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentMessages >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  await prisma.inquiry.create({
+    data: {
+      listingId: listing.id,
+      senderId: user.id,
+      recipientId: listing.ownerId,
+      message,
+    },
+  });
+
+  return NextResponse.json(
+    { success: true, message: "پیام با موفقیت ارسال شد." },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: backups\stage3-api-security-20261017-232058\apps\web\app\api\inquiries\[id]\reply\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const limit = await checkRateLimit("reply-inquiry", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+
+  if (!origin || origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست نامعتبر است." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "برای پاسخ وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const target = await prisma.inquiry.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      listingId: true,
+      senderId: true,
+      recipientId: true,
+    },
+  });
+
+  // Only the recipient of a message can reply to it.
+  if (!target || target.recipientId !== user.id) {
+    return NextResponse.json(
+      { error: "پیام یافت نشد یا دسترسی مجاز نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (target.senderId === user.id) {
+    return NextResponse.json(
+      { error: "امکان ارسال پاسخ به خودتان وجود ندارد." },
+      { status: 400 }
+    );
+  }
+
+  const contentType = request.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    return NextResponse.json(
+      { error: "نوع درخواست نامعتبر است." },
+      { status: 415 }
+    );
+  }
+
+  const contentLength = Number(
+    request.headers.get("content-length") || "0"
+  );
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش از حد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "متن درخواست معتبر نیست." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 2 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "پاسخ باید بین ۲ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentCount = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentCount >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  // Preserve the original listing and reverse sender/recipient.
+  const reply = await prisma.inquiry.create({
+    data: {
+      listingId: target.listingId,
+      senderId: user.id,
+      recipientId: target.senderId,
+      message,
+    },
+    select: { id: true },
+  });
+
+  return NextResponse.json(
+    { success: true, id: reply.id },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: backups\stage3-api-security-20261017-232058\apps\web\app\api\admin\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "../../../../src/lib/auth";
+import { prisma } from "../../../../src/lib/prisma";
+
+export async function GET() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  if (user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "دسترسی مدیر لازم است." },
+      { status: 403 },
+    );
+  }
+
+  const listings = await prisma.listing.findMany({
+    where: { status: "PENDING" },
+    orderBy: { createdAt: "asc" },
+    take: 100,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      listingType: true,
+      propertyType: true,
+      city: true,
+      address: true,
+      price: true,
+      currency: true,
+      area: true,
+      rooms: true,
+      floor: true,
+      totalFloors: true,
+      createdAt: true,
+      owner: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  return NextResponse.json(
+    {
+      listings: listings.map((listing) => ({
+        ...listing,
+        price: listing.price.toString(),
+        area: listing.area.toString(),
+      })),
+    },
+    {
+      headers: { "Cache-Control": "no-store" },
+    },
+  );
+}
+
+===========================================================================
+FILE: backups\stage3-api-security-20261017-232058\apps\web\app\api\admin\listings\[id]\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { getCurrentUser } from "../../../../../src/lib/auth";
+import { prisma } from "../../../../../src/lib/prisma";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+const decisionSchema = z
+  .object({
+    status: z.enum(["PUBLISHED", "REJECTED"]),
+    reason: z.string().trim().max(1000).optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.status === "REJECTED" && (!data.reason || data.reason.length < 10)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "برای رد آگهی، توضیح حداقل ۱۰ کاراکتری لازم است.",
+      });
+    }
+  });
+
+export async function PATCH(request: Request, context: Context) {
+  const origin = request.headers.get("origin");
+  const expectedOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== expectedOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  if (user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "دسترسی مدیر لازم است." },
+      { status: 403 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  if (!(request.headers.get("content-type") ?? "")
+    .toLowerCase().includes("application/json")) {
+    return NextResponse.json(
+      { error: "درخواست باید JSON باشد." },
+      { status: 415 },
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "JSON نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = decisionSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: "اطلاعات تصمیم مدیریت معتبر نیست.",
+        details: parsed.error.flatten().fieldErrors,
+      },
+      { status: 400 },
+    );
+  }
+
+  const { status, reason } = parsed.data;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.listing.updateMany({
+        where: { id, status: "PENDING" },
+        data: { status },
+      });
+
+      if (updated.count === 0) {
+        return false;
+      }
+
+      await tx.listingReview.create({
+        data: {
+          listingId: id,
+          reviewerId: user.id,
+          decision: status,
+          reason: reason || null,
+        },
+      });
+
+      return true;
+    });
+
+    if (!result) {
+      return NextResponse.json(
+        { error: "آگهی پیدا نشد یا قبلاً بررسی شده است." },
+        { status: 409 },
+      );
+    }
+
+    return NextResponse.json({
+      message:
+        status === "PUBLISHED"
+          ? "آگهی با موفقیت منتشر شد."
+          : "آگهی رد شد و دلیل آن ثبت گردید.",
+      id,
+      status,
+    });
+  } catch (error) {
+    console.error("Admin review failed:", error);
+
+    return NextResponse.json(
+      { error: "ثبت تصمیم مدیریت ناموفق بود." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: backups\stage2-rate-limit-20261017-231544\apps\web\app\api\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../src/lib/rate-limit";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+export async function POST(request: Request) {
+  const limit = checkRateLimit("create-listing", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""),
+      propertyType: String(formData.get("propertyType") ?? ""),
+      price: Number(formData.get("price")),
+      currency: String(formData.get("currency") ?? "RUB"),
+      area: Number(formData.get("area")),
+      rooms:
+        formData.get("rooms") === null || formData.get("rooms") === ""
+          ? null
+          : Number(formData.get("rooms")),
+      city: String(formData.get("city") ?? ""),
+      address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null,
+      longitude: null,
+      imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor,
+        totalFloors,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: backups\stage2-rate-limit-20261017-231544\apps\web\app\api\inquiries\[id]\reply\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const limit = checkRateLimit("reply-inquiry", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+
+  if (!origin || origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست نامعتبر است." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "برای پاسخ وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const target = await prisma.inquiry.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      listingId: true,
+      senderId: true,
+      recipientId: true,
+    },
+  });
+
+  // Only the recipient of a message can reply to it.
+  if (!target || target.recipientId !== user.id) {
+    return NextResponse.json(
+      { error: "پیام یافت نشد یا دسترسی مجاز نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (target.senderId === user.id) {
+    return NextResponse.json(
+      { error: "امکان ارسال پاسخ به خودتان وجود ندارد." },
+      { status: 400 }
+    );
+  }
+
+  const contentType = request.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    return NextResponse.json(
+      { error: "نوع درخواست نامعتبر است." },
+      { status: 415 }
+    );
+  }
+
+  const contentLength = Number(
+    request.headers.get("content-length") || "0"
+  );
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش از حد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "متن درخواست معتبر نیست." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 2 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "پاسخ باید بین ۲ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentCount = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentCount >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  // Preserve the original listing and reverse sender/recipient.
+  const reply = await prisma.inquiry.create({
+    data: {
+      listingId: target.listingId,
+      senderId: user.id,
+      recipientId: target.senderId,
+      message,
+    },
+    select: { id: true },
+  });
+
+  return NextResponse.json(
+    { success: true, id: reply.id },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: backups\stage1-baseline-20261017-231353\apps\web\app\api\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../src/lib/rate-limit";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+export async function POST(request: Request) {
+  const limit = checkRateLimit("create-listing", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""),
+      propertyType: String(formData.get("propertyType") ?? ""),
+      price: Number(formData.get("price")),
+      currency: String(formData.get("currency") ?? "RUB"),
+      area: Number(formData.get("area")),
+      rooms:
+        formData.get("rooms") === null || formData.get("rooms") === ""
+          ? null
+          : Number(formData.get("rooms")),
+      city: String(formData.get("city") ?? ""),
+      address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null,
+      longitude: null,
+      imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor,
+        totalFloors,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: backups\stage1-baseline-20261017-231353\apps\web\app\api\inquiries\[id]\reply\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const limit = checkRateLimit("reply-inquiry", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+
+  if (!origin || origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست نامعتبر است." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "برای پاسخ وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const target = await prisma.inquiry.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      listingId: true,
+      senderId: true,
+      recipientId: true,
+    },
+  });
+
+  // Only the recipient of a message can reply to it.
+  if (!target || target.recipientId !== user.id) {
+    return NextResponse.json(
+      { error: "پیام یافت نشد یا دسترسی مجاز نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (target.senderId === user.id) {
+    return NextResponse.json(
+      { error: "امکان ارسال پاسخ به خودتان وجود ندارد." },
+      { status: 400 }
+    );
+  }
+
+  const contentType = request.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    return NextResponse.json(
+      { error: "نوع درخواست نامعتبر است." },
+      { status: 415 }
+    );
+  }
+
+  const contentLength = Number(
+    request.headers.get("content-length") || "0"
+  );
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش از حد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "متن درخواست معتبر نیست." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 2 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "پاسخ باید بین ۲ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentCount = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentCount >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  // Preserve the original listing and reverse sender/recipient.
+  const reply = await prisma.inquiry.create({
+    data: {
+      listingId: target.listingId,
+      senderId: user.id,
+      recipientId: target.senderId,
+      message,
+    },
+    select: { id: true },
+  });
+
+  return NextResponse.json(
+    { success: true, id: reply.id },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: backups\stage1-20261017-224421\apps\web\app\api\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+export async function POST(request: Request) {
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""),
+      propertyType: String(formData.get("propertyType") ?? ""),
+      price: Number(formData.get("price")),
+      currency: String(formData.get("currency") ?? "RUB"),
+      area: Number(formData.get("area")),
+      rooms:
+        formData.get("rooms") === null || formData.get("rooms") === ""
+          ? null
+          : Number(formData.get("rooms")),
+      city: String(formData.get("city") ?? ""),
+      address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null,
+      longitude: null,
+      imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor,
+        totalFloors,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: backups\stage1-20261017-224322\apps\web\app\api\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+export async function POST(request: Request) {
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""),
+      propertyType: String(formData.get("propertyType") ?? ""),
+      price: Number(formData.get("price")),
+      currency: String(formData.get("currency") ?? "RUB"),
+      area: Number(formData.get("area")),
+      rooms:
+        formData.get("rooms") === null || formData.get("rooms") === ""
+          ? null
+          : Number(formData.get("rooms")),
+      city: String(formData.get("city") ?? ""),
+      address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null,
+      longitude: null,
+      imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor,
+        totalFloors,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: backups\stage-api-rate-limit-20261017-230450\apps\web\app\api\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../src/lib/rate-limit";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+export async function POST(request: Request) {
+  const limit = checkRateLimit("create-listing", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""),
+      propertyType: String(formData.get("propertyType") ?? ""),
+      price: Number(formData.get("price")),
+      currency: String(formData.get("currency") ?? "RUB"),
+      area: Number(formData.get("area")),
+      rooms:
+        formData.get("rooms") === null || formData.get("rooms") === ""
+          ? null
+          : Number(formData.get("rooms")),
+      city: String(formData.get("city") ?? ""),
+      address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null,
+      longitude: null,
+      imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor,
+        totalFloors,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: backups\stage-api-rate-limit-20261017-230450\apps\web\app\api\inquiries\[id]\reply\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const limit = checkRateLimit("reply-inquiry", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+
+  if (!origin || origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست نامعتبر است." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "برای پاسخ وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const target = await prisma.inquiry.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      listingId: true,
+      senderId: true,
+      recipientId: true,
+    },
+  });
+
+  // Only the recipient of a message can reply to it.
+  if (!target || target.recipientId !== user.id) {
+    return NextResponse.json(
+      { error: "پیام یافت نشد یا دسترسی مجاز نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (target.senderId === user.id) {
+    return NextResponse.json(
+      { error: "امکان ارسال پاسخ به خودتان وجود ندارد." },
+      { status: 400 }
+    );
+  }
+
+  const contentType = request.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    return NextResponse.json(
+      { error: "نوع درخواست نامعتبر است." },
+      { status: 415 }
+    );
+  }
+
+  const contentLength = Number(
+    request.headers.get("content-length") || "0"
+  );
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش از حد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "متن درخواست معتبر نیست." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 2 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "پاسخ باید بین ۲ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentCount = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentCount >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  // Preserve the original listing and reverse sender/recipient.
+  const reply = await prisma.inquiry.create({
+    data: {
+      listingId: target.listingId,
+      senderId: user.id,
+      recipientId: target.senderId,
+      message,
+    },
+    select: { id: true },
+  });
+
+  return NextResponse.json(
+    { success: true, id: reply.id },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: backups\stage-api-rate-limit-20261017-230335\apps\web\app\api\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+export async function POST(request: Request) {
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""),
+      propertyType: String(formData.get("propertyType") ?? ""),
+      price: Number(formData.get("price")),
+      currency: String(formData.get("currency") ?? "RUB"),
+      area: Number(formData.get("area")),
+      rooms:
+        formData.get("rooms") === null || formData.get("rooms") === ""
+          ? null
+          : Number(formData.get("rooms")),
+      city: String(formData.get("city") ?? ""),
+      address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null,
+      longitude: null,
+      imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor,
+        totalFloors,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: backups\stage-api-rate-limit-20261017-230335\apps\web\app\api\inquiries\[id]\reply\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const origin = request.headers.get("origin");
+
+  if (!origin || origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست نامعتبر است." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "برای پاسخ وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const target = await prisma.inquiry.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      listingId: true,
+      senderId: true,
+      recipientId: true,
+    },
+  });
+
+  // Only the recipient of a message can reply to it.
+  if (!target || target.recipientId !== user.id) {
+    return NextResponse.json(
+      { error: "پیام یافت نشد یا دسترسی مجاز نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (target.senderId === user.id) {
+    return NextResponse.json(
+      { error: "امکان ارسال پاسخ به خودتان وجود ندارد." },
+      { status: 400 }
+    );
+  }
+
+  const contentType = request.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    return NextResponse.json(
+      { error: "نوع درخواست نامعتبر است." },
+      { status: 415 }
+    );
+  }
+
+  const contentLength = Number(
+    request.headers.get("content-length") || "0"
+  );
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش از حد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "متن درخواست معتبر نیست." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 2 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "پاسخ باید بین ۲ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentCount = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentCount >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  // Preserve the original listing and reverse sender/recipient.
+  const reply = await prisma.inquiry.create({
+    data: {
+      listingId: target.listingId,
+      senderId: user.id,
+      recipientId: target.senderId,
+      message,
+    },
+    select: { id: true },
+  });
+
+  return NextResponse.json(
+    { success: true, id: reply.id },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: backups\stage-admin-security-20261017-231005\apps\web\app\api\admin\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "../../../../src/lib/auth";
+import { prisma } from "../../../../src/lib/prisma";
+
+export async function GET() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  if (user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "دسترسی مدیر لازم است." },
+      { status: 403 },
+    );
+  }
+
+  const listings = await prisma.listing.findMany({
+    where: { status: "PENDING" },
+    orderBy: { createdAt: "asc" },
+    take: 100,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      listingType: true,
+      propertyType: true,
+      city: true,
+      address: true,
+      price: true,
+      currency: true,
+      area: true,
+      rooms: true,
+      floor: true,
+      totalFloors: true,
+      createdAt: true,
+      owner: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  return NextResponse.json(
+    {
+      listings: listings.map((listing) => ({
+        ...listing,
+        price: listing.price.toString(),
+        area: listing.area.toString(),
+      })),
+    },
+    {
+      headers: { "Cache-Control": "no-store" },
+    },
+  );
+}
+
+===========================================================================
+FILE: backups\stage-admin-security-20261017-231005\apps\web\app\api\admin\listings\[id]\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { getCurrentUser } from "../../../../../src/lib/auth";
+import { prisma } from "../../../../../src/lib/prisma";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+const decisionSchema = z
+  .object({
+    status: z.enum(["PUBLISHED", "REJECTED"]),
+    reason: z.string().trim().max(1000).optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.status === "REJECTED" && (!data.reason || data.reason.length < 10)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "برای رد آگهی، توضیح حداقل ۱۰ کاراکتری لازم است.",
+      });
+    }
+  });
+
+export async function PATCH(request: Request, context: Context) {
+  const origin = request.headers.get("origin");
+  const expectedOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== expectedOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  if (user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "دسترسی مدیر لازم است." },
+      { status: 403 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  if (!(request.headers.get("content-type") ?? "")
+    .toLowerCase().includes("application/json")) {
+    return NextResponse.json(
+      { error: "درخواست باید JSON باشد." },
+      { status: 415 },
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "JSON نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = decisionSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: "اطلاعات تصمیم مدیریت معتبر نیست.",
+        details: parsed.error.flatten().fieldErrors,
+      },
+      { status: 400 },
+    );
+  }
+
+  const { status, reason } = parsed.data;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.listing.updateMany({
+        where: { id, status: "PENDING" },
+        data: { status },
+      });
+
+      if (updated.count === 0) {
+        return false;
+      }
+
+      await tx.listingReview.create({
+        data: {
+          listingId: id,
+          reviewerId: user.id,
+          decision: status,
+          reason: reason || null,
+        },
+      });
+
+      return true;
+    });
+
+    if (!result) {
+      return NextResponse.json(
+        { error: "آگهی پیدا نشد یا قبلاً بررسی شده است." },
+        { status: 409 },
+      );
+    }
+
+    return NextResponse.json({
+      message:
+        status === "PUBLISHED"
+          ? "آگهی با موفقیت منتشر شد."
+          : "آگهی رد شد و دلیل آن ثبت گردید.",
+      id,
+      status,
+    });
+  } catch (error) {
+    console.error("Admin review failed:", error);
+
+    return NextResponse.json(
+      { error: "ثبت تصمیم مدیریت ناموفق بود." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: apps\web\app\api\my\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "../../../../src/lib/auth";
+import { prisma } from "../../../../src/lib/prisma";
+
+export async function GET() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      {
+        status: 401,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
+  }
+
+  const listings = await prisma.listing.findMany({
+    where: { ownerId: user.id },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    select: {
+      id: true,
+      title: true,
+      city: true,
+      status: true,
+      listingType: true,
+      propertyType: true,
+      price: true,
+      currency: true,
+      createdAt: true,
+      reviews: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          decision: true,
+          reason: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+
+  return NextResponse.json(
+    {
+      listings: listings.map((listing) => ({
+        ...listing,
+        price: listing.price.toString(),
+      })),
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+===========================================================================
+FILE: apps\web\app\api\my\listings\[id]\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../../../src/lib/rate-limit";
+import { getCurrentUser } from "../../../../../src/lib/auth";
+import { prisma } from "../../../../../src/lib/prisma";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function DELETE(request: Request, context: Context) {
+  const limit = await checkRateLimit(
+    "delete-own-listing",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const result = await prisma.listing.deleteMany({
+    where: {
+      id,
+      ownerId: user.id,
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا اجازه حذف آن را ندارید." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "آگهی با موفقیت حذف شد.",
+  });
+}
+
+import { listingSchema } from "@real-estate/shared";
+
+export async function GET(_request: Request, context: Context) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  const listing = await prisma.listing.findFirst({
+    where: { id, ownerId: user.id },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      listingType: true,
+      propertyType: true,
+      price: true,
+      currency: true,
+      area: true,
+      rooms: true,
+      floor: true,
+      totalFloors: true,
+      city: true,
+      address: true,
+      latitude: true,
+      longitude: true,
+      status: true,
+    },
+  });
+
+  if (!listing) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      listing: {
+        ...listing,
+        price: listing.price.toString(),
+        area: listing.area.toString(),
+      },
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+export async function PATCH(request: Request, context: Context) {
+  const limit = await checkRateLimit(
+    "update-own-listing",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+  const requestOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== requestOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
+    return NextResponse.json(
+      { error: "فرمت درخواست معتبر نیست." },
+      { status: 415 },
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "JSON معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return NextResponse.json(
+      { error: "اطلاعات درخواست معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const input = body as Record<string, unknown>;
+  const allowedKeys = new Set([
+    "title", "description", "listingType", "propertyType",
+    "price", "currency", "area", "rooms", "city", "address",
+    "latitude", "longitude", "floor", "totalFloors",
+  ]);
+
+  if (Object.keys(input).some((key) => !allowedKeys.has(key))) {
+    return NextResponse.json(
+      { error: "فیلد غیرمجاز در درخواست وجود دارد." },
+      { status: 400 },
+    );
+  }
+
+  const validation = listingSchema.safeParse({
+    ...input,
+    imageUrls: [],
+  });
+
+  if (!validation.success) {
+    return NextResponse.json(
+      {
+        error: "اطلاعات فرم معتبر نیست.",
+        details: validation.error.flatten(),
+      },
+      { status: 400 },
+    );
+  }
+
+  const { floor, totalFloors } = input;
+
+  const validFloor =
+    floor === null ||
+    (typeof floor === "number" && Number.isInteger(floor) && floor >= 0);
+
+  const validTotalFloors =
+    totalFloors === null ||
+    (typeof totalFloors === "number" &&
+      Number.isInteger(totalFloors) && totalFloors >= 1);
+
+  if (
+    !validFloor ||
+    !validTotalFloors ||
+    floor === undefined ||
+    totalFloors === undefined ||
+    (typeof floor === "number" &&
+      typeof totalFloors === "number" &&
+      floor > totalFloors)
+  ) {
+    return NextResponse.json(
+      { error: "اطلاعات طبقه معتبر نیست." },
+      { status: 400 },
+    );
+  }
+
+  const data = validation.data;
+
+  const result = await prisma.listing.updateMany({
+    where: { id, ownerId: user.id },
+    data: {
+      title: data.title,
+      description: data.description,
+      listingType: data.listingType,
+      propertyType: data.propertyType,
+      price: data.price,
+      currency: data.currency,
+      area: data.area,
+      rooms: data.rooms,
+      city: data.city,
+      address: data.address,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      floor: floor as number | null,
+      totalFloors: totalFloors as number | null,
+      status: "PENDING",
+    },
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json(
+      { error: "آگهی پیدا نشد یا متعلق به شما نیست." },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({
+    message: "تغییرات ذخیره شد و آگهی منتظر تأیید مجدد است.",
+    id,
+    status: "PENDING",
+  });
+}
+
+===========================================================================
+FILE: apps\web\app\api\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../src/lib/rate-limit";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+export async function POST(request: Request) {
+  const limit = await checkRateLimit("create-listing", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""),
+      description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""),
+      propertyType: String(formData.get("propertyType") ?? ""),
+      price: Number(formData.get("price")),
+      currency: String(formData.get("currency") ?? "RUB"),
+      area: Number(formData.get("area")),
+      rooms:
+        formData.get("rooms") === null || formData.get("rooms") === ""
+          ? null
+          : Number(formData.get("rooms")),
+      city: String(formData.get("city") ?? ""),
+      address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null,
+      longitude: null,
+      imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor,
+        totalFloors,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}
+
+===========================================================================
+FILE: apps\web\app\api\listings\[id]\inquiries\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const limit = await checkRateLimit(
+    "create-inquiry",
+    getRequestIdentity(request),
+  );
+
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+
+  if (origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const contentLength = Number(request.headers.get("content-length") || 0);
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش‌ازحد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "ساختار پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 20 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "متن پیام باید بین ۲۰ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const listing = await prisma.listing.findFirst({
+    where: { id, status: "PUBLISHED" },
+    select: { id: true, ownerId: true },
+  });
+
+  if (!listing) {
+    return NextResponse.json(
+      { error: "آگهی در دسترس نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (listing.ownerId === user.id) {
+    return NextResponse.json(
+      { error: "نمی‌توانید برای آگهی خودتان پیام بفرستید." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentMessages = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentMessages >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  await prisma.inquiry.create({
+    data: {
+      listingId: listing.id,
+      senderId: user.id,
+      recipientId: listing.ownerId,
+      message,
+    },
+  });
+
+  return NextResponse.json(
+    { success: true, message: "پیام با موفقیت ارسال شد." },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: apps\web\app\api\inquiries\[id]\reply\route.ts
+===========================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
+import { prisma } from "@/src/lib/prisma";
+import { getCurrentUser } from "@/src/lib/auth";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+export async function POST(request: NextRequest, context: Context) {
+  const limit = await checkRateLimit("reply-inquiry", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  const origin = request.headers.get("origin");
+
+  if (!origin || origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست نامعتبر است." },
+      { status: 403 }
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "برای پاسخ وارد حساب شوید." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه پیام نامعتبر است." },
+      { status: 400 }
+    );
+  }
+
+  const target = await prisma.inquiry.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      listingId: true,
+      senderId: true,
+      recipientId: true,
+    },
+  });
+
+  // Only the recipient of a message can reply to it.
+  if (!target || target.recipientId !== user.id) {
+    return NextResponse.json(
+      { error: "پیام یافت نشد یا دسترسی مجاز نیست." },
+      { status: 404 }
+    );
+  }
+
+  if (target.senderId === user.id) {
+    return NextResponse.json(
+      { error: "امکان ارسال پاسخ به خودتان وجود ندارد." },
+      { status: 400 }
+    );
+  }
+
+  const contentType = request.headers.get("content-type") || "";
+
+  if (!contentType.includes("application/json")) {
+    return NextResponse.json(
+      { error: "نوع درخواست نامعتبر است." },
+      { status: 415 }
+    );
+  }
+
+  const contentLength = Number(
+    request.headers.get("content-length") || "0"
+  );
+
+  if (contentLength > 4096) {
+    return NextResponse.json(
+      { error: "درخواست بیش از حد بزرگ است." },
+      { status: 413 }
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "متن درخواست معتبر نیست." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("message" in body) ||
+    typeof body.message !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "متن پیام الزامی است." },
+      { status: 400 }
+    );
+  }
+
+  const message = body.message.trim();
+
+  if (message.length < 2 || message.length > 2000) {
+    return NextResponse.json(
+      { error: "پاسخ باید بین ۲ تا ۲۰۰۰ کاراکتر باشد." },
+      { status: 400 }
+    );
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+  const recentCount = await prisma.inquiry.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: oneHourAgo },
+    },
+  });
+
+  if (recentCount >= 5) {
+    return NextResponse.json(
+      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+      { status: 429 }
+    );
+  }
+
+  // Preserve the original listing and reverse sender/recipient.
+  const reply = await prisma.inquiry.create({
+    data: {
+      listingId: target.listingId,
+      senderId: user.id,
+      recipientId: target.senderId,
+      message,
+    },
+    select: { id: true },
+  });
+
+  return NextResponse.json(
+    { success: true, id: reply.id },
+    { status: 201 }
+  );
+}
+
+===========================================================================
+FILE: apps\web\app\api\admin\listings\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "../../../../src/lib/auth";
+import { prisma } from "../../../../src/lib/prisma";
+
+export async function GET() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  if (user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "دسترسی مدیر لازم است." },
+      { status: 403 },
+    );
+  }
+
+  const listings = await prisma.listing.findMany({
+    where: { status: "PENDING" },
+    orderBy: { createdAt: "asc" },
+    take: 100,
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      listingType: true,
+      propertyType: true,
+      city: true,
+      address: true,
+      price: true,
+      currency: true,
+      area: true,
+      rooms: true,
+      floor: true,
+      totalFloors: true,
+      createdAt: true,
+      owner: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  });
+
+  return NextResponse.json(
+    {
+      listings: listings.map((listing) => ({
+        ...listing,
+        price: listing.price.toString(),
+        area: listing.area.toString(),
+      })),
+    },
+    {
+      headers: { "Cache-Control": "no-store" },
+    },
+  );
+}
+
+===========================================================================
+FILE: apps\web\app\api\admin\listings\[id]\route.ts
+===========================================================================
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { getCurrentUser } from "../../../../../src/lib/auth";
+import { prisma } from "../../../../../src/lib/prisma";
+
+type Context = {
+  params: Promise<{ id: string }>;
+};
+
+const decisionSchema = z
+  .object({
+    status: z.enum(["PUBLISHED", "REJECTED"]),
+    reason: z.string().trim().max(1000).optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    if (data.status === "REJECTED" && (!data.reason || data.reason.length < 10)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["reason"],
+        message: "برای رد آگهی، توضیح حداقل ۱۰ کاراکتری لازم است.",
+      });
+    }
+  });
+
+export async function PATCH(request: Request, context: Context) {
+  const origin = request.headers.get("origin");
+  const expectedOrigin = new URL(request.url).origin;
+
+  if (!origin || origin !== expectedOrigin) {
+    return NextResponse.json(
+      { error: "مبدأ درخواست معتبر نیست." },
+      { status: 403 },
+    );
+  }
+
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "ابتدا وارد حساب شوید." },
+      { status: 401 },
+    );
+  }
+
+  if (user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "دسترسی مدیر لازم است." },
+      { status: 403 },
+    );
+  }
+
+  const { id } = await context.params;
+
+  if (!id || id.length > 100) {
+    return NextResponse.json(
+      { error: "شناسه آگهی نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  if (!(request.headers.get("content-type") ?? "")
+    .toLowerCase().includes("application/json")) {
+    return NextResponse.json(
+      { error: "درخواست باید JSON باشد." },
+      { status: 415 },
+    );
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "JSON نامعتبر است." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = decisionSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        error: "اطلاعات تصمیم مدیریت معتبر نیست.",
+        details: parsed.error.flatten().fieldErrors,
+      },
+      { status: 400 },
+    );
+  }
+
+  const { status, reason } = parsed.data;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.listing.updateMany({
+        where: { id, status: "PENDING" },
+        data: { status },
+      });
+
+      if (updated.count === 0) {
+        return false;
+      }
+
+      await tx.listingReview.create({
+        data: {
+          listingId: id,
+          reviewerId: user.id,
+          decision: status,
+          reason: reason || null,
+        },
+      });
+
+      return true;
+    });
+
+    if (!result) {
+      return NextResponse.json(
+        { error: "آگهی پیدا نشد یا قبلاً بررسی شده است." },
+        { status: 409 },
+      );
+    }
+
+    return NextResponse.json({
+      message:
+        status === "PUBLISHED"
+          ? "آگهی با موفقیت منتشر شد."
+          : "آگهی رد شد و دلیل آن ثبت گردید.",
+      id,
+      status,
+    });
+  } catch (error) {
+    console.error("Admin review failed:", error);
+
+    return NextResponse.json(
+      { error: "ثبت تصمیم مدیریت ناموفق بود." },
+      { status: 500 },
+    );
+  }
+}

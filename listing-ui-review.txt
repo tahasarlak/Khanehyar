@@ -1,0 +1,45 @@
+
+=== MIGRATION INVENTORY ===
+apps\web\prisma\migrations\20261017020255_init\migration.sql
+apps\web\prisma\migrations\20261017031714_add_listing_reviews\migration.sql
+apps\web\prisma\migrations\20261017035849_add_inquiries\migration.sql
+apps\web\prisma\migrations\20261017231544_rate_limit_buckets\migration.sql
+apps\web\prisma\migrations\20261019214800_listing_details_completion\migration.sql
+
+======================================================================
+FILE: apps\web\prisma\migrations\20261019214800_listing_details_completion\migration.sql
+======================================================================
+-- Additive migration: keep all existing records.
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "avatarUrl" VARCHAR(2048);
+
+ALTER TABLE "Listing"
+  ADD COLUMN IF NOT EXISTS "yearBuilt" INTEGER,
+  ADD COLUMN IF NOT EXISTS "bathrooms" INTEGER,
+  ADD COLUMN IF NOT EXISTS "parkingSpaces" INTEGER,
+  ADD COLUMN IF NOT EXISTS "hasElevator" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "hasStorage" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "heatingType" VARCHAR(80),
+  ADD COLUMN IF NOT EXISTS "coolingType" VARCHAR(80),
+  ADD COLUMN IF NOT EXISTS "documentType" VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS "orientation" VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS "naturalLight" VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS "furnished" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "readyToMove" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "balcony" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "terrace" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "garden" BOOLEAN,
+  ADD COLUMN IF NOT EXISTS "amenities" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+  ADD COLUMN IF NOT EXISTS "monthlyRent" DECIMAL(14,2),
+  ADD COLUMN IF NOT EXISTS "deposit" DECIMAL(14,2),
+  ADD COLUMN IF NOT EXISTS "allowDepositConversion" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "advertiserType" VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS "showExactLocation" BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE "ListingImage"
+  ADD COLUMN IF NOT EXISTS "label" VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS "altText" VARCHAR(200);
+
+ALTER TABLE "Inquiry"
+  ADD COLUMN IF NOT EXISTS "kind" VARCHAR(20) NOT NULL DEFAULT 'MESSAGE',
+  ADD COLUMN IF NOT EXISTS "preferredVisitAt" TIMESTAMP(3);
