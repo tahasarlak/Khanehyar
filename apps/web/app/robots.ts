@@ -1,32 +1,8 @@
 import type { MetadataRoute } from "next";
-
-function publicSiteUrl(): string | null {
-  const raw = process.env.SITE_URL?.trim();
-
-  if (!raw) return null;
-
-  try {
-    const url = new URL(raw);
-
-    if (
-      url.protocol !== "https:" ||
-      url.username ||
-      url.password ||
-      url.pathname !== "/" ||
-      url.search ||
-      url.hash
-    ) {
-      return null;
-    }
-
-    return url.origin;
-  } catch {
-    return null;
-  }
-}
+import { getSiteOrigin } from "@/src/lib/site-url";
 
 export default function robots(): MetadataRoute.Robots {
-  const site = publicSiteUrl();
+  const site = getSiteOrigin();
 
   if (!site) {
     return {

@@ -15,12 +15,17 @@ export async function GET() {
     );
   }
 
-  const unread = await prisma.inquiry.count({
-    where: {
-      recipientId: user.id,
-      isRead: false,
-    },
+  const conversations = await prisma.conversation.findMany({
+    where: { OR: [{ buyerId: user.id }, { sellerId: user.id }] },
+    select: { id: true },
   });
+  const unread = conversations.length ? await prisma.message.count({
+    where: {
+      conversationId: { in: conversations.map((conversation) => conversation.id) },
+      senderId: { not: user.id },
+      readAt: null,
+    },
+  }) : 0;
 
   return NextResponse.json(
     { unread },

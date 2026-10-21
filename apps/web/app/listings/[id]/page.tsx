@@ -1,6 +1,9 @@
+import { getSiteOrigin } from "@/src/lib/site-url";
 import Image from "next/image";
+import type { Metadata } from "next";
 
 import InquiryForm from "./InquiryForm";
+import PrintListingButton from "./PrintListingButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/src/lib/prisma";
@@ -10,9 +13,102 @@ import "./detail.css";
 
 export const instant = false;
 
-
-
 type Props = { params: Promise<{ id: string }> };
+
+const metadataPropertyNames: Record<string, string> = {
+  APARTMENT: "آپارتمان",
+  HOUSE: "خانه",
+  VILLA: "ویلا",
+  LAND: "زمین",
+  COMMERCIAL: "ملک تجاری",
+};
+
+const metadataCurrencyNames: Record<string, string> = {
+  RUB: "روبل",
+  IRR: "ریال",
+  IRT: "تومان",
+  USD: "دلار",
+  EUR: "یورو",
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const listing = await prisma.listing.findFirst({
+    where: { id, status: "PUBLISHED" },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      city: true,
+      propertyType: true,
+      listingType: true,
+      price: true,
+      currency: true,
+      area: true,
+      monthlyRent: true,
+      images: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        take: 1,
+        select: { url: true },
+      },
+    },
+  });
+
+  if (!listing) {
+    return {
+      title: "ملک پیدا نشد | خانه‌یار",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const propertyType = metadataPropertyNames[listing.propertyType] ?? "ملک";
+  const dealType = listing.listingType === "RENT" ? "اجاره" : "فروش";
+  const currency = metadataCurrencyNames[listing.currency] ?? listing.currency;
+  const amount = listing.listingType === "RENT"
+    ? (listing.monthlyRent === null
+        ? null
+        : new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(Number(listing.monthlyRent.toString())))
+    : new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(Number(listing.price.toString()));
+  const area = new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(Number(listing.area.toString()));
+  const description = (listing.description || "").replace(/\s+/g, " ").trim();
+  const seoDescription = [
+    `${propertyType} برای ${dealType} در ${listing.city}`,
+    `${area} متر مربع`,
+    amount === null ? "جزئیات مبلغ اجاره در آگهی" : `${listing.listingType === "RENT" ? "اجاره ماهانه" : "قیمت"} ${amount} ${currency}`,
+    description,
+  ].filter(Boolean).join("، ").slice(0, 180);
+  const baseUrl = getSiteOrigin();
+  const canonical = baseUrl ? `${baseUrl}/listings/${encodeURIComponent(listing.id)}` : undefined;
+  const image = listing.images[0]?.url;
+  const safeImage = image
+    ? (image.startsWith("/") && baseUrl
+        ? `${baseUrl}${image}`
+        : /^https?:\/\//i.test(image) ? image : undefined)
+    : undefined;
+
+  return {
+    title: `${listing.title} | ${propertyType} برای ${dealType} در ${listing.city} | خانه‌یار`,
+    description: seoDescription,
+    alternates: canonical ? { canonical } : undefined,
+    robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } },
+    openGraph: {
+      type: "website",
+      locale: "fa_IR",
+      siteName: "خانه‌یار",
+      title: `${listing.title} | خانه‌یار`,
+      description: seoDescription,
+      url: canonical,
+      images: safeImage ? [{ url: safeImage, alt: listing.title }] : undefined,
+    },
+    twitter: {
+      card: safeImage ? "summary_large_image" : "summary",
+      title: `${listing.title} | خانه‌یار`,
+      description: seoDescription,
+      images: safeImage ? [safeImage] : undefined,
+    },
+  };
+}
+
 
 const propertyNames: Record<string, string> = {
   APARTMENT: "آپارتمان",
@@ -68,13 +164,34 @@ export default async function ListingDetailPage({ params }: Props) {
       rooms: true,
       floor: true,
       totalFloors: true,
+      yearBuilt: true,
+      bathrooms: true,
+      parkingSpaces: true,
+      hasElevator: true,
+      hasStorage: true,
+      heatingType: true,
+      coolingType: true,
+      documentType: true,
+      orientation: true,
+      naturalLight: true,
+      furnished: true,
+      readyToMove: true,
+      balcony: true,
+      terrace: true,
+      garden: true,
+      amenities: true,
+      monthlyRent: true,
+      deposit: true,
+      allowDepositConversion: true,
+      advertiserType: true,
+      showExactLocation: true,
       city: true,
       address: true,
       latitude: true,
       longitude: true,
       createdAt: true,
       updatedAt: true,
-      owner: { select: { id: true, name: true, role: true, createdAt: true } },
+      owner: { select: { id: true, name: true, avatarUrl: true, role: true, createdAt: true } },
       images: {
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         take: 20,
@@ -98,10 +215,10 @@ export default async function ListingDetailPage({ params }: Props) {
     : null;
   const publishedDate = formatDate(listing.createdAt);
   const updatedDate = formatDate(listing.updatedAt);
-  const mapUrl = listing.latitude !== null && listing.longitude !== null
+  const mapUrl = listing.showExactLocation && listing.latitude !== null && listing.longitude !== null
     ? `https://www.openstreetmap.org/export/embed.html?bbox=${listing.longitude - 0.008}%2C${listing.latitude - 0.005}%2C${listing.longitude + 0.008}%2C${listing.latitude + 0.005}&layer=mapnik&marker=${listing.latitude}%2C${listing.longitude}`
     : null;
-  const mapLink = listing.latitude !== null && listing.longitude !== null
+  const mapLink = listing.showExactLocation && listing.latitude !== null && listing.longitude !== null
     ? `https://www.openstreetmap.org/?mlat=${listing.latitude}&mlon=${listing.longitude}#map=16/${listing.latitude}/${listing.longitude}`
     : null;
 
@@ -114,6 +231,26 @@ export default async function ListingDetailPage({ params }: Props) {
   if (listing.rooms !== null) facts.push({ label: "تعداد اتاق", value: listing.rooms.toLocaleString("fa-IR"), icon: "▤" });
   if (listing.floor !== null) facts.push({ label: "طبقه", value: listing.floor.toLocaleString("fa-IR"), icon: "⇅" });
   if (listing.totalFloors !== null) facts.push({ label: "تعداد طبقات ساختمان", value: listing.totalFloors.toLocaleString("fa-IR"), icon: "▥" });
+
+  const yesNo = (value: boolean | null | undefined) => value === null || value === undefined ? null : value ? "دارد" : "ندارد";
+  const detailFacts: { label: string; value: string }[] = [];
+  if (listing.bathrooms !== null) detailFacts.push({ label: "سرویس بهداشتی و حمام", value: listing.bathrooms.toLocaleString("fa-IR") });
+  if (listing.parkingSpaces !== null) detailFacts.push({ label: "ظرفیت پارکینگ", value: listing.parkingSpaces === 0 ? "بدون پارکینگ" : `${listing.parkingSpaces.toLocaleString("fa-IR")} خودرو` });
+  if (listing.yearBuilt !== null) detailFacts.push({ label: "سال ساخت", value: listing.yearBuilt.toLocaleString("fa-IR") });
+  if (listing.documentType) detailFacts.push({ label: "نوع سند", value: listing.documentType });
+  if (listing.orientation) detailFacts.push({ label: "جهت ملک", value: listing.orientation });
+  if (listing.naturalLight) detailFacts.push({ label: "نورگیری", value: listing.naturalLight });
+  if (listing.heatingType) detailFacts.push({ label: "سیستم گرمایش", value: listing.heatingType });
+  if (listing.coolingType) detailFacts.push({ label: "سیستم سرمایش", value: listing.coolingType });
+  for (const [label, value] of [["آسانسور", listing.hasElevator], ["انباری", listing.hasStorage], ["مبله", listing.furnished], ["آماده سکونت", listing.readyToMove], ["بالکن", listing.balcony], ["تراس", listing.terrace], ["باغچه", listing.garden]] as const) {
+    const formatted = yesNo(value);
+    if (formatted) detailFacts.push({ label, value: formatted });
+  }
+  const amenityLabels: Record<string, string> = {
+    WIFI: "اینترنت", POOL: "استخر", GYM: "سالن ورزشی", SECURITY: "نگهبانی", CCTV: "دوربین مداربسته",
+    PLAYGROUND: "فضای بازی کودکان", PET_FRIENDLY: "مناسب حیوانات خانگی", AIR_CONDITIONING: "تهویه مطبوع",
+    DISHWASHER: "ماشین ظرف‌شویی", WASHING_MACHINE: "ماشین لباس‌شویی", ROOFTOP: "روف‌گاردن", FIREPLACE: "شومینه",
+  };
 
   const similarListings = await prisma.listing.findMany({
     where: {
@@ -140,6 +277,29 @@ export default async function ListingDetailPage({ params }: Props) {
 
   return (
     <div className="hd-page" dir="rtl">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org", "@type": "RealEstateListing", name: listing.title,
+        description: listing.description?.trim() || listing.title,
+        datePosted: listing.createdAt.toISOString(), dateModified: listing.updatedAt.toISOString(),
+        url: getSiteOrigin() ? `${getSiteOrigin()}/listings/${encodeURIComponent(listing.id)}` : undefined,
+        image: pictures,
+        address: { "@type": "PostalAddress", addressLocality: listing.city, streetAddress: listing.showExactLocation ? (listing.address || undefined) : undefined },
+        offers: isRent && listing.monthlyRent === null
+          ? undefined
+          : {
+              "@type": "Offer",
+              price: isRent
+                ? Number(listing.monthlyRent!.toString())
+                : priceValue,
+              priceCurrency: listing.currency,
+              availability: "https://schema.org/InStock",
+              businessFunction: isRent
+                ? "http://purl.org/goodrelations/v1#LeaseOut"
+                : "http://purl.org/goodrelations/v1#Sell",
+            },
+        floorSize: { "@type": "QuantitativeValue", value: areaValue, unitCode: "MTK" },
+        numberOfRooms: listing.rooms ?? undefined
+      }).replace(/<\//g, "<\\/") }} />
       <main className="hd-container">
         <nav className="hd-breadcrumb" aria-label="مسیر صفحه">
           <Link href="/">خانه‌یار</Link><span>/</span><Link href="/search">آگهی‌های املاک</Link><span>/</span><span aria-current="page">{propertyName}</span>
@@ -149,10 +309,10 @@ export default async function ListingDetailPage({ params }: Props) {
           <div className="hd-heading-copy">
             <div className="hd-tags"><span>{isRent ? "برای اجاره" : "برای فروش"}</span><span>{propertyName}</span></div>
             <h1>{listing.title}</h1>
-            <p className="hd-address-line"><span aria-hidden="true">⌖</span>{listing.city}{listing.address ? `، ${listing.address}` : ""}</p>
+            <p className="hd-address-line"><span aria-hidden="true">⌖</span>{listing.city}{listing.showExactLocation && listing.address ? `، ${listing.address}` : ""}{listing.address && !listing.showExactLocation ? " · نشانی دقیق پس از هماهنگی" : ""}</p>
             <div className="hd-heading-meta"><span>کد آگهی: {listing.id.slice(-8).toLocaleUpperCase()}</span><span>ثبت‌شده در {publishedDate}</span></div>
           </div>
-          <div className="hd-favorite-actions"><ShareListing /><FavoriteButton listingId={listing.id} /></div>
+          <div className="hd-favorite-actions"><ShareListing /><PrintListingButton /><FavoriteButton listingId={listing.id} /></div>
         </div>
 
         <PropertyGallery title={listing.title} images={pictures} />
@@ -169,6 +329,12 @@ export default async function ListingDetailPage({ params }: Props) {
               </div>
             </section>
 
+            {(detailFacts.length > 0 || listing.amenities.length > 0) && <section className="hd-panel hd-details-panel">
+              <div className="hd-section-heading"><span className="hd-section-icon" aria-hidden="true">✦</span><div><h2>امکانات و مشخصات تکمیلی</h2><p>جزئیات فنی و امکاناتی که برای این ملک ثبت شده‌اند</p></div></div>
+              {detailFacts.length > 0 && <dl className="hd-detail-grid">{detailFacts.map((fact) => <div className="hd-detail-item" key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}</dl>}
+              {listing.amenities.length > 0 && <div className="hd-amenities"><h3>امکانات رفاهی</h3><ul>{listing.amenities.map((amenity) => <li key={amenity}><span aria-hidden="true">✓</span>{amenityLabels[amenity] ?? amenity.replace(/[_-]/g, " ")}</li>)}</ul></div>}
+            </section>}
+
             <section className="hd-panel">
               <div className="hd-section-heading"><span className="hd-section-icon" aria-hidden="true">≡</span><div><h2>توضیحات ملک</h2><p>جزئیات ثبت‌شده توسط آگهی‌دهنده</p></div></div>
               <div className="hd-description">{listing.description?.trim() || "برای این آگهی توضیحی ثبت نشده است."}</div>
@@ -178,7 +344,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <div className="hd-section-heading"><span className="hd-section-icon" aria-hidden="true">⌖</span><div><h2>موقعیت و محله</h2><p>اطلاعات مکانی ثبت‌شده برای این آگهی</p></div></div>
               <div className="hd-location">
                 <div className="hd-location-symbol" aria-hidden="true">⌖</div>
-                <div className="hd-location-copy"><strong>{listing.city}</strong><p>{listing.address || "نشانی دقیق برای این آگهی ثبت نشده است."}</p><small>{mapUrl ? "نقشه بر اساس مختصات ثبت‌شده آگهی نمایش داده می‌شود." : "موقعیت روی نقشه نمایش داده نمی‌شود چون مختصات ملک ثبت نشده است."}</small></div>
+                <div className="hd-location-copy"><strong>{listing.city}</strong><p>{listing.showExactLocation && listing.address ? listing.address : "نشانی دقیق برای حفظ حریم خصوصی نمایش داده نمی‌شود؛ برای هماهنگی با آگهی‌دهنده تماس بگیرید."}</p><small>{mapUrl ? "نقشه بر اساس مختصات ثبت‌شده آگهی نمایش داده می‌شود." : "موقعیت روی نقشه نمایش داده نمی‌شود چون مختصات ملک ثبت نشده است."}</small></div>
               </div>
               {mapUrl && mapLink && <div className="hd-map-wrap"><iframe title={`نقشه موقعیت ${listing.title}`} src={mapUrl} loading="lazy" referrerPolicy="no-referrer" className="hd-map" /><a className="hd-map-link" href={mapLink} target="_blank" rel="noreferrer">مشاهده نقشه بزرگ‌تر ↗</a></div>}
               <p className="hd-privacy-note">برای حفظ حریم خصوصی، پیش از مراجعه حضوری موقعیت و نشانی را با آگهی‌دهنده هماهنگ کنید.</p>
@@ -187,7 +353,7 @@ export default async function ListingDetailPage({ params }: Props) {
             <section className="hd-panel">
               <div className="hd-section-heading"><span className="hd-section-icon" aria-hidden="true">♙</span><div><h2>درباره آگهی‌دهنده</h2><p>اطلاعات عمومی حساب کاربری</p></div></div>
               <div className="hd-owner-card">
-                <div className="hd-owner-avatar" aria-hidden="true">{ownerInitial}</div>
+                {listing.owner.avatarUrl ? <Image src={listing.owner.avatarUrl} alt={`تصویر ${ownerName}`} width={58} height={58} unoptimized className="hd-owner-avatar-image" /> : <div className="hd-owner-avatar" aria-hidden="true">{ownerInitial}</div>}
                 <div className="hd-owner-details"><strong>{ownerName}</strong><span>{listing.owner.role === "ADMIN" ? "حساب مدیر" : "عضو خانه‌یار"}</span><small>عضویت از {ownerMemberSince}</small></div>
                 <a href="#hd-contact" className="hd-owner-contact">ارسال پیام</a>
               </div>
@@ -205,6 +371,9 @@ export default async function ListingDetailPage({ params }: Props) {
               <div className="hd-price" dir="auto">{price}<span>{currency}</span></div>
               {pricePerMeter && <div className="hd-price-per-meter">حدود {pricePerMeter} {currency} به‌ازای هر متر مربع</div>}
               <div className="hd-price-divider" />
+              {isRent && listing.monthlyRent !== null && <div className="hd-info-row"><span>اجاره ماهانه</span><strong>{formatNumber(listing.monthlyRent.toString())} {currency}</strong></div>}
+              {isRent && listing.deposit !== null && <div className="hd-info-row"><span>ودیعه</span><strong>{formatNumber(listing.deposit.toString())} {currency}</strong></div>}
+              {isRent && listing.allowDepositConversion && <p className="hd-conversion-note">امکان گفت‌وگو درباره تبدیل بخشی از ودیعه و اجاره وجود دارد؛ شرایط نهایی را با آگهی‌دهنده هماهنگ کنید.</p>}
               <div className="hd-info-row"><span>نوع معامله</span><strong>{isRent ? "اجاره" : "فروش"}</strong></div>
               <div className="hd-info-row"><span>متراژ</span><strong>{area} متر مربع</strong></div>
               {listing.rooms !== null && <div className="hd-info-row"><span>تعداد اتاق</span><strong>{listing.rooms.toLocaleString("fa-IR")}</strong></div>}

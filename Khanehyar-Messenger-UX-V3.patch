@@ -1,0 +1,105 @@
+diff --git a/apps/web/app/dashboard/messages/[conversationId]/page.tsx b/apps/web/app/dashboard/messages/[conversationId]/page.tsx
+index 2498c93..df24ff9 100644
+--- a/apps/web/app/dashboard/messages/[conversationId]/page.tsx
++++ b/apps/web/app/dashboard/messages/[conversationId]/page.tsx
+@@ -5,12 +5,12 @@ import { getCurrentUser } from "@/src/lib/auth";
+ import ConversationView from "../ConversationView";
+ import "../messages.css";
+ 
+-import { connection } from "next/server";
+ 
+ type Props = { params: Promise<{ conversationId: string }> };
+ 
++export const instant = false;
++
+ export default async function ConversationPage({ params }: Props) {
+-  await connection();
+   const user = await getCurrentUser();
+   if (!user) redirect(`/login?next=${encodeURIComponent("/dashboard/messages")}`);
+   const { conversationId } = await params;
+@@ -36,7 +36,7 @@ export default async function ConversationPage({ params }: Props) {
+     take: 200,
+     select: {
+       id: true, buyerId: true, updatedAt: true,
+-      listing: { select: { title: true } },
++      listing: { select: { title: true, images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } } } },
+       buyer: { select: { name: true } },
+       seller: { select: { name: true } },
+       messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1, select: { body: true, createdAt: true, senderId: true } },
+@@ -61,8 +61,10 @@ export default async function ConversationPage({ params }: Props) {
+             const latest = item.messages[0];
+             const unreadCount = inboxUnread.get(item.id) || 0;
+             return <Link key={item.id} href={`/dashboard/messages/${encodeURIComponent(item.id)}`} className={`hm-messenger-thread${item.id === conversation.id ? " is-active" : ""}`} aria-current={item.id === conversation.id ? "page" : undefined}>
+-              <span className="hm-messenger-thread-avatar" aria-hidden="true">{(name || "ک").trim().slice(0, 1)}</span>
+-              <span className="hm-messenger-thread-copy"><strong>{name || "کاربر خانه‌یار"}</strong><small>{item.listing.title}</small><em>{latest ? `${latest.senderId === user.id ? "شما: " : ""}${latest.body}` : "برای شروع گفت‌وگو پیام بدهید"}</em></span>
++              <span className="hm-messenger-thread-avatar" aria-hidden="true">
++                {item.listing.images[0]?.url ? <img src={item.listing.images[0].url} alt="" /> : <span>⌂</span>}
++              </span>
++              <span className="hm-messenger-thread-copy"><strong>{item.listing.title}</strong><small>گفت‌وگو با {name || "کاربر خانه‌یار"}</small><em>{latest ? `${latest.senderId === user.id ? "شما: " : ""}${latest.body}` : "برای شروع گفت‌وگو پیام بدهید"}</em></span>
+               <span className="hm-messenger-thread-meta">{latest && <time>{new Intl.DateTimeFormat("fa-IR", { hour: "2-digit", minute: "2-digit" }).format(latest.createdAt)}</time>}{unreadCount > 0 && <b>{unreadCount > 99 ? "۹۹+" : unreadCount.toLocaleString("fa-IR")}</b>}</span>
+             </Link>;
+           })}
+@@ -70,15 +72,13 @@ export default async function ConversationPage({ params }: Props) {
+         </div>
+       </aside>
+       <div className="hm-messenger-active-chat">
+-    <header className="hm-chat-header hm-chat-header-pro">
+-      <div className="hm-chat-person">
+-        <div className="hm-chat-person-avatar" aria-hidden="true">{(counterpart.name || "ک").trim().slice(0, 1)}</div>
+-        <div><p>گفت‌وگو با</p><h1>{counterpart.name || "کاربر خانه‌یار"}</h1><span>{user.id === conversation.buyerId ? "آگهی‌دهنده" : "متقاضی ملک"}</span></div>
+-      </div>
+-      <Link href={`/listings/${encodeURIComponent(conversation.listing.id)}`} className="hm-chat-listing-card">
+-        {conversation.listing.images[0]?.url ? <img src={conversation.listing.images[0].url} alt="" /> : <span className="hm-chat-listing-placeholder" aria-hidden="true">⌂</span>}
+-        <span className="hm-chat-listing-copy"><strong>{conversation.listing.title}</strong><small>{conversation.listing.city} · {conversation.listing.listingType === "RENT" ? "اجاره" : "فروش"}</small><em>مشاهده آگهی ↗</em></span>
++    <header className="hm-chat-header hm-chat-header-pro hm-chat-property-header">
++      <Link href={`/listings/${encodeURIComponent(conversation.listing.id)}`} className="hm-chat-property-identity" aria-label={`مشاهده آگهی ${conversation.listing.title}`}>
++        {conversation.listing.images[0]?.url ? <img src={conversation.listing.images[0].url} alt="" /> : <span className="hm-chat-property-placeholder" aria-hidden="true">⌂</span>}
++        <span className="hm-chat-property-copy"><small>خانه‌یار · گفت‌وگو درباره ملک</small><h1>{conversation.listing.title}</h1><span>{conversation.listing.city} · {conversation.listing.listingType === "RENT" ? "اجاره" : "فروش"} · مشاهده آگهی ↗</span></span>
+       </Link>
++      <div className="hm-chat-counterpart"><span className="hm-chat-counterpart-dot" aria-hidden="true" /><span><small>طرف گفت‌وگو</small><strong>{counterpart.name || "کاربر خانه‌یار"}</strong><em>{user.id === conversation.buyerId ? "آگهی‌دهنده ملک" : "متقاضی ملک"}</em></span>
++      </div>
+     </header>
+     <ConversationView conversationId={conversation.id} currentUserId={user.id} counterpartName={counterpart.name || "کاربر خانه‌یار"} initialUnread={unread} initialMessages={messages.map((message) => ({ ...message, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null }))} />
+       </div>
+diff --git a/apps/web/app/dashboard/messages/messages.css b/apps/web/app/dashboard/messages/messages.css
+index ca32c4b..5339993 100644
+--- a/apps/web/app/dashboard/messages/messages.css
++++ b/apps/web/app/dashboard/messages/messages.css
+@@ -684,3 +684,22 @@
+ /* Desktop Telegram-style two-pane messenger */
+ .hm-messenger-page{max-width:1320px}.hm-messenger-layout{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);gap:16px;align-items:stretch;min-height:620px}.hm-messenger-sidebar{overflow:hidden;display:flex;flex-direction:column;min-height:620px;border:1px solid #dfe8ee;border-radius:21px;background:#fff}.hm-messenger-sidebar-head{display:flex;align-items:center;justify-content:space-between;padding:18px;border-bottom:1px solid #e7edf1;background:#f9fbfc}.hm-messenger-sidebar-head span{color:#147d69;font-size:11px;font-weight:900}.hm-messenger-sidebar-head h2{margin:2px 0 0;color:#173b5b;font-size:20px;font-weight:950}.hm-messenger-sidebar-head>span:last-child{display:grid;place-items:center;min-width:28px;height:28px;padding:0 7px;border-radius:9px;background:#e2f3eb}.hm-messenger-sidebar-list{overflow:auto;flex:1}.hm-messenger-thread{display:flex;align-items:center;gap:10px;padding:13px 12px;border-bottom:1px solid #eef2f5;color:inherit;text-decoration:none;transition:background .15s}.hm-messenger-thread:hover{background:#f6faf8}.hm-messenger-thread.is-active{background:#eaf7f1;box-shadow:inset -3px 0 #147d69}.hm-messenger-thread-avatar{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:#e2f3eb;color:#147d69;font-size:17px;font-weight:950}.hm-messenger-thread-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}.hm-messenger-thread-copy strong,.hm-messenger-thread-copy small,.hm-messenger-thread-copy em{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hm-messenger-thread-copy strong{color:#173b5b;font-size:12px}.hm-messenger-thread-copy small{color:#147d69;font-size:10px;font-weight:800}.hm-messenger-thread-copy em{color:#7d8b99;font-size:10px;font-style:normal}.hm-messenger-thread-meta{display:flex;align-items:flex-end;align-self:stretch;flex-direction:column;justify-content:space-between;gap:6px}.hm-messenger-thread-meta time{color:#8b99a5;font-size:9px}.hm-messenger-thread-meta b{display:grid;place-items:center;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:#147d69;color:white;font-size:9px}.hm-messenger-no-threads{padding:20px;color:#80909e;font-size:12px;text-align:center}.hm-messenger-active-chat{min-width:0}.hm-messenger-active-chat .hm-chat-header{margin-bottom:12px}.hm-messenger-active-chat .hm-chat-messages{min-height:400px;max-height:calc(100vh - 360px)}
+ @media(max-width:850px){.hm-messenger-layout{grid-template-columns:minmax(0,1fr);min-height:0}.hm-messenger-sidebar{display:none}.hm-messenger-active-chat .hm-chat-messages{max-height:62vh;min-height:280px}.hm-chat-breadcrumb{display:flex}}
++
++
++/* Messenger UX V3: property-first identity and reliable blocking route */
++.hm-conversation-avatar,.hm-messenger-thread-avatar{overflow:hidden;position:relative;background:#e2f3eb;color:#147d69}
++.hm-conversation-avatar img,.hm-messenger-thread-avatar img{display:block;width:100%;height:100%;object-fit:cover}
++.hm-conversation-avatar span,.hm-messenger-thread-avatar>span{display:grid;width:100%;height:100%;place-items:center;font-size:24px;font-weight:950}
++.hm-chat-property-header{align-items:center;justify-content:space-between;gap:18px}
++.hm-chat-property-identity{display:flex;align-items:center;gap:14px;min-width:0;flex:1;color:inherit;text-decoration:none}
++.hm-chat-property-identity>img,.hm-chat-property-placeholder{display:grid;width:76px;height:70px;flex:0 0 76px;place-items:center;object-fit:cover;border-radius:15px;background:#e2f3eb;color:#147d69;font-size:32px}
++.hm-chat-property-copy{display:flex;min-width:0;flex-direction:column;gap:4px}
++.hm-chat-property-copy>small{color:#147d69;font-size:10px;font-weight:900}
++.hm-chat-property-copy h1{overflow:hidden;margin:0;color:#173b5b;font-size:clamp(16px,2vw,21px);font-weight:950;text-overflow:ellipsis;white-space:nowrap}
++.hm-chat-property-copy>span{color:#7c8c99;font-size:11px}
++.hm-chat-counterpart{display:flex;align-items:center;gap:10px;min-width:150px;padding:10px 12px;border:1px solid #e2eaf0;border-radius:14px;background:#f8fbfc}
++.hm-chat-counterpart-dot{width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:#15956e;box-shadow:0 0 0 4px #15956e18}
++.hm-chat-counterpart>span:last-child{display:flex;min-width:0;flex-direction:column;gap:3px}
++.hm-chat-counterpart small,.hm-chat-counterpart em{color:#82919d;font-size:9px;font-style:normal}
++.hm-chat-counterpart strong{overflow:hidden;color:#173b5b;font-size:12px;text-overflow:ellipsis;white-space:nowrap}
++@media(max-width:640px){.hm-chat-property-header{align-items:stretch;gap:12px;padding:15px}.hm-chat-property-identity>img,.hm-chat-property-placeholder{width:62px;height:60px;flex-basis:62px}.hm-chat-counterpart{min-width:0}.hm-chat-property-copy h1{white-space:normal}}
+diff --git a/apps/web/app/dashboard/messages/page.tsx b/apps/web/app/dashboard/messages/page.tsx
+index 35c354b..a5d2dfb 100644
+--- a/apps/web/app/dashboard/messages/page.tsx
++++ b/apps/web/app/dashboard/messages/page.tsx
+@@ -42,8 +42,8 @@ export default async function MessagesPage() {
+       const latest = conversation.messages[0];
+       const unread = unreadByConversation.get(conversation.id) || 0;
+       return <Link key={conversation.id} href={`/dashboard/messages/${encodeURIComponent(conversation.id)}`} className="hm-conversation-card">
+-        <div className="hm-conversation-avatar" aria-hidden="true">{(counterpartName || "ک").trim().slice(0, 1)}</div>
+-        <div className="hm-conversation-main"><div className="hm-conversation-top"><strong>{counterpartName || "کاربر خانه‌یار"}</strong><time>{latest ? dateLabel(latest.createdAt) : dateLabel(conversation.updatedAt)}</time></div><div className="hm-conversation-listing">{conversation.listing.title}<span>{conversation.listing.listingType === "RENT" ? "اجاره" : "فروش"} · {conversation.listing.city}</span></div><p className="hm-conversation-preview">{latest ? `${latest.senderId === user.id ? "شما: " : ""}${latest.body}` : "هنوز پیامی ارسال نشده است."}</p></div>
++        <div className="hm-conversation-avatar" aria-hidden="true">{conversation.listing.images[0]?.url ? <img src={conversation.listing.images[0].url} alt="" /> : <span>⌂</span>}</div>
++        <div className="hm-conversation-main"><div className="hm-conversation-top"><strong>{conversation.listing.title}</strong><time>{latest ? dateLabel(latest.createdAt) : dateLabel(conversation.updatedAt)}</time></div><div className="hm-conversation-listing">گفت‌وگو با {counterpartName || "کاربر خانه‌یار"}<span>{conversation.listing.listingType === "RENT" ? "اجاره" : "فروش"} · {conversation.listing.city}</span></div><p className="hm-conversation-preview">{latest ? `${latest.senderId === user.id ? "شما: " : ""}${latest.body}` : "هنوز پیامی ارسال نشده است."}</p></div>
+         <div className="hm-conversation-side">{unread > 0 && <span className="hm-conversation-unread" aria-label={`${unread} پیام خوانده‌نشده`}>{unread > 99 ? "۹۹+" : unread.toLocaleString("fa-IR")}</span>}<span className="hm-conversation-arrow" aria-hidden="true">←</span></div>
+       </Link>;
+     })}</section>}

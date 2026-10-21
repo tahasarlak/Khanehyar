@@ -1,3 +1,4 @@
+import { getSiteOrigin } from "@/src/lib/site-url";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -17,6 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: getSiteOrigin()
+    ? new URL(getSiteOrigin()!)
+    : undefined,
   title: "خانه‌یار | خرید، فروش و اجاره ملک",
   description: "جست‌وجو، خرید، فروش و اجاره ملک و ثبت آگهی در خانه‌یار.",
 };

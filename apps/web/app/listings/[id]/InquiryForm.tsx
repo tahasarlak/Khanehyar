@@ -1,54 +1,38 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-export default function InquiryForm({
-  listingId,
-}: {
-  listingId: string;
-}) {
-  const [message, setMessage] = useState("");
+export default function InquiryForm({ listingId }: { listingId: string }) {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  const [loginRequired, setLoginRequired] = useState(false);
 
-  async function send(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
+  async function openConversation() {
     if (busy) return;
-
-    setError("");
     setBusy(true);
+    setError("");
 
     try {
-      const response = await fetch(
-        `/api/listings/${encodeURIComponent(listingId)}/inquiries`,
-        {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
-        }
-      );
+      const response = await fetch(`/api/listings/${encodeURIComponent(listingId)}/inquiries`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "open" }),
+      });
 
       if (response.status === 401) {
-        setLoginRequired(true);
+        router.push(`/login?next=${encodeURIComponent(`/listings/${listingId}`)}`);
         return;
       }
 
-      const data = (await response.json()) as {
-        error?: string;
-      };
-
-      if (!response.ok) {
-        setError(data.error || "ارسال پیام ناموفق بود.");
+      const data = await response.json() as { error?: string; conversationId?: string };
+      if (!response.ok || !data.conversationId) {
+        setError(data.error || "باز کردن گفت‌وگو ناموفق بود.");
         return;
       }
 
-      setSuccess(true);
-      setMessage("");
+      router.push(`/dashboard/messages/${encodeURIComponent(data.conversationId)}`);
     } catch {
       setError("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.");
     } finally {
@@ -56,65 +40,14 @@ export default function InquiryForm({
     }
   }
 
-  if (success) {
-    return (
-      <div className="hd-inquiry-success" role="status">
-        <strong>پیامت ارسال شد.</strong>
-        <p>آگهی‌دهنده می‌تواند آن را در صندوق پیام‌هایش مشاهده کند.</p>
-        <Link href="/my/messages">مشاهده صندوق پیام‌ها</Link>
-      </div>
-    );
-  }
-
   return (
-    <form className="hd-inquiry-form" onSubmit={send}>
-      <h3>پیام به آگهی‌دهنده</h3>
-      <p>
-        درباره شرایط بازدید یا اطلاعات بیشتر ملک سؤال بپرس.
-      </p>
-
-      <label htmlFor="inquiry-message">متن پیام</label>
-
-      <textarea
-        id="inquiry-message"
-        value={message}
-        onChange={(event) => setMessage(event.target.value)}
-        minLength={20}
-        maxLength={2000}
-        required
-        rows={5}
-        placeholder="سلام، درباره این ملک و امکان بازدید سؤال داشتم..."
-        disabled={busy || loginRequired}
-      />
-
-      <small>
-        {message.length.toLocaleString("fa-IR")} / ۲۰۰۰ کاراکتر
-      </small>
-
-      {error && (
-        <p className="hd-inquiry-error" role="alert">
-          {error}
-        </p>
-      )}
-
-      {loginRequired ? (
-        <Link
-          href={`/login?next=${encodeURIComponent(
-            `/listings/${listingId}`
-          )}`}
-          className="hd-action-primary"
-        >
-          برای ارسال پیام وارد شوید
-        </Link>
-      ) : (
-        <button
-          type="submit"
-          className="hd-action-primary"
-          disabled={busy || message.trim().length < 20}
-        >
-          {busy ? "در حال ارسال..." : "ارسال پیام"}
-        </button>
-      )}
-    </form>
+    <section className="hd-inquiry-form hd-messenger-entry" aria-labelledby="hd-messenger-title">
+      <h3 id="hd-messenger-title">گفت‌وگو با آگهی‌دهنده</h3>
+      <p>چت این ملک را باز کنید؛ پیام‌ها و پاسخ‌ها در پیام‌رسان خانه‌یار باقی می‌مانند.</p>
+      <button type="button" className="hd-action-primary" onClick={openConversation} disabled={busy}>
+        {busy ? "در حال باز کردن گفت‌وگو..." : "پیام به آگهی‌دهنده ←"}
+      </button>
+      {error && <p className="hd-inquiry-error" role="alert">{error}</p>}
+    </section>
   );
 }

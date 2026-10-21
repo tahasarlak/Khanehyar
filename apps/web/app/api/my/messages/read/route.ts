@@ -107,8 +107,23 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      listingId,
+      OR: [
+        { buyerId: user.id, sellerId: counterpartId },
+        { sellerId: user.id, buyerId: counterpartId },
+      ],
+    },
+    select: { id: true },
+  });
+  const nativeResult = conversation ? await prisma.message.updateMany({
+    where: { conversationId: conversation.id, senderId: counterpartId, readAt: null },
+    data: { readAt: new Date() },
+  }) : { count: 0 };
+
   return NextResponse.json(
-    { success: true, updated: result.count },
+    { success: true, updated: result.count + nativeResult.count },
     {
       headers: {
         "Cache-Control": "private, no-store",

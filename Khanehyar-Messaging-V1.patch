@@ -1,0 +1,1001 @@
+diff --git a/apps/web/app/api/conversations/[id]/messages/route.ts b/apps/web/app/api/conversations/[id]/messages/route.ts
+new file mode 100644
+index 0000000..79b1dea
+--- /dev/null
++++ b/apps/web/app/api/conversations/[id]/messages/route.ts
+@@ -0,0 +1,92 @@
++import { NextRequest, NextResponse } from "next/server";
++import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
++import { prisma } from "@/src/lib/prisma";
++import { getCurrentUser } from "@/src/lib/auth";
++
++type Context = { params: Promise<{ id: string }> };
++
++
++export async function GET(_request: NextRequest, context: Context) {
++  const user = await getCurrentUser();
++  if (!user) return NextResponse.json({ error: "ابتدا وارد حساب شوید." }, { status: 401 });
++  const { id } = await context.params;
++  if (!id || id.length > 100) return NextResponse.json({ error: "شناسه مکالمه نامعتبر است." }, { status: 400 });
++  const conversation = await prisma.conversation.findFirst({
++    where: { id, OR: [{ buyerId: user.id }, { sellerId: user.id }] },
++    select: { id: true },
++  });
++  if (!conversation) return NextResponse.json({ error: "مکالمه پیدا نشد یا دسترسی مجاز نیست." }, { status: 404 });
++  const messages = await prisma.message.findMany({
++    where: { conversationId: id },
++    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
++    take: 100,
++    select: { id: true, body: true, senderId: true, createdAt: true, readAt: true },
++  });
++  return NextResponse.json({
++    messages: messages.reverse().map((item) => ({ ...item, createdAt: item.createdAt.toISOString(), readAt: item.readAt?.toISOString() ?? null })),
++  }, { headers: { "Cache-Control": "private, no-store" } });
++}
++
++export async function POST(request: NextRequest, context: Context) {
++  const limit = await checkRateLimit("send-conversation-message", getRequestIdentity(request));
++  if (!limit.allowed) return rateLimitResponse(limit.retryAfterSeconds);
++
++  if (request.headers.get("origin") !== request.nextUrl.origin) {
++    return NextResponse.json({ error: "مبدأ درخواست نامعتبر است." }, { status: 403 });
++  }
++  if (!(request.headers.get("content-type") || "").includes("application/json")) {
++    return NextResponse.json({ error: "نوع درخواست نامعتبر است." }, { status: 415 });
++  }
++  const size = Number(request.headers.get("content-length") || "0");
++  if (!Number.isFinite(size) || size > 4096) {
++    return NextResponse.json({ error: "درخواست بیش از حد بزرگ است." }, { status: 413 });
++  }
++
++  const user = await getCurrentUser();
++  if (!user) return NextResponse.json({ error: "برای ارسال پیام وارد حساب شوید." }, { status: 401 });
++
++  const { id } = await context.params;
++  if (!id || id.length > 100) return NextResponse.json({ error: "شناسه مکالمه نامعتبر است." }, { status: 400 });
++
++  let body: unknown;
++  try { body = await request.json(); } catch {
++    return NextResponse.json({ error: "متن درخواست معتبر نیست." }, { status: 400 });
++  }
++  if (!body || typeof body !== "object" || !("message" in body) || typeof body.message !== "string") {
++    return NextResponse.json({ error: "متن پیام الزامی است." }, { status: 400 });
++  }
++  const message = body.message.trim();
++  if (message.length < 1 || message.length > 2000) {
++    return NextResponse.json({ error: "پیام باید بین ۱ تا ۲۰۰۰ کاراکتر باشد." }, { status: 400 });
++  }
++
++  const conversation = await prisma.conversation.findFirst({
++    where: { id, OR: [{ buyerId: user.id }, { sellerId: user.id }] },
++    select: { id: true, listingId: true, buyerId: true, sellerId: true },
++  });
++  if (!conversation) {
++    return NextResponse.json({ error: "مکالمه پیدا نشد یا دسترسی مجاز نیست." }, { status: 404 });
++  }
++
++  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
++  const recentCount = await prisma.message.count({
++    where: { senderId: user.id, createdAt: { gte: oneHourAgo } },
++  });
++  if (recentCount >= 30) {
++    return NextResponse.json({ error: "سقف ارسال پیام در این ساعت تکمیل شده است." }, { status: 429 });
++  }
++
++  const created = await prisma.$transaction(async (tx) => {
++    const messageRecord = await tx.message.create({
++      data: { conversationId: conversation.id, senderId: user.id, body: message },
++      select: { id: true, body: true, senderId: true, createdAt: true, readAt: true },
++    });
++    await tx.conversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } });
++    return messageRecord;
++  });
++
++  return NextResponse.json(
++    { success: true, message: { ...created, createdAt: created.createdAt.toISOString(), readAt: created.readAt?.toISOString() ?? null } },
++    { status: 201, headers: { "Cache-Control": "private, no-store" } },
++  );
++}
+diff --git a/apps/web/app/api/conversations/[id]/read/route.ts b/apps/web/app/api/conversations/[id]/read/route.ts
+new file mode 100644
+index 0000000..453e538
+--- /dev/null
++++ b/apps/web/app/api/conversations/[id]/read/route.ts
+@@ -0,0 +1,30 @@
++import { NextRequest, NextResponse } from "next/server";
++import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
++import { prisma } from "@/src/lib/prisma";
++import { getCurrentUser } from "@/src/lib/auth";
++
++type Context = { params: Promise<{ id: string }> };
++
++export async function POST(request: NextRequest, context: Context) {
++  const limit = await checkRateLimit("read-conversation", getRequestIdentity(request));
++  if (!limit.allowed) return rateLimitResponse(limit.retryAfterSeconds);
++  if (request.headers.get("origin") !== request.nextUrl.origin) {
++    return NextResponse.json({ error: "مبدأ درخواست نامعتبر است." }, { status: 403 });
++  }
++  const user = await getCurrentUser();
++  if (!user) return NextResponse.json({ error: "ابتدا وارد حساب شوید." }, { status: 401 });
++  const { id } = await context.params;
++  const conversation = await prisma.conversation.findFirst({
++    where: { id, OR: [{ buyerId: user.id }, { sellerId: user.id }] },
++    select: { id: true },
++  });
++  if (!conversation) return NextResponse.json({ error: "مکالمه پیدا نشد." }, { status: 404 });
++
++  const result = await prisma.message.updateMany({
++    where: { conversationId: id, senderId: { not: user.id }, readAt: null },
++    data: { readAt: new Date() },
++  });
++  return NextResponse.json({ success: true, updated: result.count }, {
++    headers: { "Cache-Control": "private, no-store" },
++  });
++}
+diff --git a/apps/web/app/api/inquiries/[id]/reply/route.ts b/apps/web/app/api/inquiries/[id]/reply/route.ts
+index 13bde45..215ff7b 100644
+--- a/apps/web/app/api/inquiries/[id]/reply/route.ts
++++ b/apps/web/app/api/inquiries/[id]/reply/route.ts
+@@ -118,7 +118,7 @@ export async function POST(request: NextRequest, context: Context) {
+ 
+   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+ 
+-  const recentCount = await prisma.inquiry.count({
++  const recentCount = await prisma.message.count({
+     where: {
+       senderId: user.id,
+       createdAt: { gte: oneHourAgo },
+@@ -132,19 +132,33 @@ export async function POST(request: NextRequest, context: Context) {
+     );
+   }
+ 
+-  // Preserve the original listing and reverse sender/recipient.
+-  const reply = await prisma.inquiry.create({
+-    data: {
+-      listingId: target.listingId,
+-      senderId: user.id,
+-      recipientId: target.senderId,
+-      message,
+-    },
++  // Compatibility path for older clients: write the reply to the native conversation.
++  const listing = await prisma.listing.findUnique({
++    where: { id: target.listingId },
++    select: { id: true, ownerId: true },
++  });
++  if (!listing || (user.id !== listing.ownerId && target.senderId !== listing.ownerId && target.recipientId !== listing.ownerId)) {
++    return NextResponse.json({ error: "مکالمه معتبر نیست." }, { status: 404 });
++  }
++  const buyerId = user.id === listing.ownerId
++    ? (target.senderId === listing.ownerId ? target.recipientId : target.senderId)
++    : user.id;
++  if (buyerId === listing.ownerId) {
++    return NextResponse.json({ error: "مکالمه معتبر نیست." }, { status: 400 });
++  }
++  const conversation = await prisma.conversation.upsert({
++    where: { listingId_buyerId_sellerId: { listingId: listing.id, buyerId, sellerId: listing.ownerId } },
++    create: { listingId: listing.id, buyerId, sellerId: listing.ownerId },
++    update: { updatedAt: new Date() },
++    select: { id: true },
++  });
++  const reply = await prisma.message.create({
++    data: { conversationId: conversation.id, senderId: user.id, body: message },
+     select: { id: true },
+   });
+ 
+   return NextResponse.json(
+-    { success: true, id: reply.id },
+-    { status: 201 }
++    { success: true, id: reply.id, conversationId: conversation.id },
++    { status: 201, headers: { "Cache-Control": "private, no-store" } }
+   );
+ }
+\ No newline at end of file
+diff --git a/apps/web/app/api/listings/[id]/inquiries/route.ts b/apps/web/app/api/listings/[id]/inquiries/route.ts
+index d4909a0..5817490 100644
+--- a/apps/web/app/api/listings/[id]/inquiries/route.ts
++++ b/apps/web/app/api/listings/[id]/inquiries/route.ts
+@@ -105,7 +105,7 @@ export async function POST(request: NextRequest, context: Context) {
+ 
+   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+ 
+-  const recentMessages = await prisma.inquiry.count({
++  const recentMessages = await prisma.message.count({
+     where: {
+       senderId: user.id,
+       createdAt: { gte: oneHourAgo },
+@@ -119,17 +119,37 @@ export async function POST(request: NextRequest, context: Context) {
+     );
+   }
+ 
+-  await prisma.inquiry.create({
+-    data: {
++  const conversation = await prisma.conversation.upsert({
++    where: {
++      listingId_buyerId_sellerId: {
++        listingId: listing.id,
++        buyerId: user.id,
++        sellerId: listing.ownerId,
++      },
++    },
++    create: {
+       listingId: listing.id,
++      buyerId: user.id,
++      sellerId: listing.ownerId,
++    },
++    update: { updatedAt: new Date() },
++    select: { id: true },
++  });
++
++  await prisma.message.create({
++    data: {
++      conversationId: conversation.id,
+       senderId: user.id,
+-      recipientId: listing.ownerId,
+-      message,
++      body: message,
+     },
+   });
+ 
+   return NextResponse.json(
+-    { success: true, message: "پیام با موفقیت ارسال شد." },
+-    { status: 201 }
++    {
++      success: true,
++      conversationId: conversation.id,
++      message: "پیام با موفقیت ارسال شد.",
++    },
++    { status: 201, headers: { "Cache-Control": "private, no-store" } }
+   );
+ }
+\ No newline at end of file
+diff --git a/apps/web/app/api/my/messages/read/route.ts b/apps/web/app/api/my/messages/read/route.ts
+index 835e9d0..55a4205 100644
+--- a/apps/web/app/api/my/messages/read/route.ts
++++ b/apps/web/app/api/my/messages/read/route.ts
+@@ -107,8 +107,23 @@ export async function POST(request: NextRequest) {
+     },
+   });
+ 
++  const conversation = await prisma.conversation.findFirst({
++    where: {
++      listingId,
++      OR: [
++        { buyerId: user.id, sellerId: counterpartId },
++        { sellerId: user.id, buyerId: counterpartId },
++      ],
++    },
++    select: { id: true },
++  });
++  const nativeResult = conversation ? await prisma.message.updateMany({
++    where: { conversationId: conversation.id, senderId: counterpartId, readAt: null },
++    data: { readAt: new Date() },
++  }) : { count: 0 };
++
+   return NextResponse.json(
+-    { success: true, updated: result.count },
++    { success: true, updated: result.count + nativeResult.count },
+     {
+       headers: {
+         "Cache-Control": "private, no-store",
+diff --git a/apps/web/app/api/my/messages/unread/route.ts b/apps/web/app/api/my/messages/unread/route.ts
+index d53f46f..09b090a 100644
+--- a/apps/web/app/api/my/messages/unread/route.ts
++++ b/apps/web/app/api/my/messages/unread/route.ts
+@@ -15,12 +15,17 @@ export async function GET() {
+     );
+   }
+ 
+-  const unread = await prisma.inquiry.count({
++  const conversations = await prisma.conversation.findMany({
++    where: { OR: [{ buyerId: user.id }, { sellerId: user.id }] },
++    select: { id: true },
++  });
++  const unread = conversations.length ? await prisma.message.count({
+     where: {
+-      recipientId: user.id,
+-      isRead: false,
++      conversationId: { in: conversations.map((conversation) => conversation.id) },
++      senderId: { not: user.id },
++      readAt: null,
+     },
+-  });
++  }) : 0;
+ 
+   return NextResponse.json(
+     { unread },
+diff --git a/apps/web/app/dashboard/messages/ConversationView.tsx b/apps/web/app/dashboard/messages/ConversationView.tsx
+new file mode 100644
+index 0000000..3cbd6d7
+--- /dev/null
++++ b/apps/web/app/dashboard/messages/ConversationView.tsx
+@@ -0,0 +1,128 @@
++"use client";
++
++import { useEffect, useRef, useState, type FormEvent } from "react";
++import { useRouter } from "next/navigation";
++
++type ChatMessage = {
++  id: string;
++  body: string;
++  senderId: string;
++  createdAt: string;
++  readAt: string | null;
++};
++
++type Props = {
++  conversationId: string;
++  currentUserId: string;
++  counterpartName: string;
++  initialMessages: ChatMessage[];
++  initialUnread: number;
++};
++
++function dateLabel(value: string) {
++  return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
++}
++
++export default function ConversationView({ conversationId, currentUserId, counterpartName, initialMessages, initialUnread }: Props) {
++  const router = useRouter();
++  const [messages, setMessages] = useState(initialMessages);
++  const [text, setText] = useState("");
++  const [busy, setBusy] = useState(false);
++  const [error, setError] = useState("");
++  const scrollRef = useRef<HTMLDivElement>(null);
++
++  useEffect(() => {
++    let active = true;
++    let requestInFlight = false;
++    const refreshMessages = async () => {
++      if (requestInFlight || document.visibilityState === "hidden") return;
++      requestInFlight = true;
++      try {
++        const response = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}/messages`, {
++          credentials: "same-origin", cache: "no-store",
++        });
++        if (!response.ok) return;
++        const data = await response.json() as { messages?: ChatMessage[] };
++        if (active && Array.isArray(data.messages)) {
++          setMessages(data.messages);
++          if (data.messages.some((message) => message.senderId !== currentUserId && !message.readAt)) {
++            const readResponse = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}/read`, {
++              method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: "{}",
++            });
++            if (readResponse.ok && active) {
++              const readAt = new Date().toISOString();
++              setMessages((current) => current.map((message) => message.senderId !== currentUserId && !message.readAt ? { ...message, readAt } : message));
++              router.refresh();
++            }
++          }
++        }
++      } catch {
++        // Keep the current conversation visible during temporary network issues.
++      } finally { requestInFlight = false; }
++    };
++    const interval = window.setInterval(() => { void refreshMessages(); }, 10000);
++    return () => { active = false; window.clearInterval(interval); };
++  }, [conversationId, currentUserId, router]);
++
++  useEffect(() => {
++    if (initialUnread <= 0) return;
++    const controller = new AbortController();
++    void fetch(`/api/conversations/${encodeURIComponent(conversationId)}/read`, {
++      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
++      body: "{}", signal: controller.signal,
++    }).then((response) => {
++      if (response.ok) router.refresh();
++    }).catch(() => undefined);
++    return () => controller.abort();
++  }, [conversationId, initialUnread, router]);
++
++  useEffect(() => {
++    scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
++  }, [messages.length]);
++
++  async function submit(event: FormEvent<HTMLFormElement>) {
++    event.preventDefault();
++    const message = text.trim();
++    if (busy || !message) return;
++    setBusy(true); setError("");
++    try {
++      const response = await fetch(`/api/conversations/${encodeURIComponent(conversationId)}/messages`, {
++        method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
++        body: JSON.stringify({ message }),
++      });
++      const result = await response.json() as { error?: string; message?: ChatMessage };
++      if (!response.ok || !result.message) throw new Error(result.error || "ارسال پیام ناموفق بود.");
++      setMessages((current) => [...current, result.message!]);
++      setText("");
++      router.refresh();
++    } catch (caught) {
++      setError(caught instanceof Error ? caught.message : "ارتباط با سرور برقرار نشد.");
++    } finally { setBusy(false); }
++  }
++
++  return (
++    <div className="hm-chat-shell">
++      <div className="hm-chat-messages" aria-live="polite">
++        {messages.length === 0 ? <p className="hm-chat-first">گفت‌وگو را با ارسال پیام شروع کنید.</p> : messages.map((message) => {
++          const own = message.senderId === currentUserId;
++          return <article key={message.id} className={own ? "hm-chat-bubble hm-chat-own" : "hm-chat-bubble hm-chat-other"}>
++            <span className="hm-chat-author">{own ? "شما" : counterpartName}</span>
++            <p>{message.body}</p>
++            <time dateTime={message.createdAt}>{dateLabel(message.createdAt)}</time>
++            {own && message.readAt && <span className="hm-chat-read">خوانده شد</span>}
++          </article>;
++        })}
++        <div ref={scrollRef} />
++      </div>
++      <form className="hm-chat-compose" onSubmit={submit}>
++        <label htmlFor="hm-chat-message">پیام شما</label>
++        <textarea id="hm-chat-message" value={text} onChange={(event) => setText(event.target.value)} rows={3} maxLength={2000} required disabled={busy} placeholder="پیامت را بنویس..." />
++        <div className="hm-chat-compose-footer">
++          <small>{text.length.toLocaleString("fa-IR")} / ۲۰۰۰</small>
++          <button type="submit" disabled={busy || !text.trim()}>{busy ? "در حال ارسال..." : "ارسال پیام ←"}</button>
++        </div>
++        {error && <p role="alert" className="hm-reply-error">{error}</p>}
++      </form>
++    </div>
++  );
++}
+diff --git a/apps/web/app/dashboard/messages/[conversationId]/page.tsx b/apps/web/app/dashboard/messages/[conversationId]/page.tsx
+new file mode 100644
+index 0000000..8d707ac
+--- /dev/null
++++ b/apps/web/app/dashboard/messages/[conversationId]/page.tsx
+@@ -0,0 +1,41 @@
++import Link from "next/link";
++import { notFound, redirect } from "next/navigation";
++import { prisma } from "@/src/lib/prisma";
++import { getCurrentUser } from "@/src/lib/auth";
++import ConversationView from "../ConversationView";
++import "../messages.css";
++
++export const dynamic = "force-dynamic";
++
++type Props = { params: Promise<{ conversationId: string }> };
++
++export default async function ConversationPage({ params }: Props) {
++  const user = await getCurrentUser();
++  if (!user) redirect(`/login?next=${encodeURIComponent("/dashboard/messages")}`);
++  const { conversationId } = await params;
++  const conversation = await prisma.conversation.findFirst({
++    where: { id: conversationId, OR: [{ buyerId: user.id }, { sellerId: user.id }] },
++    select: {
++      id: true, listingId: true, buyerId: true, sellerId: true,
++      listing: { select: { id: true, title: true, city: true, listingType: true, propertyType: true } },
++      buyer: { select: { id: true, name: true } },
++      seller: { select: { id: true, name: true } },
++      messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 100, select: { id: true, body: true, senderId: true, createdAt: true, readAt: true } },
++    },
++  });
++  if (!conversation) notFound();
++  const counterpart = user.id === conversation.buyerId ? conversation.seller : conversation.buyer;
++  const messages = [...conversation.messages].reverse();
++  const unread = await prisma.message.count({
++    where: { conversationId: conversation.id, senderId: { not: user.id }, readAt: null },
++  });
++
++  return <main className="hm-page" dir="rtl"><div className="hm-container hm-content">
++    <nav className="hm-chat-breadcrumb" aria-label="مسیر صفحه"><Link href="/dashboard/messages">صندوق پیام‌ها</Link><span>/</span><span>{conversation.listing.title}</span></nav>
++    <header className="hm-chat-header">
++      <div><p>گفت‌وگو با {counterpart.name || "کاربر خانه‌یار"}</p><h1>{conversation.listing.title}</h1><span>{conversation.listing.city} · {conversation.listing.listingType === "RENT" ? "اجاره" : "فروش"}</span></div>
++      <Link href={`/listings/${encodeURIComponent(conversation.listing.id)}`} className="hm-listing-link">مشاهده آگهی ↗</Link>
++    </header>
++    <ConversationView conversationId={conversation.id} currentUserId={user.id} counterpartName={counterpart.name || "کاربر خانه‌یار"} initialUnread={unread} initialMessages={messages.map((message) => ({ ...message, createdAt: message.createdAt.toISOString(), readAt: message.readAt?.toISOString() ?? null }))} />
++  </div></main>;
++}
+diff --git a/apps/web/app/dashboard/messages/messages.css b/apps/web/app/dashboard/messages/messages.css
+index b2858fa..38cc754 100644
+--- a/apps/web/app/dashboard/messages/messages.css
++++ b/apps/web/app/dashboard/messages/messages.css
+@@ -667,3 +667,12 @@
+   }
+ }
+ /* END KHANEHYAR DASHBOARD MESSAGES LAYOUT V2 */
++
++
++/* KHANEHYAR NATIVE MESSAGING V1 */
++.hm-inbox-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;margin:12px 0 28px;padding:28px;border:1px solid #e0e9ee;border-radius:24px;background:linear-gradient(125deg,#fff,#f1f8f5)}
++.hm-inbox-eyebrow{font-size:11px;font-weight:900;color:#147d69}.hm-inbox-heading h1{margin:5px 0;color:#153655;font-size:clamp(25px,4vw,36px);font-weight:950}.hm-inbox-heading p{margin:0;color:#748596;font-size:13px}
++.hm-inbox-total{min-width:120px;display:flex;flex-direction:column;align-items:center;padding:13px;border-radius:17px;background:#e2f3eb;color:#176b59}.hm-inbox-total strong{font-size:26px}.hm-inbox-total span,.hm-inbox-total small{font-size:11px}.hm-inbox-total small{margin-top:5px;text-align:center}
++.hm-conversation-list{display:flex;flex-direction:column;gap:12px}.hm-conversation-card{display:flex;align-items:center;gap:15px;min-width:0;padding:18px 20px;border:1px solid #e0e8ee;border-radius:19px;background:#fff;color:inherit;box-shadow:0 5px 20px #15365507;transition:border-color .16s,transform .16s,box-shadow .16s}.hm-conversation-card:hover{border-color:#9acbbb;box-shadow:0 10px 28px #15365510;transform:translateY(-1px)}.hm-conversation-avatar{width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:50%;background:#e2f3eb;color:#147d69;font-weight:950;font-size:19px}.hm-conversation-main{min-width:0;flex:1}.hm-conversation-top{display:flex;justify-content:space-between;gap:12px;align-items:center}.hm-conversation-top strong{color:#173b5b;font-size:14px}.hm-conversation-top time{flex:0 0 auto;color:#8997a5;font-size:10px}.hm-conversation-listing{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:4px;color:#176b5d;font-size:12px;font-weight:900}.hm-conversation-listing span{padding:2px 7px;border-radius:6px;background:#f0f5f7;color:#728393;font-size:10px;font-weight:700}.hm-conversation-preview{overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;margin:6px 0 0;color:#788898;font-size:12px;overflow-wrap:anywhere}.hm-conversation-side{display:flex;align-items:center;gap:9px}.hm-conversation-unread{display:grid;place-items:center;min-width:23px;height:23px;padding:0 6px;border-radius:999px;background:#147d69;color:#fff;font-size:10px;font-weight:900}.hm-conversation-arrow{color:#8a9ca8;font-size:20px}.hm-inbox-empty{padding:55px 24px}.hm-inbox-empty-icon{margin:auto;width:60px;height:60px;display:grid;place-items:center;border-radius:20px;background:#e4f4ed;color:#147d69;font-size:27px}
++.hm-chat-breadcrumb{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:18px;color:#8191a0;font-size:12px}.hm-chat-breadcrumb a{color:#147d69;font-weight:850}.hm-chat-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 25px;margin-bottom:18px;border:1px solid #e0e9ee;border-radius:21px;background:#fff}.hm-chat-header h1{margin:3px 0;color:#173b5b;font-size:clamp(18px,3vw,25px);font-weight:950}.hm-chat-header p{margin:0;color:#147d69;font-size:12px;font-weight:850}.hm-chat-header span{color:#8191a0;font-size:11px}.hm-chat-shell{overflow:hidden;border:1px solid #dfe8ee;border-radius:23px;background:#fff;box-shadow:0 12px 35px #173b6008}.hm-chat-messages{display:flex;flex-direction:column;gap:14px;max-height:min(62vh,720px);min-height:300px;overflow:auto;padding:24px;background:linear-gradient(#f7fafb,#f3f7f9)}.hm-chat-bubble{max-width:min(78%,620px);padding:13px 15px;border:1px solid #e0e8ed;border-radius:17px;background:#fff;box-shadow:0 3px 10px #15365506}.hm-chat-own{align-self:flex-start;border-color:#cce8dc;background:#eaf7f1;border-bottom-right-radius:5px}.hm-chat-other{align-self:flex-end;border-bottom-left-radius:5px}.hm-chat-author{display:block;color:#147d69;font-size:10px;font-weight:950}.hm-chat-bubble p{margin:5px 0 8px;color:#2b4358;font-size:13px;line-height:2;white-space:pre-wrap;overflow-wrap:anywhere}.hm-chat-bubble time,.hm-chat-read{display:inline-block;color:#8594a2;font-size:9px}.hm-chat-read{margin-inline-start:9px;color:#147d69}.hm-chat-first{margin:auto;color:#80909e;font-size:13px}.hm-chat-compose{padding:19px 22px;border-top:1px solid #e5edf1}.hm-chat-compose label{display:block;margin-bottom:7px;color:#294b64;font-size:12px;font-weight:900}.hm-chat-compose textarea{width:100%;resize:vertical;min-height:84px;padding:12px 14px;border:1px solid #dce6ec;border-radius:13px;background:#fbfdfe;color:#243f5b;font:inherit;font-size:13px;line-height:1.9;outline:none}.hm-chat-compose textarea:focus{border-color:#55a88e;box-shadow:0 0 0 3px #147d6917}.hm-chat-compose-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}.hm-chat-compose-footer small{color:#8b99a5;font-size:10px}.hm-chat-compose-footer button{padding:10px 18px;border:0;border-radius:11px;background:#147d69;color:#fff;font:inherit;font-size:12px;font-weight:900;cursor:pointer}.hm-chat-compose-footer button:disabled{opacity:.55;cursor:not-allowed}.hm-chat-compose button:focus-visible,.hm-conversation-card:focus-visible{outline:3px solid #63c8ad;outline-offset:3px}
++@media(max-width:640px){.hm-inbox-heading{align-items:flex-start;padding:20px;gap:12px}.hm-inbox-total{min-width:80px;padding:9px}.hm-conversation-card{gap:10px;padding:14px 12px}.hm-conversation-avatar{width:40px;height:40px;flex-basis:40px}.hm-conversation-top{align-items:flex-start;flex-direction:column;gap:2px}.hm-conversation-top time{font-size:9px}.hm-chat-header{align-items:flex-start;flex-direction:column;padding:18px}.hm-chat-messages{padding:15px;min-height:250px}.hm-chat-bubble{max-width:90%}.hm-chat-compose{padding:15px}}
+diff --git a/apps/web/app/dashboard/messages/page.tsx b/apps/web/app/dashboard/messages/page.tsx
+index 8072626..35c354b 100644
+--- a/apps/web/app/dashboard/messages/page.tsx
++++ b/apps/web/app/dashboard/messages/page.tsx
+@@ -1,267 +1,52 @@
+ import Link from "next/link";
++import { redirect } from "next/navigation";
+ import { prisma } from "@/src/lib/prisma";
+ import { getCurrentUser } from "@/src/lib/auth";
+-import ReplyForm from "./ReplyForm";
+-import MarkReadButton from "./MarkReadButton";
+ import "./messages.css";
+ 
+-export const instant = false;
+-
+-type ConversationItem = {
+-  id: string;
+-  listingId: string;
+-  senderId: string;
+-  recipientId: string;
+-  message: string;
+-  createdAt: Date;
+-  isRead: boolean;
+-  listing: {
+-    id: string;
+-    title: string;
+-  };
+-  sender: {
+-    name: string | null;
+-  };
+-  recipient: {
+-    name: string | null;
+-  };
+-};
+-
+-type Conversation = {
+-  key: string;
+-  listingId: string;
+-  listingTitle: string;
+-  counterpartId: string;
+-  counterpartName: string;
+-  messages: ConversationItem[];
+-};
++export const dynamic = "force-dynamic";
+ 
+ function dateLabel(date: Date) {
+-  return new Intl.DateTimeFormat("fa-IR", {
+-    dateStyle: "medium",
+-    timeStyle: "short",
+-  }).format(date);
++  return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium", timeStyle: "short" }).format(date);
+ }
+ 
+ export default async function MessagesPage() {
+   const user = await getCurrentUser();
++  if (!user) redirect(`/login?next=${encodeURIComponent("/dashboard/messages")}`);
+ 
+-  if (!user) {
+-    return (
+-      <main className="hm-page" dir="rtl">
+-        <div className="hm-container hm-empty">
+-          <h1>گفت‌وگوهای خانه‌یار</h1>
+-          <p>برای دیدن مکالمات، ابتدا وارد حساب شوید.</p>
+-          <Link
+-            href="/login?next=%2Fmy%2Fmessages"
+-            className="hm-button"
+-          >
+-            ورود به حساب
+-          </Link>
+-        </div>
+-      </main>
+-    );
+-  }
+-
+-  const records = await prisma.inquiry.findMany({
+-    where: {
+-      OR: [
+-        { senderId: user.id },
+-        { recipientId: user.id },
+-      ],
+-    },
+-    orderBy: [
+-      { createdAt: "desc" },
+-      { id: "desc" },
+-    ],
++  const conversations = await prisma.conversation.findMany({
++    where: { OR: [{ buyerId: user.id }, { sellerId: user.id }] },
++    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+     take: 200,
+     select: {
+-      id: true,
+-      listingId: true,
+-      senderId: true,
+-      recipientId: true,
+-      message: true,
+-      createdAt: true,
+-      isRead: true,
+-      listing: {
+-        select: { id: true, title: true },
+-      },
+-      sender: {
+-        select: { name: true },
+-      },
+-      recipient: {
+-        select: { name: true },
+-      },
+-    },
+-  });
+-
+-  const conversations = new Map<string, Conversation>();
+-
+-  for (const item of records) {
+-    const outgoing = item.senderId === user.id;
+-
+-    const counterpartId = outgoing
+-      ? item.recipientId
+-      : item.senderId;
+-
+-    const counterpartName = outgoing
+-      ? item.recipient.name || "کاربر خانه‌یار"
+-      : item.sender.name || "کاربر خانه‌یار";
+-
+-    const key = `${item.listingId}:${counterpartId}`;
+-    let conversation = conversations.get(key);
+-
+-    if (!conversation) {
+-      conversation = {
+-        key,
+-        listingId: item.listingId,
+-        listingTitle: item.listing.title,
+-        counterpartId,
+-        counterpartName,
+-        messages: [],
+-      };
+-
+-      conversations.set(key, conversation);
+-    }
+-
+-    conversation.messages.push(item);
+-  }
+-
+-  const totalUnread = await prisma.inquiry.count({
+-    where: {
+-      recipientId: user.id,
+-      isRead: false,
++      id: true, listingId: true, buyerId: true, sellerId: true, updatedAt: true,
++      listing: { select: { title: true, city: true, listingType: true, images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } } } },
++      buyer: { select: { name: true } }, seller: { select: { name: true } },
++      messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1, select: { body: true, createdAt: true, senderId: true } },
+     },
+   });
+ 
+-  const threads = Array.from(conversations.values());
+-
+-  for (const thread of threads) {
+-    thread.messages.reverse();
+-  }
+-
+-  return (
+-    <main className="hm-page" dir="rtl">
+-
+-
+-      <div className="hm-container hm-content">
+-        <div className="hm-dashboard-page-title">
+-  <div>
+-    <h1>گفت‌وگوهای من</h1>
+-    <p>پیام‌ها و مکالمات مربوط به آگهی‌های شما</p>
+-  </div>
+-</div>
+-
+-
+-        <div className="hm-section-head">
+-          <h2>مکالمات</h2>
+-          <span>{threads.length.toLocaleString("fa-IR")}</span>
+-        </div>
+-
+-        {threads.length === 0 ? (
+-          <div className="hm-empty">
+-            <h2>هنوز مکالمه‌ای نداری</h2>
+-            <p>
+-              برای شروع، وارد صفحه یک آگهی شو و به مالک پیام بده.
+-            </p>
+-            <Link href="/search" className="hm-button">
+-              جست‌وجوی ملک
+-            </Link>
+-          </div>
+-        ) : (
+-          <div className="hm-thread-list">
+-            {threads.map((thread) => {
+-              const latest = thread.messages.at(-1);
+-
+-              const unreadCount = thread.messages.filter(
+-                (message) =>
+-                  message.recipientId === user.id &&
+-                  !message.isRead
+-              ).length;
+-
+-              return (
+-                <section key={thread.key} className="hm-thread">
+-                  <div className="hm-thread-header">
+-                    <div>
+-                      <span className="hm-thread-kicker">
+-                        مکالمه درباره ملک
+-                      </span>
+-
+-                      <h2>{thread.listingTitle}</h2>
+-
+-                      <p>
+-                        طرف گفت‌وگو: {thread.counterpartName}
+-                      </p>
+-
+-                      {unreadCount > 0 && (
+-                        <span className="hm-thread-unread">
+-                          {unreadCount.toLocaleString("fa-IR")} پیام جدید
+-                        </span>
+-                      )}
+-                    </div>
+-
+-                    <Link
+-                      href={`/listings/${encodeURIComponent(
+-                        thread.listingId
+-                      )}`}
+-                      className="hm-listing-link"
+-                    >
+-                      مشاهده آگهی ←
+-                    </Link>
+-                  </div>
+-
+-                  <div className="hm-thread-messages">
+-                    {thread.messages.map((item) => {
+-                      const own = item.senderId === user.id;
+-
+-                      return (
+-                        <article
+-                          key={item.id}
+-                          className={
+-                            own
+-                              ? "hm-bubble hm-bubble-own"
+-                              : "hm-bubble hm-bubble-other"
+-                          }
+-                        >
+-                          <span className="hm-bubble-author">
+-                            {own ? "شما" : thread.counterpartName}
+-                          </span>
+-
+-                          <p>{item.message}</p>
+-
+-                          <time dateTime={item.createdAt.toISOString()}>
+-                            {dateLabel(item.createdAt)}
+-                          </time>
+-                        </article>
+-                      );
+-                    })}
+-                  </div>
+-
+-                  <MarkReadButton
+-                    listingId={thread.listingId}
+-                    counterpartId={thread.counterpartId}
+-                    unreadCount={unreadCount}
+-                  />
+-
+-                  {latest && latest.recipientId === user.id ? (
+-                    <ReplyForm replyToId={latest.id} />
+-                  ) : (
+-                    <div className="hm-awaiting">
+-                      آخرین پیام را شما ارسال کرده‌اید؛
+-                      برای پاسخ طرف مقابل منتظر بمانید.
+-                    </div>
+-                  )}
+-                </section>
+-              );
+-            })}
+-          </div>
+-        )}
+-
+-        <p className="hm-limit-note">
+-          در این نسخه حداکثر ۲۰۰ پیام اخیر بارگذاری می‌شود.
+-          گفت‌وگوهای طولانی‌تر در مرحله صفحه‌بندی تکمیل خواهند شد.
+-        </p>
+-      </div>
+-    </main>
+-  );
+-}
+\ No newline at end of file
++  const unreadGroups = conversations.length ? await prisma.message.groupBy({
++    by: ["conversationId"],
++    where: { conversationId: { in: conversations.map((item) => item.id) }, senderId: { not: user.id }, readAt: null },
++    _count: { _all: true },
++  }) : [];
++  const unreadByConversation = new Map(unreadGroups.map((item) => [item.conversationId, item._count._all]));
++  const totalUnread = unreadGroups.reduce((sum, item) => sum + item._count._all, 0);
++
++  return <main className="hm-page" dir="rtl"><div className="hm-container hm-content">
++    <header className="hm-inbox-heading"><div><span className="hm-inbox-eyebrow">خانه‌یار · ارتباط امن</span><h1>پیام‌های من</h1><p>تمام گفت‌وگوهای خریداران و فروشندگان، مرتب‌شده بر اساس آخرین پیام.</p></div><div className="hm-inbox-total"><strong>{conversations.length.toLocaleString("fa-IR")}</strong><span>گفت‌وگو</span>{totalUnread > 0 && <small>{totalUnread.toLocaleString("fa-IR")} پیام خوانده‌نشده</small>}</div></header>
++    {conversations.length === 0 ? <section className="hm-empty hm-inbox-empty"><div className="hm-inbox-empty-icon" aria-hidden="true">✉</div><h2>هنوز گفت‌وگویی ندارید</h2><p>از صفحه هر آگهی می‌توانید مستقیماً به آگهی‌دهنده پیام بدهید. پاسخ‌ها هم در همین صندوق نمایش داده می‌شوند.</p><Link href="/search" className="hm-button">جست‌وجوی ملک</Link></section> : <section className="hm-conversation-list" aria-label="فهرست گفت‌وگوها">{conversations.map((conversation) => {
++      const isBuyer = conversation.buyerId === user.id;
++      const counterpartName = isBuyer ? conversation.seller.name : conversation.buyer.name;
++      const latest = conversation.messages[0];
++      const unread = unreadByConversation.get(conversation.id) || 0;
++      return <Link key={conversation.id} href={`/dashboard/messages/${encodeURIComponent(conversation.id)}`} className="hm-conversation-card">
++        <div className="hm-conversation-avatar" aria-hidden="true">{(counterpartName || "ک").trim().slice(0, 1)}</div>
++        <div className="hm-conversation-main"><div className="hm-conversation-top"><strong>{counterpartName || "کاربر خانه‌یار"}</strong><time>{latest ? dateLabel(latest.createdAt) : dateLabel(conversation.updatedAt)}</time></div><div className="hm-conversation-listing">{conversation.listing.title}<span>{conversation.listing.listingType === "RENT" ? "اجاره" : "فروش"} · {conversation.listing.city}</span></div><p className="hm-conversation-preview">{latest ? `${latest.senderId === user.id ? "شما: " : ""}${latest.body}` : "هنوز پیامی ارسال نشده است."}</p></div>
++        <div className="hm-conversation-side">{unread > 0 && <span className="hm-conversation-unread" aria-label={`${unread} پیام خوانده‌نشده`}>{unread > 99 ? "۹۹+" : unread.toLocaleString("fa-IR")}</span>}<span className="hm-conversation-arrow" aria-hidden="true">←</span></div>
++      </Link>;
++    })}</section>}
++    <p className="hm-limit-note">در حال حاضر حداکثر ۲۰۰ گفت‌وگوی اخیر نمایش داده می‌شود.</p>
++  </div></main>;
++}
+diff --git a/apps/web/app/listings/[id]/InquiryForm.tsx b/apps/web/app/listings/[id]/InquiryForm.tsx
+index a90bc08..c974a18 100644
+--- a/apps/web/app/listings/[id]/InquiryForm.tsx
++++ b/apps/web/app/listings/[id]/InquiryForm.tsx
+@@ -11,6 +11,7 @@ export default function InquiryForm({
+   const [message, setMessage] = useState("");
+   const [busy, setBusy] = useState(false);
+   const [success, setSuccess] = useState(false);
++  const [conversationId, setConversationId] = useState("");
+   const [error, setError] = useState("");
+   const [loginRequired, setLoginRequired] = useState(false);
+ 
+@@ -40,6 +41,7 @@ export default function InquiryForm({
+ 
+       const data = (await response.json()) as {
+         error?: string;
++        conversationId?: string;
+       };
+ 
+       if (!response.ok) {
+@@ -47,6 +49,7 @@ export default function InquiryForm({
+         return;
+       }
+ 
++      setConversationId(data.conversationId || "");
+       setSuccess(true);
+       setMessage("");
+     } catch {
+@@ -61,7 +64,9 @@ export default function InquiryForm({
+       <div className="hd-inquiry-success" role="status">
+         <strong>پیامت ارسال شد.</strong>
+         <p>آگهی‌دهنده می‌تواند آن را در صندوق پیام‌هایش مشاهده کند.</p>
+-        <Link href="/my/messages">مشاهده صندوق پیام‌ها</Link>
++        <Link href={conversationId ? `/dashboard/messages/${encodeURIComponent(conversationId)}` : "/dashboard/messages"}>
++          رفتن به گفت‌وگو
++        </Link>
+       </div>
+     );
+   }
+diff --git a/apps/web/prisma/migrations/20261021120000_add_conversations_messages/migration.sql b/apps/web/prisma/migrations/20261021120000_add_conversations_messages/migration.sql
+new file mode 100644
+index 0000000..a10a64b
+--- /dev/null
++++ b/apps/web/prisma/migrations/20261021120000_add_conversations_messages/migration.sql
+@@ -0,0 +1,82 @@
++-- Native messaging: keep Inquiry as an immutable legacy/audit source.
++-- Existing inquiry records are copied into conversations and messages.
++CREATE TABLE "Conversation" (
++    "id" TEXT NOT NULL,
++    "listingId" TEXT NOT NULL,
++    "buyerId" TEXT NOT NULL,
++    "sellerId" TEXT NOT NULL,
++    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++    CONSTRAINT "Conversation_pkey" PRIMARY KEY ("id")
++);
++
++CREATE TABLE "Message" (
++    "id" TEXT NOT NULL,
++    "conversationId" TEXT NOT NULL,
++    "senderId" TEXT NOT NULL,
++    "body" VARCHAR(2000) NOT NULL,
++    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "readAt" TIMESTAMP(3),
++    CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
++);
++
++CREATE UNIQUE INDEX "Conversation_listingId_buyerId_sellerId_key"
++  ON "Conversation"("listingId", "buyerId", "sellerId");
++CREATE INDEX "Conversation_buyerId_updatedAt_idx"
++  ON "Conversation"("buyerId", "updatedAt");
++CREATE INDEX "Conversation_sellerId_updatedAt_idx"
++  ON "Conversation"("sellerId", "updatedAt");
++CREATE INDEX "Message_conversationId_createdAt_idx"
++  ON "Message"("conversationId", "createdAt");
++CREATE INDEX "Message_conversationId_readAt_idx"
++  ON "Message"("conversationId", "readAt");
++CREATE INDEX "Message_senderId_createdAt_idx"
++  ON "Message"("senderId", "createdAt");
++
++ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_listingId_fkey"
++  FOREIGN KEY ("listingId") REFERENCES "Listing"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_buyerId_fkey"
++  FOREIGN KEY ("buyerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_sellerId_fkey"
++  FOREIGN KEY ("sellerId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++ALTER TABLE "Message" ADD CONSTRAINT "Message_conversationId_fkey"
++  FOREIGN KEY ("conversationId") REFERENCES "Conversation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++ALTER TABLE "Message" ADD CONSTRAINT "Message_senderId_fkey"
++  FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++
++-- Stable IDs make the data migration deterministic. Seller is always the listing owner.
++WITH pairs AS (
++  SELECT
++    i."listingId",
++    CASE WHEN i."senderId" = l."ownerId" THEN i."recipientId" ELSE i."senderId" END AS "buyerId",
++    l."ownerId" AS "sellerId",
++    MIN(i."createdAt") AS "createdAt",
++    MAX(i."createdAt") AS "updatedAt"
++  FROM "Inquiry" i
++  JOIN "Listing" l ON l."id" = i."listingId"
++  WHERE CASE WHEN i."senderId" = l."ownerId" THEN i."recipientId" ELSE i."senderId" END <> l."ownerId"
++  GROUP BY i."listingId",
++    CASE WHEN i."senderId" = l."ownerId" THEN i."recipientId" ELSE i."senderId" END,
++    l."ownerId"
++)
++INSERT INTO "Conversation" ("id", "listingId", "buyerId", "sellerId", "createdAt", "updatedAt")
++SELECT
++  md5('khanehyar-conversation:' || p."listingId" || ':' || p."buyerId" || ':' || p."sellerId"),
++  p."listingId", p."buyerId", p."sellerId", p."createdAt", p."updatedAt"
++FROM pairs p;
++
++INSERT INTO "Message" ("id", "conversationId", "senderId", "body", "createdAt", "readAt")
++SELECT
++  md5('khanehyar-message:' || i."id"),
++  c."id",
++  i."senderId",
++  i."message",
++  i."createdAt",
++  CASE WHEN i."isRead" THEN i."createdAt" ELSE NULL END
++FROM "Inquiry" i
++JOIN "Listing" l ON l."id" = i."listingId"
++JOIN "Conversation" c
++  ON c."listingId" = i."listingId"
++ AND c."sellerId" = l."ownerId"
++ AND c."buyerId" = CASE WHEN i."senderId" = l."ownerId" THEN i."recipientId" ELSE i."senderId" END
++WHERE CASE WHEN i."senderId" = l."ownerId" THEN i."recipientId" ELSE i."senderId" END <> l."ownerId";
+diff --git a/apps/web/prisma/schema.prisma b/apps/web/prisma/schema.prisma
+index 7c2f77b..9601441 100644
+--- a/apps/web/prisma/schema.prisma
++++ b/apps/web/prisma/schema.prisma
+@@ -37,6 +37,9 @@ enum ListingStatus {
+ model User {
+   sentInquiries Inquiry[] @relation("InquirySender")
+   receivedInquiries Inquiry[] @relation("InquiryRecipient")
++  buyerConversations Conversation[] @relation("ConversationBuyer")
++  sellerConversations Conversation[] @relation("ConversationSeller")
++  sentMessages Message[] @relation("MessageSender")
+   reviews ListingReview[]
+   id           String     @id @default(cuid())
+   name         String?
+@@ -55,6 +58,7 @@ model User {
+ 
+ model Listing {
+   inquiries Inquiry[]
++  conversations Conversation[]
+   reviews ListingReview[]
+   id           String        @id @default(cuid())
+   title        String        @db.VarChar(120)
+@@ -164,6 +168,40 @@ model ListingReview {
+ }
+ 
+ 
++model Conversation {
++  id        String   @id @default(cuid())
++  listingId String
++  buyerId   String
++  sellerId  String
++  createdAt DateTime @default(now())
++  updatedAt DateTime @updatedAt
++
++  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
++  buyer   User    @relation("ConversationBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
++  seller  User    @relation("ConversationSeller", fields: [sellerId], references: [id], onDelete: Cascade)
++  messages Message[]
++
++  @@unique([listingId, buyerId, sellerId])
++  @@index([buyerId, updatedAt])
++  @@index([sellerId, updatedAt])
++}
++
++model Message {
++  id             String   @id @default(cuid())
++  conversationId String
++  senderId       String
++  body           String   @db.VarChar(2000)
++  createdAt      DateTime @default(now())
++  readAt         DateTime?
++
++  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
++  sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
++
++  @@index([conversationId, createdAt])
++  @@index([conversationId, readAt])
++  @@index([senderId, createdAt])
++}
++
+ model Inquiry {
+   id          String   @id @default(cuid())
+   listingId   String

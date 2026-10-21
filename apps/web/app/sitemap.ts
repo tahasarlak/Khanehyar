@@ -1,34 +1,24 @@
 import type { MetadataRoute } from "next";
+import { connection } from "next/server";
+import { prisma } from "@/src/lib/prisma";
+import { getSiteOrigin } from "@/src/lib/site-url";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const raw = process.env.SITE_URL?.trim();
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  await connection();
 
-  if (!raw) return [];
+  const origin = getSiteOrigin();
+  if (!origin) return [];
 
-  let origin: string;
-
-  try {
-    const url = new URL(raw);
-
-    if (
-      url.protocol !== "https:" ||
-      url.username ||
-      url.password ||
-      url.pathname !== "/" ||
-      url.search ||
-      url.hash
-    ) {
-      return [];
-    }
-
-    origin = url.origin;
-  } catch {
-    return [];
-  }
+  const listings = await prisma.listing.findMany({
+    where: { status: "PUBLISHED" },
+    select: { id: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+    take: 50000,
+  });
 
   return [
     {
-      url: origin,
+      url: `${origin}/`,
       changeFrequency: "daily",
       priority: 1,
     },
@@ -37,5 +27,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 0.8,
     },
+    ...listings.map((listing) => ({
+      url: `${origin}/listings/${encodeURIComponent(listing.id)}`,
+      lastModified: listing.updatedAt,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    })),
   ];
 }

@@ -118,7 +118,7 @@ export async function POST(request: NextRequest, context: Context) {
 
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-  const recentCount = await prisma.inquiry.count({
+  const recentCount = await prisma.message.count({
     where: {
       senderId: user.id,
       createdAt: { gte: oneHourAgo },
@@ -132,19 +132,33 @@ export async function POST(request: NextRequest, context: Context) {
     );
   }
 
-  // Preserve the original listing and reverse sender/recipient.
-  const reply = await prisma.inquiry.create({
-    data: {
-      listingId: target.listingId,
-      senderId: user.id,
-      recipientId: target.senderId,
-      message,
-    },
+  // Compatibility path for older clients: write the reply to the native conversation.
+  const listing = await prisma.listing.findUnique({
+    where: { id: target.listingId },
+    select: { id: true, ownerId: true },
+  });
+  if (!listing || (user.id !== listing.ownerId && target.senderId !== listing.ownerId && target.recipientId !== listing.ownerId)) {
+    return NextResponse.json({ error: "مکالمه معتبر نیست." }, { status: 404 });
+  }
+  const buyerId = user.id === listing.ownerId
+    ? (target.senderId === listing.ownerId ? target.recipientId : target.senderId)
+    : user.id;
+  if (buyerId === listing.ownerId) {
+    return NextResponse.json({ error: "مکالمه معتبر نیست." }, { status: 400 });
+  }
+  const conversation = await prisma.conversation.upsert({
+    where: { listingId_buyerId_sellerId: { listingId: listing.id, buyerId, sellerId: listing.ownerId } },
+    create: { listingId: listing.id, buyerId, sellerId: listing.ownerId },
+    update: { updatedAt: new Date() },
+    select: { id: true },
+  });
+  const reply = await prisma.message.create({
+    data: { conversationId: conversation.id, senderId: user.id, body: message },
     select: { id: true },
   });
 
   return NextResponse.json(
-    { success: true, id: reply.id },
-    { status: 201 }
+    { success: true, id: reply.id, conversationId: conversation.id },
+    { status: 201, headers: { "Cache-Control": "private, no-store" } }
   );
 }

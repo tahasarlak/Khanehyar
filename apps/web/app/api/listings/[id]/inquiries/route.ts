@@ -63,25 +63,33 @@ export async function POST(request: NextRequest, context: Context) {
     );
   }
 
-  if (
-    !body ||
-    typeof body !== "object" ||
-    !("message" in body) ||
-    typeof body.message !== "string"
-  ) {
+  if (!body || typeof body !== "object") {
     return NextResponse.json(
-      { error: "متن پیام الزامی است." },
+      { error: "درخواست نامعتبر است." },
       { status: 400 }
     );
   }
 
-  const message = body.message.trim();
+  // `action: open` creates or reuses the listing-specific chat without
+  // sending a message. The first message is then written in the messenger.
+  const openOnly = "action" in body && body.action === "open";
+  let message = "";
 
-  if (message.length < 20 || message.length > 2000) {
-    return NextResponse.json(
-      { error: "متن پیام باید بین ۲۰ تا ۲۰۰۰ کاراکتر باشد." },
-      { status: 400 }
-    );
+  if (!openOnly) {
+    if (!("message" in body) || typeof body.message !== "string") {
+      return NextResponse.json(
+        { error: "متن پیام الزامی است." },
+        { status: 400 }
+      );
+    }
+
+    message = body.message.trim();
+    if (message.length < 20 || message.length > 2000) {
+      return NextResponse.json(
+        { error: "متن پیام باید بین ۲۰ تا ۲۰۰۰ کاراکتر باشد." },
+        { status: 400 }
+      );
+    }
   }
 
   const listing = await prisma.listing.findFirst({
@@ -103,33 +111,49 @@ export async function POST(request: NextRequest, context: Context) {
     );
   }
 
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  if (!openOnly) {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentMessages = await prisma.message.count({
+      where: { senderId: user.id, createdAt: { gte: oneHourAgo } },
+    });
 
-  const recentMessages = await prisma.inquiry.count({
-    where: {
-      senderId: user.id,
-      createdAt: { gte: oneHourAgo },
-    },
-  });
-
-  if (recentMessages >= 5) {
-    return NextResponse.json(
-      { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
-      { status: 429 }
-    );
+    if (recentMessages >= 5) {
+      return NextResponse.json(
+        { error: "سقف ارسال پیام در این ساعت تکمیل شده است." },
+        { status: 429 }
+      );
+    }
   }
 
-  await prisma.inquiry.create({
-    data: {
-      listingId: listing.id,
-      senderId: user.id,
-      recipientId: listing.ownerId,
-      message,
+  const conversation = await prisma.conversation.upsert({
+    where: {
+      listingId_buyerId_sellerId: {
+        listingId: listing.id,
+        buyerId: user.id,
+        sellerId: listing.ownerId,
+      },
     },
+    create: {
+      listingId: listing.id,
+      buyerId: user.id,
+      sellerId: listing.ownerId,
+    },
+    update: { updatedAt: new Date() },
+    select: { id: true },
   });
 
+  if (!openOnly) {
+    await prisma.message.create({
+      data: { conversationId: conversation.id, senderId: user.id, body: message },
+    });
+  }
+
   return NextResponse.json(
-    { success: true, message: "پیام با موفقیت ارسال شد." },
-    { status: 201 }
+    {
+      success: true,
+      conversationId: conversation.id,
+      message: openOnly ? "گفت‌وگو آماده است." : "پیام با موفقیت ارسال شد.",
+    },
+    { status: openOnly ? 200 : 201, headers: { "Cache-Control": "private, no-store" } }
   );
 }
