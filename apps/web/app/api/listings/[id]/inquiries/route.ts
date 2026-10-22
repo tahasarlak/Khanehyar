@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "@/src/lib/rate-limit";
 import { prisma } from "@/src/lib/prisma";
 import { getCurrentUser } from "@/src/lib/auth";
+import { sendNewMessageEmail } from "@/src/lib/messenger-email";
 
 type Context = {
   params: Promise<{ id: string }>;
@@ -111,6 +112,12 @@ export async function POST(request: NextRequest, context: Context) {
     );
   }
 
+  const block = await prisma.blockedUser.findFirst({
+    where: { OR: [{ blockerId: user.id, blockedId: listing.ownerId }, { blockerId: listing.ownerId, blockedId: user.id }] },
+    select: { blockerId: true },
+  });
+  if (block) return NextResponse.json({ error: "ارسال پیام به این کاربر امکان‌پذیر نیست." }, { status: 403 });
+
   if (!openOnly) {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const recentMessages = await prisma.message.count({
@@ -143,9 +150,12 @@ export async function POST(request: NextRequest, context: Context) {
   });
 
   if (!openOnly) {
-    await prisma.message.create({
-      data: { conversationId: conversation.id, senderId: user.id, body: message },
+    await prisma.$transaction(async (tx) => {
+      await tx.message.create({ data: { conversationId: conversation.id, senderId: user.id, body: message } });
+      await tx.notification.create({ data: { userId: listing.ownerId, type: "NEW_MESSAGE", title: "پیام جدید درباره یک ملک", body: message.slice(0, 450), href: `/dashboard/messages/${conversation.id}` } });
+      await tx.conversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } });
     });
+    await sendNewMessageEmail({ recipientId: listing.ownerId, conversationId: conversation.id, listingId: listing.id, preview: message });
   }
 
   return NextResponse.json(

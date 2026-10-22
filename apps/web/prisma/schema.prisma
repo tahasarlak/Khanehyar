@@ -40,6 +40,12 @@ model User {
   buyerConversations Conversation[] @relation("ConversationBuyer")
   sellerConversations Conversation[] @relation("ConversationSeller")
   sentMessages Message[] @relation("MessageSender")
+  messageReactions MessageReaction[]
+  conversationPreferences ConversationPreference[]
+  blockedUsers BlockedUser[] @relation("UserBlocks")
+  blockedBy BlockedUser[] @relation("UserBlockedBy")
+  messageReports MessageReport[]
+  notifications Notification[]
   reviews ListingReview[]
   id           String     @id @default(cuid())
   name         String?
@@ -48,6 +54,7 @@ model User {
   phone        String?    @unique
   passwordHash String
   role         UserRole   @default(USER)
+  emailNotificationsEnabled Boolean @default(true)
 
   listings     Listing[]
   favorites    Favorite[]
@@ -180,6 +187,7 @@ model Conversation {
   buyer   User    @relation("ConversationBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
   seller  User    @relation("ConversationSeller", fields: [sellerId], references: [id], onDelete: Cascade)
   messages Message[]
+  preferences ConversationPreference[]
 
   @@unique([listingId, buyerId, sellerId])
   @@index([buyerId, updatedAt])
@@ -193,13 +201,103 @@ model Message {
   body           String   @db.VarChar(2000)
   createdAt      DateTime @default(now())
   readAt         DateTime?
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  replyToId      String?
+  attachmentUrl  String?  @db.VarChar(2048)
+  attachmentName String?  @db.VarChar(255)
+  attachmentMime String?  @db.VarChar(100)
+  attachmentSize Int?
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  conversation Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User           @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      Message?       @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]      @relation("MessageReplies")
+  reports      MessageReport[]
+  reactions    MessageReaction[]
 
   @@index([conversationId, createdAt])
   @@index([conversationId, readAt])
   @@index([senderId, createdAt])
+  @@index([replyToId])
+}
+
+
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String   @db.VarChar(32)
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ConversationPreference {
+  userId         String
+  conversationId String
+  archivedAt     DateTime?
+  mutedUntil     DateTime?
+  pinnedAt       DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+  @@index([userId, archivedAt, updatedAt])
+  @@index([userId, mutedUntil])
+}
+
+model BlockedUser {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  reason    String?  @db.VarChar(500)
+
+  blocker User @relation("UserBlocks", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("UserBlockedBy", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId, createdAt])
+}
+
+model MessageReport {
+  id         String   @id @default(cuid())
+  reporterId String
+  messageId  String
+  reason     String   @db.VarChar(1000)
+  status     String   @default("OPEN") @db.VarChar(20)
+  createdAt  DateTime @default(now())
+
+  reporter User    @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  message  Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([reporterId, messageId])
+  @@index([status, createdAt])
+  @@index([messageId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   @db.VarChar(40)
+  title     String   @db.VarChar(160)
+  body      String   @db.VarChar(500)
+  href      String?  @db.VarChar(2048)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
 }
 
 model Inquiry {

@@ -140,9 +140,10 @@ export default function AdminListingsPage() {
             </p>
           </div>
 
-          <Link href="/" className="text-emerald-700">
-            بازگشت به خانه‌یار
-          </Link>
+          <div className="flex flex-wrap gap-4">
+            <Link href="/admin/messages" className="text-emerald-700">گزارش‌های پیام‌رسان</Link>
+            <Link href="/" className="text-emerald-700">بازگشت به خانه‌یار</Link>
+          </div>
         </div>
 
         {loading && <p>در حال دریافت اطلاعات...</p>}

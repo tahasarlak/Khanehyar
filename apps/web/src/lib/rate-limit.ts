@@ -2,8 +2,8 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { prisma } from "./prisma";
 
-const WINDOW_MS = 15 * 60 * 1000;
-const MAX_ATTEMPTS = 10;
+const DEFAULT_WINDOW_MS = 15 * 60 * 1000;
+const DEFAULT_MAX_ATTEMPTS = 10;
 
 type BucketResult = {
   count: number;
@@ -15,9 +15,12 @@ let cleanupCounter = 0;
 export async function checkRateLimit(
   scope: string,
   identity: string,
+  options: { windowMs?: number; maxAttempts?: number } = {},
 ): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+  const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS;
+  const maxAttempts = options.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
   const now = new Date();
-  const resetAt = new Date(now.getTime() + WINDOW_MS);
+  const resetAt = new Date(now.getTime() + windowMs);
 
   const key = createHash("sha256")
     .update(`${scope}:${identity}`)
@@ -61,7 +64,7 @@ export async function checkRateLimit(
       .catch(() => undefined);
   }
 
-  if (bucket.count > MAX_ATTEMPTS) {
+  if (bucket.count > maxAttempts) {
     return {
       allowed: false,
       retryAfterSeconds: Math.max(

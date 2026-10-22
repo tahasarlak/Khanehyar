@@ -33,3 +33,6 @@ pnpm-debug.log*
 yarn-debug.log*
 .vercel
 .env*
+
+# Local persistent message uploads
+apps/web/.data/
