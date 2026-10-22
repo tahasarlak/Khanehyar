@@ -2,10 +2,14 @@ import Link from "next/link";
 import { getCurrentUser } from "@/src/lib/auth";
 import UnreadMessagesLink from "./UnreadMessagesLink";
 import SignOutButton from "./SignOutButton";
+import SiteHeaderMobileMenu from "./SiteHeaderMobileMenu";
 import styles from "./SiteHeader.module.css";
 
+/* KHANEHYAR_SITEWIDE_HEADER_V1 */
 export default async function SiteHeader() {
   const user = await getCurrentUser();
+  const userName = user?.name?.trim() || "کاربر خانه‌یار";
+  const userInitial = (user?.name?.trim() || "ک").slice(0, 1).toLocaleUpperCase("fa-IR");
 
   return (
     <header className={styles.header} dir="rtl">
@@ -30,8 +34,8 @@ export default async function SiteHeader() {
           {user ? (
             <>
               <Link href="/dashboard" className={styles.account}>
-                <span className={styles.accountAvatar} aria-hidden="true">{(user.name?.trim().charAt(0) || "ک").toLocaleUpperCase("fa-IR")}</span>
-                <span className={styles.accountName}>{user.name?.trim() || "حساب کاربری"}</span>
+                <span className={styles.accountAvatar} aria-hidden="true">{userInitial}</span>
+                <span className={styles.accountName}>{userName}</span>
               </Link>
               {user.role === "ADMIN" ? <Link href="/admin/listings" className="ui-btn ui-btn-outline">مدیریت</Link> : null}
               <SignOutButton />
@@ -44,6 +48,13 @@ export default async function SiteHeader() {
           )}
           <Link href="/listings/new" className="ui-btn ui-btn-primary">+ ثبت آگهی</Link>
         </div>
+
+        <SiteHeaderMobileMenu
+          authenticated={Boolean(user)}
+          userName={userName}
+          userInitial={userInitial}
+          isAdmin={user?.role === "ADMIN"}
+        />
       </div>
     </header>
   );

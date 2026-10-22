@@ -1327,3 +1327,768 @@
   }
 }
 /* End V7.3 */
+.hm-chat-search-current {
+  outline: 3px solid #3390ec;
+  outline-offset: 3px;
+  background-color: rgba(51, 144, 236, 0.16);
+  border-radius: 12px;
+  transition: background-color 180ms ease;
+}
+
+.hm-chat-search-current mark.hm-search-highlight {
+  background: #ffd866;
+  color: #202020;
+  border-radius: 3px;
+  padding-inline: 2px;
+}
+
+/* Telegram-style archive entry placed directly beneath conversation search. */
+.hm-archive-row{display:flex;align-items:center;gap:12px;margin:10px 0 14px;padding:12px 14px;border:1px solid #dce8e8;border-radius:16px;background:linear-gradient(110deg,#f0f8f5,#fff);color:#173c50;text-decoration:none;transition:border-color .18s,background .18s,transform .18s}
+.hm-archive-row:hover{border-color:#9bcfc0;background:#eaf6f1;transform:translateY(-1px)}
+.hm-archive-row-icon{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:50%;background:#dcefe8;color:#176b5d;font-size:20px}
+.hm-archive-row-thumb{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;overflow:hidden;border-radius:12px;background:#e7eef0;color:#527887;font-size:23px}
+.hm-archive-row-thumb img{width:100%;height:100%;object-fit:cover}
+.hm-archive-row-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:4px}
+.hm-archive-row-copy strong{font-size:13px;font-weight:900}
+.hm-archive-row-copy small{overflow:hidden;color:#728594;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.hm-archive-row-count{display:grid;place-items:center;min-width:25px;height:25px;padding:0 6px;border-radius:999px;background:#dcefe8;color:#176b5d;font-size:11px;font-weight:900}
+.hm-archive-row-arrow{color:#7c939d;font-size:24px;line-height:1}
+@media(max-width:520px){.hm-archive-row{gap:8px;padding:10px}.hm-archive-row-icon{flex-basis:32px;width:32px;height:32px}.hm-archive-row-thumb{flex-basis:36px;width:36px;height:36px}.hm-archive-row-copy small{max-width:45vw}}
+
+/* KHANEHYAR_TELEGRAM_INBOX_V1 */
+/* Telegram-inspired inbox styling; preserves existing routes, data and interactions. */
+.hm-page {
+  min-height: 100dvh;
+  background: #e7ebee;
+  padding: 0 !important;
+  color: #182533;
+}
+.hm-page .hm-container.hm-content {
+  width: min(100%, 1440px) !important;
+  max-width: 1440px !important;
+  min-height: 100dvh;
+  margin-inline: auto !important;
+  padding: 0 !important;
+  background: #fff;
+  box-shadow: 0 0 24px rgba(28, 44, 58, .08);
+}
+.hm-inbox-heading {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 76px;
+  margin: 0 !important;
+  padding: 14px 22px !important;
+  color: #fff;
+  background: #517da8;
+  border: 0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+}
+.hm-inbox-heading .hm-inbox-eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: rgba(255,255,255,.78);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.hm-inbox-heading h1 {
+  margin: 0 !important;
+  color: #fff !important;
+  font-size: 21px !important;
+  line-height: 1.35;
+  font-weight: 650;
+}
+.hm-inbox-heading p {
+  margin: 3px 0 0 !important;
+  color: rgba(255,255,255,.82) !important;
+  font-size: 12px !important;
+}
+.hm-inbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hm-inbox-total {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 0 7px;
+  min-width: 86px;
+  color: #fff;
+  text-align: end;
+}
+.hm-inbox-total strong {
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+}
+.hm-inbox-total span { font-size: 12px; color: rgba(255,255,255,.82); }
+.hm-inbox-total small {
+  grid-column: 1 / -1;
+  color: rgba(255,255,255,.78);
+  font-size: 10px;
+}
+.hm-inbox-list-wrap,
+.hm-messenger-list-wrap {
+  width: 100%;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #fff;
+}
+.hm-conversation-search {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  margin: 0 !important;
+  padding: 7px 14px !important;
+  background: #f1f3f5;
+  border: 1px solid transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.hm-conversation-search:focus-within {
+  border-color: #72a8d8 !important;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #72a8d8 !important;
+}
+.hm-conversation-search > span:not(.hm-sr-only) {
+  color: #6c8498;
+  font-size: 24px;
+  line-height: 1;
+}
+.hm-conversation-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #182533;
+  font-size: 14px;
+}
+.hm-conversation-search input::placeholder { color: #81909d; }
+.hm-conversation-list {
+  display: flex !important;
+  flex-direction: column;
+  gap: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-top: 1px solid #e8edf0;
+  background: #fff;
+}
+.hm-conversation-card-wrap {
+  position: relative;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-bottom: 1px solid #edf0f2;
+  background: #fff;
+}
+.hm-conversation-card {
+  display: flex !important;
+  align-items: center;
+  gap: 13px;
+  min-height: 82px;
+  padding: 12px 18px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  transition: background-color .12s ease;
+}
+.hm-conversation-card:hover,
+.hm-conversation-card:focus-visible {
+  background: #f2f6f8 !important;
+  outline: none;
+}
+.hm-conversation-card:active { background: #e7f0f7 !important; }
+.hm-conversation-avatar {
+  flex: 0 0 54px;
+  width: 54px !important;
+  height: 54px !important;
+  overflow: hidden;
+  border-radius: 50% !important;
+  background: #d9e7ef !important;
+  color: #47718f;
+  display: grid;
+  place-items: center;
+}
+.hm-conversation-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hm-conversation-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+.hm-conversation-top {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.hm-conversation-top strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #182533 !important;
+  font-size: 15px !important;
+  font-weight: 650 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hm-conversation-top time {
+  flex: 0 0 auto;
+  color: #8796a3 !important;
+  font-size: 11px !important;
+  white-space: nowrap;
+}
+.hm-conversation-listing {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: #6b7f8e !important;
+  font-size: 12px !important;
+}
+.hm-conversation-listing span {
+  overflow: hidden;
+  color: #6b7f8e !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hm-conversation-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0 !important;
+  color: #71818d !important;
+  font-size: 13px !important;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+.hm-conversation-side {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 7px;
+}
+.hm-conversation-unread {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 6px;
+  border-radius: 12px !important;
+  background: #62a9e5 !important;
+  color: #fff !important;
+  font-size: 11px !important;
+  font-weight: 700;
+}
+.hm-conversation-arrow { color: #9aabb7 !important; font-size: 17px; }
+.hm-archive-row {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  margin: 0 !important;
+  padding: 10px 18px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #edf0f2 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: #182533 !important;
+  text-decoration: none !important;
+}
+.hm-archive-row:hover { background: #f2f6f8 !important; }
+.hm-archive-row-icon { color: #6c8da7 !important; font-size: 19px; }
+.hm-archive-row-thumb {
+  flex: 0 0 43px;
+  width: 43px !important;
+  height: 43px !important;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border-radius: 50% !important;
+  background: #e4edf3 !important;
+}
+.hm-archive-row-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.hm-archive-row-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.hm-archive-row-copy strong { font-size: 14px; font-weight: 650; }
+.hm-archive-row-copy small { overflow: hidden; color: #82909b; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.hm-archive-row-count { color: #82909b; font-size: 12px; }
+.hm-archive-row-arrow { color: #9aabb7; }
+.hm-conversation-restore {
+  margin: 0 18px 10px 18px !important;
+  padding: 7px 12px !important;
+  border: 1px solid #c9dce9 !important;
+  border-radius: 7px !important;
+  background: #f5f9fc !important;
+  color: #477da4 !important;
+  font-size: 12px;
+}
+.hm-search-result-count {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin: 0 !important;
+  padding: 9px 16px !important;
+  border-top: 1px solid #e7edf1;
+  background: rgba(255,255,255,.96);
+  color: #728491;
+  font-size: 12px;
+  backdrop-filter: blur(8px);
+}
+.hm-limit-note {
+  margin: 0 !important;
+  padding: 12px 16px !important;
+  background: #f7f9fa;
+  color: #84929c !important;
+  font-size: 11px !important;
+  text-align: center;
+}
+.hm-inbox-empty {
+  margin: 0 !important;
+  padding: 70px 20px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  text-align: center;
+}
+.hm-inbox-empty .hm-inbox-empty-icon { color: #79a9ce; font-size: 42px; }
+.hm-inbox-empty h2 { color: #253747; font-size: 18px; }
+.hm-inbox-empty p { max-width: 420px; margin-inline: auto; color: #71818d; font-size: 13px; line-height: 1.8; }
+.hm-inbox-empty .hm-button {
+  display: inline-flex;
+  margin-top: 12px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: #568dbb;
+  color: #fff;
+  text-decoration: none;
+}
+.hm-messenger-sidebar-list { background: #fff; }
+.hm-messenger-thread {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 10px 14px !important;
+  border: 0 !important;
+  border-bottom: 1px solid #edf0f2 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+.hm-messenger-thread:hover { background: #f2f6f8 !important; }
+.hm-messenger-thread.is-active { background: #e8f2f9 !important; }
+.hm-messenger-thread-avatar {
+  flex: 0 0 48px;
+  width: 48px !important;
+  height: 48px !important;
+  overflow: hidden;
+  border-radius: 50% !important;
+}
+.hm-messenger-thread-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.hm-messenger-thread-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hm-messenger-thread-copy strong { overflow: hidden; color: #182533; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.hm-messenger-thread-copy small { overflow: hidden; color: #82909b; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.hm-messenger-thread-copy em { overflow: hidden; color: #71818d; font-size: 12px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
+.hm-messenger-thread-meta { display: flex; align-items: flex-end; flex-direction: column; gap: 5px; color: #8796a3; font-size: 10px; }
+.hm-messenger-thread-meta b { display: grid; min-width: 20px; height: 20px; padding-inline: 5px; place-items: center; border-radius: 12px; background: #62a9e5; color: #fff; }
+.hm-messenger-no-threads { padding: 24px 16px; color: #82909b; font-size: 13px; text-align: center; }
+
+@media (min-width: 1000px) {
+  .hm-page .hm-container.hm-content { min-height: 100dvh; }
+  .hm-inbox-heading { padding-inline: 28px !important; }
+  .hm-conversation-card { padding-inline: 22px !important; }
+}
+@media (max-width: 640px) {
+  .hm-page { background: #fff; }
+  .hm-page .hm-container.hm-content { width: 100% !important; box-shadow: none; }
+  .hm-inbox-heading { min-height: 68px; padding: 11px 13px !important; gap: 8px; }
+  .hm-inbox-heading h1 { font-size: 18px !important; }
+  .hm-inbox-heading p { display: none; }
+  .hm-inbox-heading .hm-inbox-eyebrow { font-size: 10px; }
+  .hm-inbox-actions { gap: 7px; }
+  .hm-inbox-total { min-width: 58px; gap: 0 4px; }
+  .hm-inbox-total strong { font-size: 16px; }
+  .hm-inbox-total span { font-size: 10px; }
+  .hm-inbox-total small { max-width: 110px; font-size: 9px; }
+  .hm-conversation-card { min-height: 76px; gap: 10px; padding: 10px 12px !important; }
+  .hm-conversation-avatar { flex-basis: 48px; width: 48px !important; height: 48px !important; }
+  .hm-conversation-top strong { font-size: 13px !important; }
+  .hm-conversation-top time { font-size: 10px !important; }
+  .hm-conversation-preview { font-size: 12px !important; }
+  .hm-conversation-listing { font-size: 11px !important; }
+  .hm-conversation-side { gap: 4px; }
+  .hm-archive-row { min-height: 66px; padding-inline: 12px !important; }
+  .hm-archive-row-thumb { flex-basis: 39px; width: 39px !important; height: 39px !important; }
+}
+
+/* KHANEHYAR_TELEGRAM_INBOX_LAYOUT_V3 — desktop two-pane, mobile list-first, existing chat features preserved */
+.hm-telegram-inbox-page{direction:ltr!important;width:100%;min-height:100dvh!important;padding:0!important;background:#f3f6f8!important;color:#1d3442}
+.hm-telegram-inbox-shell{display:grid!important;grid-template-columns:minmax(300px,360px) minmax(0,1fr)!important;grid-template-areas:"sidebar stage";gap:0!important;width:100%!important;max-width:none!important;height:100dvh;min-height:100dvh!important;margin:0!important;padding:0!important;overflow:hidden;background:#fff;box-shadow:none!important}
+.hm-telegram-inbox-sidebar{grid-area:sidebar;display:flex;flex-direction:column;min-width:0;min-height:0;height:100%;overflow:auto;border-right:1px solid #e0e7eb;background:#fff;text-align:left}
+.hm-telegram-inbox-sidebar>.hm-inbox-heading{position:sticky;top:0;z-index:5;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0!important;padding:18px 16px!important;border:0!important;border-bottom:1px solid #e5ecef!important;border-radius:0!important;background:#fff!important;box-shadow:none!important}
+.hm-telegram-inbox-sidebar>.hm-inbox-heading h1{margin:2px 0!important;color:#173b5b!important;font-size:22px!important}
+.hm-telegram-inbox-sidebar>.hm-inbox-heading p{margin:4px 0 0!important;color:#718391!important;font-size:11px!important;line-height:1.7}
+.hm-telegram-inbox-sidebar>.hm-inbox-heading .hm-inbox-eyebrow{color:#147d69!important}
+.hm-telegram-inbox-sidebar>.hm-inbox-list-wrap{flex:1 0 auto;min-height:0;background:#fff}
+.hm-telegram-inbox-sidebar .hm-conversation-search{position:sticky;top:0;z-index:4;margin:10px 12px!important;width:calc(100% - 24px)!important;background:#f4f7f8}
+.hm-telegram-inbox-sidebar .hm-conversation-list{gap:0!important}
+.hm-telegram-inbox-sidebar .hm-conversation-card{border:0!important;border-bottom:1px solid #edf1f3!important;border-radius:0!important;box-shadow:none!important;transform:none!important;padding:14px 13px!important}
+.hm-telegram-inbox-sidebar .hm-conversation-card:hover{background:#f6faf8!important}
+.hm-telegram-inbox-sidebar .hm-conversation-card:focus-visible{outline-offset:-3px}
+.hm-telegram-inbox-sidebar>.hm-limit-note{flex:0 0 auto;margin:0!important;padding:9px 12px;color:#82919b;font-size:10px}
+.hm-telegram-inbox-stage{grid-area:stage;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;height:100%;overflow:auto;background:#f4f7f8;background-image:radial-gradient(#dfe7e9 .7px,transparent .7px);background-size:15px 15px}
+.hm-telegram-stage-content{display:flex;align-items:center;flex-direction:column;gap:10px;max-width:430px;padding:32px;text-align:center;color:#718391}
+.hm-telegram-stage-mark{display:grid;width:88px;height:88px;place-items:center;border-radius:50%;background:#147d69;box-shadow:0 8px 24px #147d6928}
+.hm-telegram-stage-mark svg{width:48px;height:48px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hm-telegram-stage-content h2{margin:8px 0 0;color:#173b5b;font-size:22px;font-weight:850}
+.hm-telegram-stage-content p{margin:0;max-width:350px;font-size:13px;line-height:2}
+.hm-telegram-stage-content>span{margin-top:6px;padding:5px 12px;border-radius:20px;background:#e5f4ee;color:#147d69;font-size:11px}
+@media(max-width:760px){
+ .hm-telegram-inbox-shell{display:block!important;height:100dvh;min-height:100dvh!important;overflow:auto}
+ .hm-telegram-inbox-sidebar{height:100dvh;min-height:100dvh;overflow:auto;border:0}
+ .hm-telegram-inbox-stage{display:none!important}
+ .hm-telegram-inbox-sidebar>.hm-inbox-heading{padding:13px 12px!important}
+ .hm-telegram-inbox-sidebar>.hm-inbox-heading h1{font-size:19px!important}
+ .hm-telegram-inbox-sidebar .hm-conversation-card{padding:12px 10px!important}
+}
+@media(prefers-reduced-motion:reduce){.hm-telegram-inbox-sidebar .hm-conversation-card{transition:none!important}}
+
+/* KHANEHYAR_MESSENGER_SMOOTH_ARCHIVE_V1 */
+.hm-inbox-compact-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--hm-chat-panel,#fff);border-bottom:1px solid rgba(100,116,139,.16)}
+.hm-inbox-compact-toolbar .hm-notification-center,.hm-inbox-compact-toolbar [class*="notification"]{flex:0 0 auto}
+.hm-inbox-compact-count{min-width:0;color:var(--hm-chat-muted,#64748b);font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-archive-row{order:-1;position:relative;display:flex;align-items:center;gap:10px;margin:0!important;padding:12px 14px!important;border:0!important;border-bottom:1px solid #e7edf1!important;border-radius:0!important;background:var(--hm-chat-panel,#fff)!important;color:inherit;text-decoration:none;transition:background .16s ease}
+.hm-archive-row:hover{background:var(--hm-chat-hover,#f4f8f7)!important}
+.hm-archive-row-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:3px}
+.hm-archive-row-copy strong{color:var(--hm-chat-text,#173b5b);font-size:13px}
+.hm-archive-row-copy small{overflow:hidden;color:var(--hm-chat-muted,#64748b);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+.hm-inbox-list-wrap,.hm-messenger-list-wrap{scroll-behavior:smooth}
+.hm-conversation-card,.hm-messenger-thread{scroll-margin-block:12px;transition:background-color .14s ease,box-shadow .14s ease}
+@media(prefers-reduced-motion:reduce){.hm-inbox-list-wrap,.hm-messenger-list-wrap{scroll-behavior:auto}.hm-conversation-card,.hm-messenger-thread,.hm-archive-row{transition:none}}
+/* KHANEHYAR_MESSENGER_SMOOTH_ARCHIVE_V1 */
+
+
+/* KHANEHYAR_MOBILE_CHAT_VIEWPORT_V2
+   Mobile inbox: keep the app frame fixed and scroll only the conversation list.
+   Mobile conversation: keep header/composer anchored and scroll only the message history. */
+@media (max-width: 760px) {
+  body:has(.kh-account-shell--messages) {
+    height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+
+  body:has(.kh-account-shell--messages) .site-content {
+    display: flex;
+    flex: 1 1 auto;
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100dvh;
+    overflow: hidden;
+    flex-direction: column;
+  }
+
+  .kh-account-shell--messages {
+    display: flex !important;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding-bottom: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .kh-account-shell--messages > [class*="workspace"] {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .kh-account-shell--messages > [class*="workspace"] > [class*="topbar"] {
+    position: relative;
+    top: auto;
+    z-index: 40;
+    flex: 0 0 auto;
+  }
+
+  .kh-account-shell--messages > [class*="workspace"] > [class*="content"] {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 8px 10px 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Inbox: the app chrome remains fixed; only the conversation list scrolls. */
+  .kh-account-shell--messages:not(.kh-account-shell--chat) > [class*="workspace"] {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) [class*="content"] > .hm-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-page > .hm-container {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-inbox-heading {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px !important;
+    margin: 0 0 8px;
+    padding: 10px 12px !important;
+    border-radius: 13px;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-inbox-heading .hm-inbox-eyebrow,
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-inbox-heading p {
+    display: none !important;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-inbox-heading h1 {
+    margin: 0 !important;
+    font-size: 18px !important;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-message-view-tabs {
+    gap: 5px;
+    margin-top: 7px;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-message-view-tabs a {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-inbox-actions {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-inbox-total {
+    min-width: 0 !important;
+    padding: 5px 8px !important;
+    border-radius: 10px;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-inbox-total strong {
+    font-size: 17px;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-inbox-total small {
+    display: none;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-notification-trigger {
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-inbox-list-wrap {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-conversation-search {
+    flex: 0 0 auto;
+    min-height: 42px;
+    margin-bottom: 8px;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-conversation-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 12px;
+  }
+
+  .kh-account-shell--messages:not(.kh-account-shell--chat) .hm-limit-note {
+    display: none !important;
+  }
+
+  /* Chat: no public chrome, no account topbar/bottom dock, no body scrolling. */
+  .kh-account-shell--chat > [class*="sidebar"],
+  .kh-account-shell--chat > [class*="drawerBackdrop"],
+  .kh-account-shell--chat > [class*="workspace"] > [class*="topbar"],
+  .kh-account-shell--chat > [class*="mobileNav"] {
+    display: none !important;
+  }
+
+  .kh-account-shell--chat > [class*="workspace"] {
+    height: 100%;
+    padding: 0 !important;
+  }
+
+  .kh-account-shell--chat > [class*="workspace"] > [class*="content"] {
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0 !important;
+  }
+
+  .kh-account-shell--chat [class*="content"] > .hm-messenger-ltr-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .kh-account-shell--chat .hm-messenger-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .kh-account-shell--chat .hm-chat-breadcrumb {
+    display: none !important;
+  }
+
+  .kh-account-shell--chat .hm-messenger-layout {
+    display: flex !important;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0 !important;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .kh-account-shell--chat .hm-messenger-sidebar {
+    display: none !important;
+  }
+
+  .kh-account-shell--chat .hm-messenger-active-chat {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .kh-account-shell--chat .hm-chat-shell {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .kh-account-shell--chat .hm-tg-topbar {
+    position: relative;
+    top: auto;
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 58px;
+    padding-top: max(6px, env(safe-area-inset-top));
+    border-radius: 0;
+  }
+
+  .kh-account-shell--chat .hm-chat-messages {
+    display: flex !important;
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-x: hidden;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding: 10px 10px 14px;
+  }
+
+  .kh-account-shell--chat .hm-chat-compose-telegram {
+    position: relative;
+    z-index: 20;
+    flex: 0 0 auto;
+    width: 100%;
+    padding-bottom: calc(7px + env(safe-area-inset-bottom));
+  }
+
+  .kh-account-shell--chat .hm-chat-compose-telegram textarea {
+    max-height: min(110px, 20dvh);
+  }
+}
+/* END KHANEHYAR_MOBILE_CHAT_VIEWPORT_V2 */
+

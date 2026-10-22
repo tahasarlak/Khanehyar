@@ -146,6 +146,19 @@ function TelegramVideoMessage({ src }: { src: string }) {
   </div>;
 }
 
+function highlightMessageText(text: string, query: string) {
+  const term = query.trim();
+  if (!term) return text;
+
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "ig"));
+
+  return parts.map((part, index) =>
+    part.toLocaleLowerCase() === term.toLocaleLowerCase()
+      ? <mark key={index} className="hm-search-highlight">{part}</mark>
+      : <span key={index}>{part}</span>
+  );
+}
 export default function ConversationView({
   conversationId,
   currentUserId,
@@ -711,7 +724,22 @@ export default function ConversationView({
           <button type="button" role="menuitem" className="is-danger" onClick={() => { setHeaderMenuOpen(false); void blockCounterpart(); }} disabled={actionBusy}><span className="hm-tg-menu-symbol">⊘</span><span>مسدودکردن مخاطب</span></button>
         </div>}
       </div>
-      {headerSearchOpen && <form className="hm-tg-header-search" role="search" onSubmit={(event) => { event.preventDefault(); document.querySelector(".hm-chat-search-hit")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
+      {headerSearchOpen && <form className="hm-tg-header-search" role="search" onSubmit={(event) => {
+          event.preventDefault();
+          const term = headerSearchQuery.trim().toLocaleLowerCase();
+          if (!term) return;
+          const first = messages.find((message) =>
+            `${message.body} ${message.attachmentName || ""}`.toLocaleLowerCase().includes(term)
+          );
+          if (first) {
+            requestAnimationFrame(() => {
+              document.getElementById(`message-${first.id}`)?.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+              });
+            });
+          }
+        }}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></svg>
         <input autoFocus value={headerSearchQuery} onChange={(event) => setHeaderSearchQuery(event.target.value)} placeholder="Search messages..." aria-label="جست‌وجو در پیام‌های گفتگو" />
         {headerSearchQuery && <span className="hm-tg-search-count">{messages.filter((message) => `${message.body} ${message.attachmentName || ""}`.toLocaleLowerCase().includes(headerSearchQuery.toLocaleLowerCase())).length.toLocaleString("fa-IR")} نتیجه</span>}
@@ -722,13 +750,16 @@ export default function ConversationView({
         {hasOlderMessages && <button type="button" className="hm-chat-load-older" onClick={() => void loadOlder()} disabled={loadingOlder}>
           {loadingOlder ? "در حال بارگذاری..." : "نمایش پیام‌های قدیمی‌تر"}
         </button>}
-        {messages.length === 0 ? <p className="hm-chat-first">گفت‌وگو را با ارسال پیام شروع کنید.</p> : (headerSearchQuery.trim() && headerSearchOpen ? messages.filter((message) => `${message.body} ${message.attachmentName || ""}`.toLocaleLowerCase().includes(headerSearchQuery.trim().toLocaleLowerCase())) : messages).length === 0 ? <p className="hm-chat-first">پیامی با این عبارت پیدا نشد.</p> : (headerSearchQuery.trim() && headerSearchOpen ? messages.filter((message) => `${message.body} ${message.attachmentName || ""}`.toLocaleLowerCase().includes(headerSearchQuery.trim().toLocaleLowerCase())) : messages).map((message) => {
+        {messages.length === 0 ? <p className="hm-chat-first">گفت‌وگو را با ارسال پیام شروع کنید.</p> : (headerSearchQuery.trim() && headerSearchOpen ? messages : messages).length === 0 ? <p className="hm-chat-first">پیامی با این عبارت پیدا نشد.</p> : (headerSearchQuery.trim() && headerSearchOpen ? messages : messages).map((message) => {
           const own = message.senderId === currentUserId;
           const menuIsOpen = openMessageMenu?.messageId === message.id;
+          const searchTerm = headerSearchQuery.trim().toLocaleLowerCase();
+          const searchMatch = Boolean(headerSearchOpen && searchTerm &&
+            `${message.body} ${message.attachmentName || ""}`.toLocaleLowerCase().includes(searchTerm));
           return <article
             key={message.id}
             id={`message-${message.id}`}
-            className={`${own ? "hm-chat-bubble hm-chat-own" : "hm-chat-bubble hm-chat-other"}${headerSearchOpen && headerSearchQuery.trim() ? " hm-chat-search-hit" : ""}`}
+            className={`${own ? "hm-chat-bubble hm-chat-own" : "hm-chat-bubble hm-chat-other"}${searchMatch ? " hm-chat-search-hit hm-chat-search-current" : ""}`}
             onContextMenu={(event) => {
               if (message.deletedAt) return;
               event.preventDefault();
@@ -778,7 +809,7 @@ export default function ConversationView({
               : message.attachmentMime?.startsWith("audio/") ? <TelegramAudioMessage src={message.attachmentUrl} voiceNote={Boolean(message.attachmentName?.startsWith("voice-"))} />
               : message.attachmentMime?.startsWith("video/") ? <TelegramVideoMessage src={message.attachmentUrl} />
               : <a className="hm-chat-attachment" href={message.attachmentUrl} target="_blank" rel="noreferrer">📎 {message.attachmentName || "پیوست"}</a>)}
-            {(message.body || message.deletedAt) && <p>{message.deletedAt ? "این پیام حذف شده است." : message.body}</p>}
+            {(message.body || message.deletedAt) && <p>{message.deletedAt ? "این پیام حذف شده است." : highlightMessageText(message.body, headerSearchOpen ? headerSearchQuery : "")}</p>}
             {!message.deletedAt && (message.reactions || []).length > 0 && <div className="hm-chat-reactions" aria-label="واکنش‌های پیام">
               {(message.reactions || []).map((reaction) => <button key={reaction.emoji} type="button" className={`hm-chat-reaction${reaction.reacted ? " is-reacted" : ""}`} onClick={() => void toggleReaction(message, reaction.emoji)} disabled={actionBusy} aria-label={`واکنش ${reaction.emoji}، ${reaction.count} نفر`}>{reaction.emoji} <span>{reaction.count}</span></button>)}
             </div>}

@@ -587,3 +587,33 @@ body {
     width: calc(100% - 28px);
   }
 }
+
+/* KHANEHYAR_ACCOUNT_APP_CHROME_V2
+   Account routes use the account shell instead of the duplicate public-site header/footer/dock. */
+body:has(.kh-account-shell) > header,
+body:has(.kh-account-shell) > nav,
+body:has(.kh-account-shell) > footer {
+  display: none !important;
+}
+body:has(.kh-account-shell) .site-content {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  body:has(.kh-account-shell--messages) {
+    height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none;
+  }
+  body:has(.kh-account-shell--messages) .site-content {
+    display: flex;
+    flex: 1 1 auto;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    flex-direction: column;
+  }
+}
+/* END KHANEHYAR_ACCOUNT_APP_CHROME_V2 */
+

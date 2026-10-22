@@ -32,8 +32,30 @@ type Props = {
   currentUserId: string;
   activeConversationId?: string;
   variant?: "inbox" | "sidebar";
+  archiveCount?: number;
+  archivePreview?: { title: string; imageUrl: string | null; latestText: string } | null;
+  showArchived?: boolean;
 };
 
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  const term = query.trim();
+  if (!term) return <>{text}</>;
+
+  const parts = text.split(new RegExp(
+    `(${term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+    "ig"
+  ));
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.toLocaleLowerCase("fa") === term.toLocaleLowerCase("fa")
+          ? <mark key={index} className="hm-search-highlight">{part}</mark>
+          : <span key={index}>{part}</span>
+      )}
+    </>
+  );
+}
 function dateLabel(value: string, timeOnly = false) {
   return new Intl.DateTimeFormat("fa-IR", timeOnly
     ? { hour: "2-digit", minute: "2-digit" }
@@ -45,6 +67,9 @@ export default function ConversationSearchList({
   currentUserId,
   activeConversationId,
   variant = "inbox",
+  archiveCount = 0,
+  archivePreview = null,
+  showArchived = false,
 }: Props) {
   const [query, setQuery] = useState("");
   const router = useRouter();
@@ -72,6 +97,15 @@ export default function ConversationSearchList({
 
   return (
     <div className={variant === "sidebar" ? "hm-messenger-list-wrap" : "hm-inbox-list-wrap"}>
+      {variant === "inbox" && !showArchived && archiveCount > 0 && (
+        <Link href="/dashboard/messages?view=archived" className="hm-archive-row" aria-label={`بایگانی، ${archiveCount.toLocaleString("fa-IR")} گفت‌وگو`}>
+          <span className="hm-archive-row-icon" aria-hidden="true">▣</span>
+          <span className="hm-archive-row-thumb" aria-hidden="true">{archivePreview?.imageUrl ? <img src={archivePreview.imageUrl} alt="" loading="lazy" /> : "⌂"}</span>
+          <span className="hm-archive-row-copy"><strong>بایگانی</strong><small>{archivePreview?.latestText || "گفت‌وگوهای بایگانی‌شده"}</small></span>
+          <span className="hm-archive-row-count">{archiveCount.toLocaleString("fa-IR")}</span>
+          <span className="hm-archive-row-arrow" aria-hidden="true">‹</span>
+        </Link>
+      )}
       <label className="hm-conversation-search">
         <span className="hm-sr-only">جست‌وجوی گفت‌وگوها</span>
         <span aria-hidden="true">⌕</span>
@@ -84,14 +118,12 @@ export default function ConversationSearchList({
           maxLength={120}
         />
         {query && <button type="button" onClick={() => setQuery("")} aria-label="پاک کردن جست‌وجو">×</button>}
-      </label>
-
-      {variant === "sidebar" ? (
+      </label>{variant === "sidebar" ? (
         <div className="hm-messenger-sidebar-list">
-          {filtered.map((item) => (
+          {items.map((item) => (
             <Link
               key={item.id}
-              href={`/dashboard/messages/${encodeURIComponent(item.id)}`}
+              href={`/dashboard/messages/${encodeURIComponent(item.id)}`} scroll={false}
               className={`hm-messenger-thread${item.id === activeConversationId ? " is-active" : ""}`}
               aria-current={item.id === activeConversationId ? "page" : undefined}
             >
@@ -101,9 +133,9 @@ export default function ConversationSearchList({
                   : <span>⌂</span>}
               </span>
               <span className="hm-messenger-thread-copy">
-                <strong>{item.pinned ? "📌 " : ""}{item.listing.title}{item.muted ? " · 🔕" : ""}{item.archived ? " · بایگانی" : ""}</strong>
+                <strong>{item.pinned ? "📌 " : ""}<HighlightMatch text={item.listing.title} query={query} />{item.muted ? " · 🔕" : ""}{item.archived ? " · بایگانی" : ""}</strong>
                 <small>{item.counterpartName} · {item.listing.city}</small>
-                <em>{item.latest ? `${item.latest.senderId === currentUserId ? "شما: " : ""}${item.latest.body}` : "برای شروع گفت‌وگو پیام بدهید"}</em>
+                <em>{item.latest ? <><span>{item.latest.senderId === currentUserId ? "شما: " : ""}</span><HighlightMatch text={item.latest.body} query={query} /></> : "برای شروع گفت‌وگو پیام بدهید"}</em>
               </span>
               <span className="hm-messenger-thread-meta">
                 {item.latest && <time dateTime={item.latest.createdAt}>{dateLabel(item.latest.createdAt, true)}</time>}
@@ -115,22 +147,22 @@ export default function ConversationSearchList({
         </div>
       ) : (
         <section className="hm-conversation-list" aria-label="فهرست گفت‌وگوها">
-          {filtered.map((item) => (
+          {items.map((item) => (
             <div key={item.id} className="hm-conversation-card-wrap">
-              <Link href={`/dashboard/messages/${encodeURIComponent(item.id)}`} className="hm-conversation-card">
+              <Link href={`/dashboard/messages/${encodeURIComponent(item.id)}`} className="hm-conversation-card" scroll={false}>
                 <div className="hm-conversation-avatar" aria-hidden="true">
                   {item.listing.imageUrl ? <img src={item.listing.imageUrl} alt="" loading="lazy" /> : <span>⌂</span>}
                 </div>
                 <div className="hm-conversation-main">
                   <div className="hm-conversation-top">
-                    <strong>{item.pinned ? "📌 " : ""}{item.listing.title}{item.muted ? " · 🔕" : ""}</strong>
+                    <strong>{item.pinned ? "📌 " : ""}<HighlightMatch text={item.listing.title} query={query} />{item.muted ? " · 🔕" : ""}</strong>
                     <time dateTime={item.latest?.createdAt ?? item.updatedAt}>{dateLabel(item.latest?.createdAt ?? item.updatedAt)}</time>
                   </div>
                   <div className="hm-conversation-listing">
                     {item.counterpartName}
                     <span>{item.listing.listingType === "RENT" ? "اجاره" : "فروش"} · {item.listing.city}</span>
                   </div>
-                  <p className="hm-conversation-preview">{item.latest ? `${item.latest.senderId === currentUserId ? "شما: " : ""}${item.latest.body}` : "هنوز پیامی ارسال نشده است."}</p>
+                  <p className="hm-conversation-preview">{item.latest ? <><span>{item.latest.senderId === currentUserId ? "شما: " : ""}</span><HighlightMatch text={item.latest.body} query={query} /></> : "هنوز پیامی ارسال نشده است."}</p>
                 </div>
                 <div className="hm-conversation-side">
                   {item.unread > 0 && <span className="hm-conversation-unread" aria-label={`${item.unread} پیام خوانده‌نشده`}>{item.unread > 99 ? "۹۹+" : item.unread.toLocaleString("fa-IR")}</span>}
@@ -147,3 +179,5 @@ export default function ConversationSearchList({
     </div>
   );
 }
+
+/* KHANEHYAR_MESSENGER_SMOOTH_ARCHIVE_V1 */

@@ -18,6 +18,24 @@ export default async function MessagesPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) redirect(`/login?next=${encodeURIComponent("/dashboard/messages")}`);
 
+  const archiveSummary = !showArchived ? await prisma.conversation.findFirst({
+    where: {
+      OR: [{ buyerId: user.id }, { sellerId: user.id }],
+      preferences: { some: { userId: user.id, archivedAt: { not: null } } },
+    },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    select: {
+      listing: { select: { title: true, images: { orderBy: { sortOrder: "asc" }, take: 1, select: { url: true } } } },
+      messages: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 1, select: { body: true } },
+    },
+  }) : null;
+  const archivedCount = !showArchived ? await prisma.conversation.count({
+    where: {
+      OR: [{ buyerId: user.id }, { sellerId: user.id }],
+      preferences: { some: { userId: user.id, archivedAt: { not: null } } },
+    },
+  }) : 0;
+
   const conversations = await prisma.conversation.findMany({
     where: {
       OR: [{ buyerId: user.id }, { sellerId: user.id }],
@@ -70,12 +88,11 @@ export default async function MessagesPage({ searchParams }: PageProps) {
     };
   }).sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
 
-  return <main className="hm-page" dir="rtl"><div className="hm-container hm-content">
-    <header className="hm-inbox-heading">
-      <div><span className="hm-inbox-eyebrow">خانه‌یار · ارتباط امن</span><h1>{showArchived ? "گفت‌وگوهای بایگانی‌شده" : "پیام‌های من"}</h1><p>گفت‌وگوهای مربوط به آگهی‌های شما، مرتب‌شده بر اساس آخرین فعالیت.</p><nav className="hm-message-view-tabs"><Link href="/dashboard/messages" aria-current={!showArchived ? "page" : undefined}>صندوق ورودی</Link><Link href="/dashboard/messages?view=archived" aria-current={showArchived ? "page" : undefined}>بایگانی</Link></nav></div>
-      <div className="hm-inbox-actions"><NotificationCenter /><div className="hm-inbox-total"><strong>{conversations.length.toLocaleString("fa-IR")}</strong><span>گفت‌وگو</span>{totalUnread > 0 && <small>{totalUnread.toLocaleString("fa-IR")} پیام خوانده‌نشده</small>}</div></div>
-    </header>
-    {conversations.length === 0 ? <section className="hm-empty hm-inbox-empty"><div className="hm-inbox-empty-icon" aria-hidden="true">✉</div><h2>{showArchived ? "گفت‌وگوی بایگانی‌شده‌ای ندارید" : "هنوز گفت‌وگویی ندارید"}</h2><p>{showArchived ? "مکالمه‌هایی که بایگانی می‌کنید اینجا قرار می‌گیرند." : "از صفحه هر آگهی می‌توانید مستقیماً به آگهی‌دهنده پیام بدهید. پاسخ‌ها هم در همین صندوق نمایش داده می‌شوند."}</p>{!showArchived && <Link href="/search" className="hm-button">جست‌وجوی ملک</Link>}</section> : <ConversationSearchList items={items} currentUserId={user.id} />}
+  return <main className="hm-page hm-telegram-inbox-page" dir="ltr"><div className="hm-container hm-content hm-telegram-inbox-shell"><section className="hm-telegram-inbox-sidebar" dir="rtl">
+    <div className="hm-inbox-compact-toolbar"><NotificationCenter /><span className="hm-inbox-compact-count">{conversations.length.toLocaleString("fa-IR")} گفت‌وگو{totalUnread > 0 ? ` · ${totalUnread.toLocaleString("fa-IR")} خوانده‌نشده` : ""}</span></div>
+{conversations.length === 0 ? <section className="hm-empty hm-inbox-empty"><div className="hm-inbox-empty-icon" aria-hidden="true">✉</div><h2>{showArchived ? "گفت‌وگوی بایگانی‌شده‌ای ندارید" : "هنوز گفت‌وگویی ندارید"}</h2><p>{showArchived ? "مکالمه‌هایی که بایگانی می‌کنید اینجا قرار می‌گیرند." : "از صفحه هر آگهی می‌توانید مستقیماً به آگهی‌دهنده پیام بدهید. پاسخ‌ها هم در همین صندوق نمایش داده می‌شوند."}</p>{!showArchived && <Link href="/search" className="hm-button">جست‌وجوی ملک</Link>}</section> : <ConversationSearchList items={items} currentUserId={user.id} archiveCount={archivedCount} archivePreview={archiveSummary ? { title: archiveSummary.listing.title, imageUrl: archiveSummary.listing.images[0]?.url ?? null, latestText: archiveSummary.messages[0]?.body ?? archiveSummary.listing.title } : null} showArchived={showArchived} />}
     <p className="hm-limit-note">حداکثر ۲۰۰ گفت‌وگوی اخیر نمایش داده می‌شود.</p>
-  </div></main>;
+  </section><section className="hm-telegram-inbox-stage" aria-label="پنجره گفت‌وگو" dir="ltr"><div className="hm-telegram-stage-content"><div className="hm-telegram-stage-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M54 10 8 28c-3 1-3 4 0 5l12 4 5 15c1 3 3 3 5 1l7-9 12 9c2 1 4 0 5-3l7-36c1-4-2-6-7-4ZM24 35l24-17-19 21-1 9-4-13Z"/></svg></div><h2>خانه‌یار</h2><p>برای شروع یا ادامهٔ گفت‌وگو، یکی از گفتگوها را از فهرست سمت چپ انتخاب کنید.</p><span>پیام‌رسان خانه‌یار</span></div></section></div></main>;
 }
+
+/* KHANEHYAR_MESSENGER_SMOOTH_ARCHIVE_V1 */
