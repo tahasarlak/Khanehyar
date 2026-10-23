@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { unlink } from "node:fs/promises";
+import path from "node:path";
 import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../../../src/lib/rate-limit";
 import { getCurrentUser } from "../../../../../src/lib/auth";
 import { prisma } from "../../../../../src/lib/prisma";
@@ -44,11 +46,12 @@ export async function DELETE(request: Request, context: Context) {
     );
   }
 
+  const imageRows = await prisma.listingImage.findMany({
+    where: { listingId: id, listing: { ownerId: user.id } },
+    select: { url: true },
+  });
   const result = await prisma.listing.deleteMany({
-    where: {
-      id,
-      ownerId: user.id,
-    },
+    where: { id, ownerId: user.id },
   });
 
   if (result.count === 0) {
@@ -58,9 +61,13 @@ export async function DELETE(request: Request, context: Context) {
     );
   }
 
-  return NextResponse.json({
-    message: "آگهی با موفقیت حذف شد.",
-  });
+  const uploadDir = process.env.LISTING_UPLOAD_DIR || path.join(process.cwd(), ".data", "listing-uploads");
+  await Promise.all(imageRows.map(async (image) => {
+    const match = /^\/api\/listing-images\/([0-9a-f-]{36}\.(?:jpg|png|webp))$/i.exec(image.url);
+    if (match) await unlink(path.join(uploadDir, path.basename(match[1]))).catch(() => undefined);
+  }));
+
+  return NextResponse.json({ message: "آگهی با موفقیت حذف شد." });
 }
 
 import { listingSchema } from "@real-estate/shared";
@@ -98,6 +105,11 @@ export async function GET(_request: Request, context: Context) {
       rooms: true,
       floor: true,
       totalFloors: true,
+      yearBuilt: true, bathrooms: true, parkingSpaces: true, hasElevator: true, hasStorage: true,
+      heatingType: true, coolingType: true, documentType: true, orientation: true, naturalLight: true,
+      furnished: true, readyToMove: true, balcony: true, terrace: true, garden: true, amenities: true,
+      monthlyRent: true, deposit: true, allowDepositConversion: true, advertiserType: true, showExactLocation: true,
+      images: { orderBy: { sortOrder: "asc" }, select: { id: true, url: true, sortOrder: true, altText: true } },
       city: true,
       address: true,
       latitude: true,
@@ -191,7 +203,10 @@ export async function PATCH(request: Request, context: Context) {
   const allowedKeys = new Set([
     "title", "description", "listingType", "propertyType",
     "price", "currency", "area", "rooms", "city", "address",
-    "latitude", "longitude", "floor", "totalFloors",
+    "latitude", "longitude", "floor", "totalFloors", "yearBuilt", "bathrooms", "parkingSpaces",
+    "hasElevator", "hasStorage", "heatingType", "coolingType", "documentType", "orientation", "naturalLight",
+    "furnished", "readyToMove", "balcony", "terrace", "garden", "amenities", "monthlyRent", "deposit",
+    "allowDepositConversion", "advertiserType", "showExactLocation",
   ]);
 
   if (Object.keys(input).some((key) => !allowedKeys.has(key))) {
@@ -261,6 +276,14 @@ export async function PATCH(request: Request, context: Context) {
       longitude: data.longitude,
       floor: floor as number | null,
       totalFloors: totalFloors as number | null,
+      yearBuilt: data.yearBuilt ?? null, bathrooms: data.bathrooms ?? null, parkingSpaces: data.parkingSpaces ?? null,
+      hasElevator: data.hasElevator ?? null, hasStorage: data.hasStorage ?? null,
+      heatingType: data.heatingType ?? null, coolingType: data.coolingType ?? null, documentType: data.documentType ?? null,
+      orientation: data.orientation ?? null, naturalLight: data.naturalLight ?? null,
+      furnished: data.furnished ?? null, readyToMove: data.readyToMove ?? null, balcony: data.balcony ?? null,
+      terrace: data.terrace ?? null, garden: data.garden ?? null, amenities: data.amenities,
+      monthlyRent: data.monthlyRent ?? null, deposit: data.deposit ?? null,
+      allowDepositConversion: data.allowDepositConversion, advertiserType: data.advertiserType, showExactLocation: data.showExactLocation,
       status: "PENDING",
     },
   });

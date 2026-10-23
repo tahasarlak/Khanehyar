@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "../../src/lib/auth";
 import ProfileForm from "./ProfileForm";
@@ -25,6 +26,7 @@ export default async function ProfilePage() {
           <p>
             اطلاعات حساب کاربری خود را مشاهده و به‌روز نگه دار.
           </p>
+          <Link href="/dashboard/settings" className={styles.profileSettingsLink}>رفتن به تنظیمات حساب ←</Link>
         </header>
 
         <section className={styles.profileCard}>

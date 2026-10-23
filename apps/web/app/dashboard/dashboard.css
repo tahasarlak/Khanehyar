@@ -340,7 +340,7 @@
 
 .ud-activity-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   margin-bottom: 43px;
 }
@@ -510,7 +510,8 @@
 }
 
 @media (max-width: 1200px) {
-  .ud-stats-grid {
+  .ud-stats-grid,
+  .ud-activity-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -588,7 +589,25 @@
 
 @media (max-width: 400px) {
   .ud-stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .ud-stat-card {
+    padding: 12px;
+    border-radius: 15px;
+  }
+
+  .ud-stat-card > strong {
+    font-size: 24px;
+  }
+
+  .ud-stat-card h3 {
+    font-size: 11px;
+  }
+
+  .ud-stat-card p {
+    font-size: 10px;
   }
 }
 
@@ -604,3 +623,124 @@
   min-height: 0;
   background: transparent;
 }
+
+/* KHANEHYAR DASHBOARD OVERVIEW V2 */
+.ud-quick-section { margin-bottom: 38px; }
+.ud-activity-card {
+  min-height: 132px;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.ud-activity-card:hover {
+  transform: translateY(-2px);
+  border-color: #cfe5dc;
+  box-shadow: 0 12px 30px rgb(19 59 83 / 7%);
+}
+.ud-activity-card:focus-visible,
+.ud-stat-card:focus-visible,
+.ud-text-link:focus-visible,
+.ud-row-link:focus-visible {
+  outline: 3px solid #70c9ad;
+  outline-offset: 3px;
+}
+.ud-notification-icon { background: #eaf1ff; color: #426bb0; }
+.ud-notification-unread { color: #c92f47 !important; }
+.ud-action-needed {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 36px;
+  padding: 19px 21px;
+  border: 1px solid #f2cbd1;
+  border-radius: 18px;
+  background: linear-gradient(110deg, #fff7f8, #fff);
+}
+.ud-action-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border-radius: 14px;
+  background: #fde8ec;
+  color: #b4233b;
+  font-size: 23px;
+  font-weight: 950;
+}
+.ud-action-copy { min-width: 0; flex: 1; }
+.ud-action-copy > span { color: #b4233b; font-size: 11px; font-weight: 950; }
+.ud-action-copy h2 { margin: 2px 0 4px; color: #173b60; font-size: 15px; font-weight: 950; }
+.ud-action-copy p { margin: 0; color: #788a9a; font-size: 11px; line-height: 1.9; }
+.ud-action-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid #e8aab5;
+  border-radius: 11px;
+  color: #a52239;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  text-decoration: none;
+}
+.ud-action-link:hover { background: #fff0f2; }
+
+@media (max-width: 680px) {
+  .ud-quick-section { margin-bottom: 28px; }
+  .ud-activity-grid { grid-template-columns: 1fr; gap: 11px; }
+  .ud-activity-card { min-height: 112px; gap: 13px; padding: 17px; border-radius: 16px; }
+  .ud-activity-icon { width: 48px; height: 48px; border-radius: 14px; font-size: 27px; }
+  .ud-action-needed { align-items: flex-start; flex-wrap: wrap; gap: 12px; padding: 16px; margin-bottom: 28px; }
+  .ud-action-copy { flex-basis: calc(100% - 60px); }
+  .ud-action-link { margin-inline-start: 56px; }
+
+  .ud-listing-table-wrap { overflow: visible; border: 0; background: transparent; }
+  .ud-listing-table,
+  .ud-listing-table tbody,
+  .ud-listing-table tr,
+  .ud-listing-table td { display: block; width: 100%; white-space: normal; }
+  .ud-listing-table thead { display: none; }
+  .ud-listing-table tbody tr {
+    margin-bottom: 12px;
+    padding: 8px 14px;
+    border: 1px solid var(--ud-border);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 5px 18px rgb(23 59 96 / 4%);
+  }
+  .ud-listing-table td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 11px 0;
+    border-bottom: 1px solid #eef2f5;
+    text-align: left;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+  }
+  .ud-listing-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: #8494a4;
+    font-size: 11px;
+    font-weight: 800;
+    text-align: right;
+  }
+  .ud-listing-table td:last-child { border-bottom: 0; }
+  .ud-listing-table td strong { text-align: left; }
+  .ud-row-link { text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ud-activity-card { transition: none; }
+  .ud-activity-card:hover { transform: none; }
+}
+/* END KHANEHYAR DASHBOARD OVERVIEW V2 */
+
+
+/* Dashboard inbox shortcut; the global header badge remains the primary notification cue. */
+.ud-message-icon { background: #fff0f1; color: #c92f47; }
+.ud-message-unread { color: #c92f47 !important; }

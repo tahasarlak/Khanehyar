@@ -725,3 +725,5 @@
   }
 }
 /* END KHANEHYAR PROFILE DASHBOARD NORMALIZATION V1 */
+
+.profileSettingsLink{display:inline-flex;align-items:center;min-height:38px;margin-top:10px;padding:0 12px;border:1px solid #cfe1db;border-radius:10px;background:#f0f8f4;color:#116b58;font-size:12px;font-weight:800;text-decoration:none}.profileSettingsLink:hover{background:#e4f3ec}

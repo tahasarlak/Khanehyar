@@ -25,12 +25,11 @@ export default async function AccountLayout({
     redirect("/dashboard");
   }
 
-  const unreadMessages = await prisma.inquiry.count({
-    where: {
-      recipientId: user.id,
-      isRead: false,
-    },
-  });
+  const participantFilter = { is: { OR: [{ buyerId: user.id }, { sellerId: user.id }] } };
+  const [unreadMessages, unreadNotifications] = await Promise.all([
+    prisma.message.count({ where: { conversation: participantFilter, senderId: { not: user.id }, readAt: null, deletedAt: null } }),
+    prisma.notification.count({ where: { userId: user.id, readAt: null } }),
+  ]);
 
   return (
     <AccountShell
@@ -38,6 +37,7 @@ export default async function AccountLayout({
       email={user.email}
       role={user.role}
       unreadMessages={unreadMessages}
+      unreadNotifications={unreadNotifications}
     >
       {children}
     </AccountShell>

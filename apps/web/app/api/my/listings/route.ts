@@ -29,6 +29,7 @@ export async function GET() {
       price: true,
       currency: true,
       createdAt: true,
+      images: { take: 1, orderBy: { sortOrder: "asc" }, select: { url: true } },
       reviews: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -46,6 +47,7 @@ export async function GET() {
       listings: listings.map((listing) => ({
         ...listing,
         price: listing.price.toString(),
+        imageUrl: listing.images[0]?.url ?? null,
       })),
     },
     { headers: { "Cache-Control": "no-store" } },

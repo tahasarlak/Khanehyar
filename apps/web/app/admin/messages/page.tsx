@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Report = {
   id: string; reason: string; status: string; createdAt: string;
@@ -13,6 +13,15 @@ export default function AdminMessageReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "OPEN" | "RESOLVED" | "DISMISSED">("ALL");
+  const filteredReports = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("fa");
+    return reports.filter((report) => {
+      const text = `${report.message.conversation.listing.title} ${report.message.body} ${report.message.sender.name ?? ""} ${report.message.sender.email} ${report.reporter.name ?? ""} ${report.reason}`.toLocaleLowerCase("fa");
+      return (!normalized || text.includes(normalized)) && (statusFilter === "ALL" || report.status === statusFilter);
+    });
+  }, [reports, query, statusFilter]);
   async function load() {
     setLoading(true); setError("");
     try {
@@ -36,9 +45,12 @@ export default function AdminMessageReportsPage() {
   }
   return <main dir="rtl" className="min-h-screen bg-slate-50 px-4 py-10"><div className="mx-auto max-w-5xl">
     <header className="mb-8 flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm text-emerald-700">خانه‌یار · مدیریت اعتماد و امنیت</p><h1 className="text-2xl font-bold text-slate-900">گزارش‌های پیام‌رسان</h1></div><Link href="/admin/listings" className="text-emerald-700">بازگشت به پنل مدیریت</Link></header>
+    <section className="kh-admin-toolbar" aria-label="جست‌وجو و فیلتر گزارش‌های پیام‌رسان"><label className="kh-admin-search"><span>جست‌وجو در آگهی، پیام، گزارش‌دهنده یا دلیل</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="عبارت موردنظر..." /></label><label><span>وضعیت گزارش</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}><option value="ALL">همه وضعیت‌ها</option><option value="OPEN">باز</option><option value="RESOLVED">رسیدگی‌شده</option><option value="DISMISSED">ردشده</option></select></label></section>
+    <p className="kh-admin-results">{filteredReports.length.toLocaleString("fa-IR")} گزارش از {reports.length.toLocaleString("fa-IR")} مورد</p>
     {loading && <p>در حال دریافت گزارش‌ها…</p>}{error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-4 text-red-700">{error}</p>}
-    {!loading && reports.length === 0 && !error && <p className="rounded-xl bg-white p-6">گزارشی ثبت نشده است.</p>}
-    <div className="space-y-4">{reports.map((report) => <article key={report.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    {!loading && reports.length === 0 && !error && <p className="kh-admin-empty">گزارشی ثبت نشده است.</p>}
+    {!loading && reports.length > 0 && filteredReports.length === 0 && !error && <p className="kh-admin-empty">گزارشی با این فیلترها پیدا نشد.</p>}
+    <div className="space-y-4">{filteredReports.map((report) => <article key={report.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-bold">{report.message.conversation.listing.title}</h2><p className="mt-1 text-sm text-slate-500">{new Date(report.createdAt).toLocaleString("fa-IR")} · وضعیت: {report.status}</p></div><Link className="text-sm text-emerald-700" href="/admin/listings">بازگشت به مدیریت ↗</Link></div>
       <div className="mt-4 rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">پیام گزارش‌شده از {report.message.sender.name || report.message.sender.email}</p><p className="mt-2 whitespace-pre-wrap text-sm">{report.message.deletedAt ? "پیام پس از گزارش حذف شده است." : report.message.body}</p></div>
       <p className="mt-3 whitespace-pre-wrap text-sm"><strong>دلیل گزارش:</strong> {report.reason}</p><p className="mt-2 text-xs text-slate-500">گزارش‌دهنده: {report.reporter.name || report.reporter.email}</p>

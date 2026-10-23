@@ -136,3 +136,5 @@
     padding: 10px;
   }
 }
+
+.kh-favorites-dashboard .hy-property-photo{display:block;width:100%;height:100%;object-fit:cover}.kh-favorites-dashboard .hy-property{overflow:hidden;border-radius:18px}.kh-favorites-dashboard .hy-property-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.kh-favorites-dashboard .hy-favorite-item{transition:transform .18s ease,box-shadow .18s ease}.kh-favorites-dashboard .hy-favorite-item:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(23,59,96,.07)}@media(max-width:900px){.kh-favorites-dashboard .hy-property-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.kh-favorites-dashboard .hy-property-grid{grid-template-columns:minmax(0,1fr)}}

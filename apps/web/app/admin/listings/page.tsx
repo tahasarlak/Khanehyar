@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 type PendingListing = {
@@ -28,6 +28,15 @@ export default function AdminListingsPage() {
   const [message, setMessage] = useState("");
   const [accessStatus, setAccessStatus] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [dealFilter, setDealFilter] = useState<"ALL" | "SALE" | "RENT">("ALL");
+  const filteredListings = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("fa");
+    return listings.filter((item) => {
+      const text = `${item.title} ${item.city} ${item.owner.name ?? ""} ${item.address ?? ""}`.toLocaleLowerCase("fa");
+      return (!normalized || text.includes(normalized)) && (dealFilter === "ALL" || item.listingType === dealFilter);
+    });
+  }, [listings, query, dealFilter]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -146,6 +155,8 @@ export default function AdminListingsPage() {
           </div>
         </div>
 
+        <section className="kh-admin-toolbar" aria-label="جست‌وجو و فیلتر آگهی‌های در انتظار بررسی"><label className="kh-admin-search"><span>جست‌وجو در عنوان، شهر، مالک یا نشانی</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="مثلاً آپارتمان در تهران" /></label><label><span>نوع معامله</span><select value={dealFilter} onChange={(event) => setDealFilter(event.target.value as typeof dealFilter)}><option value="ALL">همه</option><option value="SALE">فروش</option><option value="RENT">اجاره</option></select></label></section>
+        <p className="kh-admin-results">{filteredListings.length.toLocaleString("fa-IR")} آگهی از {listings.length.toLocaleString("fa-IR")} مورد در صف بررسی</p>
         {loading && <p>در حال دریافت اطلاعات...</p>}
 
         {!loading && accessStatus === 401 && (
@@ -181,9 +192,11 @@ export default function AdminListingsPage() {
           </p>
         )}
 
+        {!loading && accessStatus === null && !error && listings.length > 0 && filteredListings.length === 0 && <div className="kh-admin-empty">آگهی‌ای با این جست‌وجو یا فیلتر پیدا نشد.</div>}
+
         {!loading && accessStatus === null && (
           <div className="space-y-5">
-            {listings.map((listing) => (
+            {filteredListings.map((listing) => (
               <article
                 key={listing.id}
                 className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"

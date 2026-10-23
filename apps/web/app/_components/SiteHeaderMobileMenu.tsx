@@ -81,7 +81,9 @@ export default function SiteHeaderMobileMenu({
             {authenticated ? <Link href="/dashboard" onClick={close}><span aria-hidden="true">▦</span><span>داشبورد</span></Link> : null}
             {authenticated ? <Link href="/dashboard/listings" onClick={close}><span aria-hidden="true">▤</span><span>آگهی‌های من</span></Link> : null}
             {authenticated ? <Link href="/dashboard/messages" onClick={close}><span aria-hidden="true">✉</span><span>پیام‌ها</span></Link> : null}
-            {authenticated ? <Link href="/favorites" onClick={close}><span aria-hidden="true">♡</span><span>علاقه‌مندی‌ها</span></Link> : null}
+            {authenticated ? <Link href="/dashboard/notifications" onClick={close}><span aria-hidden="true">♧</span><span>اعلان‌ها</span></Link> : null}
+            {authenticated ? <Link href="/dashboard/favorites" onClick={close}><span aria-hidden="true">♡</span><span>علاقه‌مندی‌ها</span></Link> : null}
+            {authenticated ? <Link href="/dashboard/settings" onClick={close}><span aria-hidden="true">⚙</span><span>تنظیمات</span></Link> : null}
             {authenticated ? <Link href="/profile" onClick={close}><span aria-hidden="true">◎</span><span>پروفایل</span></Link> : null}
             {isAdmin ? <Link href="/admin/listings" onClick={close}><span aria-hidden="true">⚙</span><span>مدیریت</span></Link> : null}
           </nav>

@@ -47,6 +47,7 @@ export default function NotificationsPage() {
   const [error,setError]=useState("");
   const [filter,setFilter]=useState<"all"|"unread">("all");
   const [busy,setBusy]=useState<string|null>(null);
+  const [busyAll,setBusyAll]=useState(false);
   const load=useCallback(async()=>{
     setLoading(true); setError("");
     try {
@@ -64,18 +65,30 @@ export default function NotificationsPage() {
     setBusy(n.id);
     try {
       // Use the notification-specific read endpoint if the backend exposes it.
-      const res=await fetch(`/api/notifications/${encodeURIComponent(n.id)}/read`,{method:"PATCH",credentials:"same-origin"});
+      const res=await fetch(`/api/notifications/${encodeURIComponent(n.id)}/read`,{method:"POST",credentials:"same-origin"});
       if(res.ok) setItems(old=>old.map(x=>x.id===n.id?{...x,isRead:true,read:true,readAt:new Date().toISOString()}:x));
       else if(res.status===404 || res.status===405) setError("نمایش اعلان فعال است؛ برای ثبت خوانده‌شدن، endpoint خواندن اعلان باید در API موجود باشد.");
       else setError("ثبت خوانده‌شدن اعلان انجام نشد.");
     } catch { setError("ارتباط با سرور برای ثبت اعلان خوانده‌شده برقرار نشد."); }
     finally { setBusy(null); }
   }
+  async function markAllRead() {
+    if (busyAll || unread === 0) return;
+    setBusyAll(true); setError("");
+    try {
+      const response = await fetch("/api/notifications/read-all", { method: "POST", credentials: "same-origin" });
+      const data = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(data.error || "علامت‌گذاری اعلان‌ها ناموفق بود.");
+      const now = new Date().toISOString();
+      setItems((current) => current.map((item) => ({ ...item, isRead: true, read: true, readAt: item.readAt || now })));
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "علامت‌گذاری اعلان‌ها ناموفق بود."); }
+    finally { setBusyAll(false); }
+  }
   return <main className="kh-notifications" dir="rtl">
     <header className="kh-notifications-head">
       <Link className="kh-notifications-back" href="/dashboard/messages" aria-label="بازگشت به پیام‌ها">‹</Link>
       <div className="kh-notifications-heading"><span className="kh-notifications-bell">♧</span><div><h1>اعلان‌ها</h1><p>{unread?`${unread.toLocaleString("fa-IR")} اعلان خوانده‌نشده`:"همه اعلان‌ها خوانده شده‌اند"}</p></div></div>
-      <button className="kh-notifications-refresh" onClick={()=>void load()} disabled={loading} title="تازه‌سازی" aria-label="تازه‌سازی">↻</button>
+      <div className="kh-notifications-head-actions"><button className="kh-notifications-mark-all" onClick={() => void markAllRead()} disabled={busyAll || unread === 0}>{busyAll ? "در حال ذخیره…" : "خواندن همه"}</button><button className="kh-notifications-refresh" onClick={()=>void load()} disabled={loading} title="تازه‌سازی" aria-label="تازه‌سازی">↻</button></div>
     </header>
     <nav className="kh-notifications-tabs" aria-label="فیلتر اعلان‌ها">
       <button className={filter==="all"?"active":""} onClick={()=>setFilter("all")}>همه <span>{items.length.toLocaleString("fa-IR")}</span></button>

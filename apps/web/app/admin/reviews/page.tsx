@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 type Review = {
@@ -22,6 +22,15 @@ export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [decisionFilter, setDecisionFilter] = useState<"ALL" | "PUBLISHED" | "REJECTED">("ALL");
+  const filteredReviews = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("fa");
+    return reviews.filter((review) => {
+      const text = `${review.listing.title} ${review.reviewer?.name ?? ""} ${review.reviewer?.email ?? ""} ${review.reason ?? ""}`.toLocaleLowerCase("fa");
+      return (!normalized || text.includes(normalized)) && (decisionFilter === "ALL" || review.decision === decisionFilter);
+    });
+  }, [reviews, query, decisionFilter]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,6 +79,8 @@ export default function AdminReviewsPage() {
           </Link>
         </div>
 
+        <section className="kh-admin-toolbar" aria-label="جست‌وجو و فیلتر تاریخچه بررسی"><label className="kh-admin-search"><span>جست‌وجو در آگهی، مدیر یا دلیل تصمیم</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="عبارت موردنظر..." /></label><label><span>نتیجه بررسی</span><select value={decisionFilter} onChange={(event) => setDecisionFilter(event.target.value as typeof decisionFilter)}><option value="ALL">همه تصمیم‌ها</option><option value="PUBLISHED">تأیید و انتشار</option><option value="REJECTED">رد آگهی</option></select></label></section>
+        <p className="kh-admin-results">{filteredReviews.length.toLocaleString("fa-IR")} نتیجه از {reviews.length.toLocaleString("fa-IR")} مورد</p>
         {loading && <p>در حال دریافت تاریخچه...</p>}
 
         {error && (
@@ -84,8 +95,9 @@ export default function AdminReviewsPage() {
           </p>
         )}
 
+        {!loading && !error && reviews.length > 0 && filteredReviews.length === 0 && <div className="kh-admin-empty">نتیجه‌ای با این فیلترها پیدا نشد.</div>}
         <div className="space-y-4">
-          {reviews.map((review) => (
+          {filteredReviews.map((review) => (
             <article
               key={review.id}
               className="rounded-xl border border-slate-200 bg-white p-5"

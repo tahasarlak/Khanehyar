@@ -56,7 +56,7 @@ export default async function MessagesPage({ searchParams }: PageProps) {
 
   const unreadGroups = conversations.length ? await prisma.message.groupBy({
     by: ["conversationId"],
-    where: { conversationId: { in: conversations.map((item) => item.id) }, senderId: { not: user.id }, readAt: null },
+    where: { conversationId: { in: conversations.map((item) => item.id) }, senderId: { not: user.id }, readAt: null, deletedAt: null },
     _count: { _all: true },
   }) : [];
   const unreadByConversation = new Map(unreadGroups.map((item) => [item.conversationId, item._count._all]));

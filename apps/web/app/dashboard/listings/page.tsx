@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 type Listing = {
@@ -13,6 +13,7 @@ type Listing = {
   price: string;
   currency: string;
   createdAt: string;
+  imageUrl: string | null;
   reviews: {
     decision: "PUBLISHED" | "REJECTED";
     reason: string | null;
@@ -40,6 +41,11 @@ export default function MyListingsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [needsLogin, setNeedsLogin] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | Listing["status"]>("ALL");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | Listing["listingType"]>("ALL");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "price-high" | "price-low">("newest");
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadListings = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -81,6 +87,23 @@ export default function MyListingsPage() {
       controller.abort();
     };
   }, [loadListings]);
+
+  const visibleListings = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("fa");
+    return listings.filter((listing) => {
+      const matchesQuery = !normalized || `${listing.title} ${listing.city} ${listing.propertyType}`.toLocaleLowerCase("fa").includes(normalized);
+      const matchesStatus = statusFilter === "ALL" || listing.status === statusFilter;
+      const matchesType = typeFilter === "ALL" || listing.listingType === typeFilter;
+      return matchesQuery && matchesStatus && matchesType;
+    }).sort((a, b) => {
+      if (sortBy === "oldest") return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      if (sortBy === "price-high") return Number(b.price) - Number(a.price);
+      if (sortBy === "price-low") return Number(a.price) - Number(b.price);
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [listings, query, statusFilter, typeFilter, sortBy]);
+  const statusCounts = useMemo(() => ({ ALL: listings.length, PUBLISHED: listings.filter((item) => item.status === "PUBLISHED").length, PENDING: listings.filter((item) => item.status === "PENDING").length, REJECTED: listings.filter((item) => item.status === "REJECTED").length, ARCHIVED: listings.filter((item) => item.status === "ARCHIVED").length }), [listings]);
+  async function refreshListings() { setRefreshing(true); try { await loadListings(); } finally { setRefreshing(false); } }
 
   async function deleteListing(listing: Listing) {
     const confirmed = window.confirm(
@@ -141,6 +164,17 @@ export default function MyListingsPage() {
           </Link>
         </div>
 
+        <section className="kh-listing-overview" aria-label="خلاصه وضعیت آگهی‌ها">
+          {([ ["ALL", "همه آگهی‌ها", statusCounts.ALL], ["PUBLISHED", "منتشرشده", statusCounts.PUBLISHED], ["PENDING", "در انتظار بررسی", statusCounts.PENDING], ["REJECTED", "ردشده", statusCounts.REJECTED], ["ARCHIVED", "بایگانی‌شده", statusCounts.ARCHIVED] ] as const).map(([key, label, count]) => <button key={key} type="button" className={`kh-listing-stat ${statusFilter === key ? "is-active" : ""}`} onClick={() => setStatusFilter(key)}><span>{label}</span><strong>{count.toLocaleString("fa-IR")}</strong></button>)}
+        </section>
+        <section className="kh-listing-toolbar" aria-label="جست‌وجو و فیلتر آگهی‌ها">
+          <label className="kh-listing-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="جست‌وجوی عنوان، شهر یا نوع ملک..." aria-label="جست‌وجوی آگهی‌ها" />{query && <button type="button" onClick={() => setQuery("")} aria-label="پاک کردن جست‌وجو">×</button>}</label>
+          <label className="kh-listing-filter"><span>نوع معامله</span><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as "ALL" | Listing["listingType"])}><option value="ALL">همه</option><option value="SALE">فروش</option><option value="RENT">اجاره</option></select></label>
+          <label className="kh-listing-filter"><span>مرتب‌سازی</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)}><option value="newest">جدیدترین</option><option value="oldest">قدیمی‌ترین</option><option value="price-high">بالاترین قیمت</option><option value="price-low">پایین‌ترین قیمت</option></select></label>
+          <button type="button" className="kh-listing-refresh" onClick={() => void refreshListings()} disabled={refreshing || loading}>{refreshing ? "در حال تازه‌سازی…" : "↻ تازه‌سازی"}</button>
+        </section>
+        <div className="kh-listing-results-count" aria-live="polite">نمایش {visibleListings.length.toLocaleString("fa-IR")} از {listings.length.toLocaleString("fa-IR")} آگهی</div>
+
         {needsLogin ? (
           <div className="rounded-2xl border border-[#e2e9f0] bg-white p-8 text-center shadow-sm">
             <p className="mb-5">برای مشاهده آگهی‌های خود وارد شوید.</p>
@@ -169,14 +203,18 @@ export default function MyListingsPage() {
               </div>
             )}
 
+            {listings.length > 0 && visibleListings.length === 0 && <div className="kh-listing-no-results"><strong>آگهی‌ای با این فیلترها پیدا نشد</strong><p>عبارت جست‌وجو یا فیلترها را تغییر بده.</p><button type="button" onClick={() => { setQuery(""); setStatusFilter("ALL"); setTypeFilter("ALL"); setSortBy("newest"); }}>پاک کردن فیلترها</button></div>}
             <div className="grid min-w-0 grid-cols-1 gap-4">
-              {listings.map((listing) => (
+              {visibleListings.map((listing) => (
                 <article
                   key={listing.id}
                   className="min-w-0 rounded-2xl border border-[#e2e9f0] bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-6"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
+                  <div className="kh-listing-card-head">
+                    <div className="kh-listing-thumb">{listing.imageUrl ? <img src={listing.imageUrl} alt="" loading="lazy" /> : <span aria-hidden="true">⌂</span>}</div>
+                    <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
                       <h2 className="break-words text-lg font-extrabold text-[#173b60] sm:text-xl">
                         {listing.title}
                       </h2>
@@ -192,11 +230,9 @@ export default function MyListingsPage() {
                       </p>
                     </div>
 
-                    <span
-                      className={`rounded-full px-3 py-1 text-sm font-medium ${statusStyles[listing.status]}`}
-                    >
-                      {statusLabels[listing.status]}
-                    </span>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-sm font-medium ${statusStyles[listing.status]}`}>{statusLabels[listing.status]}</span>
+                    </div>
                   </div>
 
                   {listing.status === "REJECTED" &&
