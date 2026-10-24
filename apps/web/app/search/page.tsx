@@ -115,6 +115,7 @@ function parseFilters(params: SearchParams): SearchFilters {
 function buildWhere(filters: SearchFilters): Prisma.ListingWhereInput {
   const where: Prisma.ListingWhereInput = {
     status: "PUBLISHED",
+    deletedAt: null,
   };
 
   if (filters.city) {

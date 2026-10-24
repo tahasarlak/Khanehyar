@@ -20,7 +20,7 @@ export async function GET() {
   }
 
   const listings = await prisma.listing.findMany({
-    where: { status: "PENDING" },
+    where: { status: "PENDING", deletedAt: null },
     orderBy: { createdAt: "asc" },
     take: 100,
     select: {

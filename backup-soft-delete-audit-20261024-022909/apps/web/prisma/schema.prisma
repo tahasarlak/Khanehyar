@@ -1,0 +1,331 @@
+// Real Estate Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+model User {
+  sentInquiries Inquiry[] @relation("InquirySender")
+  receivedInquiries Inquiry[] @relation("InquiryRecipient")
+  buyerConversations Conversation[] @relation("ConversationBuyer")
+  sellerConversations Conversation[] @relation("ConversationSeller")
+  sentMessages Message[] @relation("MessageSender")
+  messageReactions MessageReaction[]
+  conversationPreferences ConversationPreference[]
+  blockedUsers BlockedUser[] @relation("UserBlocks")
+  blockedBy BlockedUser[] @relation("UserBlockedBy")
+  messageReports MessageReport[]
+  notifications Notification[]
+  reviews ListingReview[]
+  id           String     @id @default(cuid())
+  name         String?
+  avatarUrl    String?    @db.VarChar(2048)
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+  emailNotificationsEnabled Boolean @default(true)
+
+  listings     Listing[]
+  favorites    Favorite[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Listing {
+  inquiries Inquiry[]
+  conversations Conversation[]
+  reviews ListingReview[]
+  id           String        @id @default(cuid())
+  title        String        @db.VarChar(120)
+  description  String        @db.Text
+  listingType  ListingType
+  propertyType PropertyType
+  status       ListingStatus @default(PENDING)
+
+  price        Decimal       @db.Decimal(14, 2)
+  currency     String        @default("RUB") @db.VarChar(3)
+  area         Decimal       @db.Decimal(10, 2)
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?
+
+  yearBuilt              Int?
+  bathrooms              Int?
+  parkingSpaces          Int?
+  hasElevator            Boolean?
+  hasStorage             Boolean?
+  heatingType            String?   @db.VarChar(80)
+  coolingType            String?   @db.VarChar(80)
+  documentType           String?   @db.VarChar(100)
+  orientation            String?   @db.VarChar(50)
+  naturalLight           String?   @db.VarChar(50)
+  furnished              Boolean?
+  readyToMove            Boolean?
+  balcony                Boolean?
+  terrace                Boolean?
+  garden                 Boolean?
+  amenities              String[]  @default([])
+  monthlyRent            Decimal?  @db.Decimal(14, 2)
+  deposit                Decimal?  @db.Decimal(14, 2)
+  allowDepositConversion Boolean   @default(false)
+  advertiserType         String?   @db.VarChar(20)
+  showExactLocation      Boolean   @default(false)
+
+  city         String        @db.VarChar(100)
+  address      String?       @db.VarChar(300)
+  latitude     Float?
+  longitude    Float?
+
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images       ListingImage[]
+  favorites    Favorite[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([city, status])
+  @@index([listingType, propertyType, status])
+  @@index([price])
+  @@index([ownerId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  url       String   @db.VarChar(2048)
+  sortOrder Int      @default(0)
+  label     String?  @db.VarChar(50)
+  altText   String?  @db.VarChar(200)
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+
+enum ReviewDecision {
+  PUBLISHED
+  REJECTED
+}
+
+model ListingReview {
+  id         String         @id @default(cuid())
+  listingId  String
+  reviewerId String?
+  decision   ReviewDecision
+  reason     String?        @db.VarChar(1000)
+  createdAt  DateTime       @default(now())
+
+  listing    Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, createdAt])
+  @@index([reviewerId])
+}
+
+
+model Conversation {
+  id        String   @id @default(cuid())
+  listingId String
+  buyerId   String
+  sellerId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer   User    @relation("ConversationBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller  User    @relation("ConversationSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  messages Message[]
+  preferences ConversationPreference[]
+
+  @@unique([listingId, buyerId, sellerId])
+  @@index([buyerId, updatedAt])
+  @@index([sellerId, updatedAt])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String   @db.VarChar(2000)
+  createdAt      DateTime @default(now())
+  readAt         DateTime?
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  replyToId      String?
+  attachmentUrl  String?  @db.VarChar(2048)
+  attachmentName String?  @db.VarChar(255)
+  attachmentMime String?  @db.VarChar(100)
+  attachmentSize Int?
+
+  conversation Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User           @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      Message?       @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]      @relation("MessageReplies")
+  reports      MessageReport[]
+  reactions    MessageReaction[]
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, readAt])
+  @@index([senderId, createdAt])
+  @@index([replyToId])
+}
+
+
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String   @db.VarChar(32)
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ConversationPreference {
+  userId         String
+  conversationId String
+  archivedAt     DateTime?
+  mutedUntil     DateTime?
+  pinnedAt       DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+  @@index([userId, archivedAt, updatedAt])
+  @@index([userId, mutedUntil])
+}
+
+model BlockedUser {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  reason    String?  @db.VarChar(500)
+
+  blocker User @relation("UserBlocks", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("UserBlockedBy", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId, createdAt])
+}
+
+model MessageReport {
+  id         String   @id @default(cuid())
+  reporterId String
+  messageId  String
+  reason     String   @db.VarChar(1000)
+  status     String   @default("OPEN") @db.VarChar(20)
+  createdAt  DateTime @default(now())
+
+  reporter User    @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  message  Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([reporterId, messageId])
+  @@index([status, createdAt])
+  @@index([messageId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   @db.VarChar(40)
+  title     String   @db.VarChar(160)
+  body      String   @db.VarChar(500)
+  href      String?  @db.VarChar(2048)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model Inquiry {
+  id          String   @id @default(cuid())
+  listingId   String
+  senderId    String
+  recipientId String
+  message     String   @db.VarChar(2000)
+  kind        String   @default("MESSAGE") @db.VarChar(20)
+  preferredVisitAt DateTime?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  sender    User    @relation("InquirySender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User    @relation("InquiryRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([listingId])
+}
+
+// Shared PostgreSQL-backed API rate-limit buckets.
+model RateLimitBucket {
+  key       String   @id @db.VarChar(64)
+  count     Int      @default(1)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}

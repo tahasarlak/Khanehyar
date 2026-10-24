@@ -47,6 +47,7 @@ model User {
   messageReports MessageReport[]
   notifications Notification[]
   reviews ListingReview[]
+  auditLogs ListingAuditLog[] @relation("ListingAuditActor")
   id           String     @id @default(cuid())
   name         String?
   avatarUrl    String?    @db.VarChar(2048)
@@ -73,6 +74,9 @@ model Listing {
   listingType  ListingType
   propertyType PropertyType
   status       ListingStatus @default(PENDING)
+  deletedAt    DateTime?
+  deleteExpiresAt DateTime?
+  deletedById  String?
 
   price        Decimal       @db.Decimal(14, 2)
   currency     String        @default("RUB") @db.VarChar(3)
@@ -122,6 +126,35 @@ model Listing {
   @@index([listingType, propertyType, status])
   @@index([price])
   @@index([ownerId])
+  @@index([deletedAt, deleteExpiresAt])
+}
+
+enum ListingAuditAction {
+  CREATED
+  UPDATED
+  STATUS_CHANGED
+  DELETED
+  RESTORED
+  PERMANENTLY_DELETED
+}
+
+// Deliberately no Listing relation: audit records must survive permanent listing deletion.
+model ListingAuditLog {
+  id           String             @id @default(cuid())
+  listingId    String
+  listingTitle String             @db.VarChar(120)
+  actorId      String?
+  actor        User?              @relation("ListingAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole    UserRole?
+  action       ListingAuditAction
+  reason       String?            @db.VarChar(1000)
+  before       Json?
+  after        Json?
+  createdAt    DateTime           @default(now())
+
+  @@index([listingId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
 }
 
 model ListingImage {

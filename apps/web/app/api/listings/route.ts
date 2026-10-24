@@ -73,6 +73,20 @@ export async function POST(request: Request) {
     if (imageFiles.some((file) => !imageExtensions[file.type] || file.size > 8 * 1024 * 1024)) return NextResponse.json({ error: "تصاویر باید JPG، PNG یا WebP و هرکدام حداکثر ۸ مگابایت باشند." }, { status: 400 });
     for (const file of imageFiles) if (!(await hasValidImageSignature(file))) return NextResponse.json({ error: "محتوای یکی از تصاویر معتبر نیست." }, { status: 400 });
     if (imageEntries.some((entry) => typeof entry === "string" && entry.trim() !== "")) return NextResponse.json({ error: "فایل تصویر نامعتبر است." }, { status: 400 });
+    const allowedImageLabels = new Set(["نمای بیرونی", "پذیرایی", "آشپزخانه", "اتاق خواب", "سرویس بهداشتی", "حمام", "بالکن و تراس", "حیاط و باغ", "منظره", "نقشهٔ ملک", "سایر"]);
+    let imageLabels: (string | null)[] = imageFiles.map(() => null);
+    const rawImageLabels = formData.get("imageLabels");
+    if (typeof rawImageLabels === "string" && rawImageLabels.trim()) {
+      try {
+        const parsed: unknown = JSON.parse(rawImageLabels);
+        if (!Array.isArray(parsed) || parsed.length !== imageFiles.length || parsed.some((label) => label !== null && label !== "" && (typeof label !== "string" || !allowedImageLabels.has(label)))) {
+          return NextResponse.json({ error: "برچسب یکی از تصاویر معتبر نیست." }, { status: 400 });
+        }
+        imageLabels = parsed.map((label) => typeof label === "string" && label ? label : null);
+      } catch {
+        return NextResponse.json({ error: "اطلاعات برچسب تصاویر معتبر نیست." }, { status: 400 });
+      }
+    }
 
     const rawInput = {
       title: String(formData.get("title") ?? ""), description: String(formData.get("description") ?? ""),
@@ -171,9 +185,21 @@ export async function POST(request: Request) {
         const extension = imageExtensions[file.type]; const imageId = randomUUID(); const filename = `${imageId}.${extension}`;
         const diskPath = path.join(uploadDir, filename);
         await writeFile(diskPath, Buffer.from(await file.arrayBuffer()), { flag: "wx" }); storedFilePaths.push(diskPath);
-        await prisma.listingImage.create({ data: { id: imageId, url: `/api/listing-images/${filename}`, sortOrder: index, altText: validation.data.title.slice(0, 200), listingId: listing.id } });
+        await prisma.listingImage.create({ data: { id: imageId, url: `/api/listing-images/${filename}`, sortOrder: index, label: imageLabels[index] ?? null, altText: validation.data.title.slice(0, 200), listingId: listing.id } });
       }
     }
+
+    await prisma.listingAuditLog.create({
+      data: {
+        listingId: listing.id,
+        listingTitle: listing.title,
+        actorId: user.id,
+        actorRole: user.role,
+        action: "CREATED",
+        reason: "ثبت آگهی توسط مالک",
+        after: { status: listing.status, title: listing.title, createdAt: listing.createdAt.toISOString() },
+      },
+    });
 
     return NextResponse.json(
       {

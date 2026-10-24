@@ -39,12 +39,12 @@ async function DashboardContent() {
     unreadNotifications,
     recentListings,
   ] = await Promise.all([
-    prisma.listing.count({ where: { ownerId: user.id } }),
-    prisma.listing.count({ where: { ownerId: user.id, status: "PUBLISHED" } }),
-    prisma.listing.count({ where: { ownerId: user.id, status: "PENDING" } }),
-    prisma.listing.count({ where: { ownerId: user.id, status: "REJECTED" } }),
+    prisma.listing.count({ where: { ownerId: user.id, deletedAt: null } }),
+    prisma.listing.count({ where: { ownerId: user.id, status: "PUBLISHED", deletedAt: null } }),
+    prisma.listing.count({ where: { ownerId: user.id, status: "PENDING", deletedAt: null } }),
+    prisma.listing.count({ where: { ownerId: user.id, status: "REJECTED", deletedAt: null } }),
     prisma.favorite.count({
-      where: { userId: user.id, listing: { status: "PUBLISHED" } },
+      where: { userId: user.id, listing: { status: "PUBLISHED", deletedAt: null } },
     }),
     prisma.message.count({
       where: {
@@ -56,7 +56,7 @@ async function DashboardContent() {
     }),
     prisma.notification.count({ where: { userId: user.id, readAt: null } }),
     prisma.listing.findMany({
-      where: { ownerId: user.id },
+      where: { ownerId: user.id, deletedAt: null },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 5,
       select: { id: true, title: true, city: true, status: true, createdAt: true },

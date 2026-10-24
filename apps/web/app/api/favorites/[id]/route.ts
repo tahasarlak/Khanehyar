@@ -94,6 +94,7 @@ export async function POST(
     where: {
       id,
       status: "PUBLISHED",
+      deletedAt: null,
     },
     select: { id: true },
   });

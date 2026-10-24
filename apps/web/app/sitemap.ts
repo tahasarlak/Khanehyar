@@ -10,7 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!origin) return [];
 
   const listings = await prisma.listing.findMany({
-    where: { status: "PUBLISHED" },
+    where: { status: "PUBLISHED", deletedAt: null },
     select: { id: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
     take: 50000,

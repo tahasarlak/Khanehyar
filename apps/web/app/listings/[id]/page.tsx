@@ -34,7 +34,7 @@ const metadataCurrencyNames: Record<string, string> = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const listing = await prisma.listing.findFirst({
-    where: { id, status: "PUBLISHED" },
+    where: { id, status: "PUBLISHED", deletedAt: null },
     select: {
       id: true,
       title: true,
@@ -151,7 +151,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const { id } = await params;
 
   const listing = await prisma.listing.findFirst({
-    where: { id, status: "PUBLISHED" },
+    where: { id, status: "PUBLISHED", deletedAt: null },
     select: {
       id: true,
       title: true,
@@ -255,6 +255,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const similarListings = await prisma.listing.findMany({
     where: {
       status: "PUBLISHED",
+      deletedAt: null,
       id: { not: listing.id },
       city: listing.city,
       OR: [

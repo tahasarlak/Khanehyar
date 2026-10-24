@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import FavoriteButton from "../../_components/FavoriteButton";
+import PropertyCard from "../../_components/PropertyCard";
 
 export type FavoriteListingItem = {
   id: string;
@@ -70,11 +71,7 @@ export default function FavoriteExplorer({ listings }: { listings: FavoriteListi
         </tbody></table></div>
       </section>}
       {filtered.length ? <div className="hy-property-grid">{filtered.map((item) => <div key={item.id} className="hy-favorite-item">
-        <article className="hy-property"><Link className="hy-property-link" href={`/listings/${encodeURIComponent(item.id)}`} aria-label={`مشاهده آگهی ${item.title}`}>
-          <div className="hy-property-image">{item.imageUrl ? <img src={item.imageUrl} alt={`تصویر ${item.title}`} loading="lazy" className="hy-property-photo" /> : <div className="hy-property-placeholder"><span aria-hidden="true">⌂</span><small>خانه‌یار</small></div>}<span className="hy-property-badge">{item.listingType === "RENT" ? "اجاره" : "فروش"}</span></div>
-          <div className="hy-property-body"><div className="hy-property-meta"><span>{propertyNames[item.propertyType] ?? "ملک"}</span><span aria-hidden="true">•</span><span>{item.city}</span></div><h3 className="hy-property-title">{item.title}</h3><div className="hy-property-specs"><span>{Number(item.area).toLocaleString("fa-IR")} متر مربع</span>{item.rooms !== null && <span>{item.rooms.toLocaleString("fa-IR")} اتاق</span>}</div><div className="hy-property-bottom"><div><small>قیمت درج‌شده</small><strong>{Number(item.price).toLocaleString("fa-IR")} {currencies[item.currency] ?? item.currency}</strong></div><span className="hy-property-arrow" aria-hidden="true">←</span></div></div>
-        </Link></article>
-        <div className="kh-favorite-card-actions"><FavoriteButton listingId={item.id} /><label><input type="checkbox" checked={compareIds.includes(item.id)} onChange={() => toggleCompare(item.id)} /> مقایسه</label></div>
+        <PropertyCard listing={{ ...item, images: item.imageUrl ? [{ url: item.imageUrl }] : [] }} actions={<><FavoriteButton listingId={item.id} /><label className="kh-favorite-compare"><input type="checkbox" checked={compareIds.includes(item.id)} onChange={() => toggleCompare(item.id)} /> مقایسه</label></>} />
       </div>)}</div> : <div className="hy-empty"><span aria-hidden="true">⌕</span><h2>{listings.length ? "نتیجه‌ای پیدا نشد" : "هنوز آگهی ذخیره نکرده‌ای"}</h2><p>{listings.length ? "عبارت جست‌وجو یا فیلترها را تغییر بده." : "وارد صفحه یک ملک شو و با دکمه قلب آن را ذخیره کن."}</p>{listings.length ? <button type="button" className="hy-button hy-button-primary" onClick={() => { setQuery(""); setDeal("ALL"); setSort("newest"); }}>پاک کردن فیلترها</button> : <Link href="/search" className="hy-button hy-button-primary">مشاهده آگهی‌ها</Link>}</div>}
     </>
   );

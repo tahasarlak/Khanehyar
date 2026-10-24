@@ -15,7 +15,7 @@ const categories = [
 
 export default async function HomePage() {
   const listings = await prisma.listing.findMany({
-    where: { status: "PUBLISHED" },
+    where: { status: "PUBLISHED", deletedAt: null },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 6,
     select: {

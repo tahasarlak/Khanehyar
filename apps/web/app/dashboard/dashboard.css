@@ -744,3 +744,34 @@
 /* Dashboard inbox shortcut; the global header badge remains the primary notification cue. */
 .ud-message-icon { background: #fff0f1; color: #c92f47; }
 .ud-message-unread { color: #c92f47 !important; }
+
+
+/* KHANEHYAR DASHBOARD MOBILE POLISH V1 */
+.ud-content { min-width: 0; }
+.ud-welcome { flex-wrap: wrap; }
+.ud-stats-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ud-stat-card, .ud-activity-card { min-width: 0; }
+.ud-listing-table-wrap { max-width: 100%; }
+@media (max-width: 1050px) {
+  .ud-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ud-content { padding-inline: clamp(14px, 2.5vw, 28px); }
+}
+@media (max-width: 680px) {
+  .ud-welcome { align-items: stretch; gap: 14px; margin-bottom: 28px; }
+  .ud-welcome > div { min-width: 0; }
+  .ud-welcome h1 { font-size: clamp(21px, 6vw, 27px); overflow-wrap: anywhere; }
+  .ud-welcome .ud-primary-button { width: 100%; }
+  .ud-section-heading { align-items: flex-start; }
+  .ud-section-heading h2 { font-size: 18px; }
+  .ud-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 30px; }
+  .ud-stat-card { padding: 14px; border-radius: 15px; }
+  .ud-stat-top { margin-bottom: 12px; }
+  .ud-stat-icon { width: 38px; height: 38px; border-radius: 11px; }
+  .ud-stat-card > strong { font-size: 25px; }
+  .ud-stat-card h3 { overflow-wrap: anywhere; }
+  .ud-text-link { font-size: 11px; }
+}
+@media (max-width: 360px) {
+  .ud-stats-grid { grid-template-columns: 1fr; }
+}
+/* END KHANEHYAR DASHBOARD MOBILE POLISH V1 */

@@ -15,7 +15,7 @@ export default async function SellerProfilePage({ params }: Props) {
     select: {
       id: true, name: true, avatarUrl: true, createdAt: true,
       listings: {
-        where: { status: "PUBLISHED" },
+        where: { status: "PUBLISHED", deletedAt: null },
         orderBy: { createdAt: "desc" },
         select: {
           id: true, title: true, city: true, listingType: true, propertyType: true,

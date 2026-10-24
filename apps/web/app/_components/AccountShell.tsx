@@ -48,13 +48,35 @@ export default function AccountShell({ children, userName, email, unreadMessages
   const isMessagesRoute = pathname === "/dashboard/messages" || pathname.startsWith("/dashboard/messages/");
   const isConversationRoute = pathname.startsWith("/dashboard/messages/") && pathname !== "/dashboard/messages";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const pageTitle = getPageTitle(pathname, role);
 
   useEffect(() => {
+    try {
+      setDesktopSidebarCollapsed(window.localStorage.getItem("kh-account-sidebar-collapsed") === "true");
+    } catch {
+      // Storage may be unavailable; the sidebar remains usable for this session.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("kh-account-sidebar-collapsed", String(desktopSidebarCollapsed));
+    } catch {
+      // Keep the in-memory toggle functional when storage is unavailable.
+    }
+  }, [desktopSidebarCollapsed]);
+
+  useEffect(() => {
     if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") setMobileMenuOpen(false); };
     window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [mobileMenuOpen]);
 
   const visibleLinks = role === "ADMIN" ? [
@@ -65,9 +87,17 @@ export default function AccountShell({ children, userName, email, unreadMessages
   ] : links;
 
   return (
-    <div className={`${styles.shell} kh-account-shell${isMessagesRoute ? " kh-account-shell--messages" : ""}${isConversationRoute ? " kh-account-shell--chat" : ""}`} dir="rtl">
+    <div className={`${styles.shell} ${desktopSidebarCollapsed ? styles.sidebarCollapsed : ""} kh-account-shell${isMessagesRoute ? " kh-account-shell--messages" : ""}${isConversationRoute ? " kh-account-shell--chat" : ""}`} dir="rtl">
       {mobileMenuOpen && <button type="button" className={styles.drawerBackdrop} aria-label="بستن منوی حساب کاربری" onClick={() => setMobileMenuOpen(false)} />}
       <aside id="kh-account-drawer" className={`${styles.sidebar} ${mobileMenuOpen ? styles.sidebarOpen : ""}`}>
+        <button
+          type="button"
+          className={styles.sidebarMenuToggle}
+          aria-label={desktopSidebarCollapsed ? "باز کردن سایدبار" : "جمع کردن سایدبار"}
+          aria-expanded={!desktopSidebarCollapsed}
+          aria-controls="kh-account-drawer"
+          onClick={() => setDesktopSidebarCollapsed((collapsed) => !collapsed)}
+        ><span /><span /><span /></button>
         <button type="button" className={styles.drawerClose} aria-label="بستن منو" onClick={() => setMobileMenuOpen(false)}>×</button>
         <Link href="/" className={styles.brand} onClick={() => setMobileMenuOpen(false)}><span className={styles.brandIcon}>⌂</span><span><strong>خانه‌یار</strong><small>{role === "ADMIN" ? "پنل مدیریت" : "پنل کاربری"}</small></span></Link>
         <div className={styles.menuTitle}>فضای کاری</div>
@@ -86,7 +116,7 @@ export default function AccountShell({ children, userName, email, unreadMessages
       <section className={styles.workspace}>
         <header className={styles.topbar}>
           <div className={styles.topbarIdentity}>
-            <button type="button" className={styles.menuToggle} aria-label={mobileMenuOpen ? "بستن منو" : "باز کردن منو"} aria-expanded={mobileMenuOpen} aria-controls="kh-account-drawer" onClick={() => setMobileMenuOpen((open) => !open)}><span /><span /><span /></button>
+            <button type="button" className={styles.menuToggle} aria-label={mobileMenuOpen ? "بستن منو" : desktopSidebarCollapsed ? "باز کردن سایدبار" : "جمع کردن سایدبار"} aria-expanded={mobileMenuOpen || !desktopSidebarCollapsed} aria-controls="kh-account-drawer" onClick={() => { if (window.matchMedia("(max-width: 900px)").matches) setMobileMenuOpen((open) => !open); else setDesktopSidebarCollapsed((collapsed) => !collapsed); }}><span /><span /><span /></button>
             <Link href="/" className={styles.mobileBrand} aria-label="خانه‌یار، صفحه اصلی"><span className={styles.mobileBrandIcon} aria-hidden="true">⌂</span><strong>خانه‌یار</strong></Link>
             <div className={styles.desktopIdentity}><span className={styles.topbarLabel}>{role === "ADMIN" ? "مدیریت خانه‌یار" : "حساب کاربری"}</span><strong className={styles.topbarPageTitle}>{pageTitle}</strong></div>
           </div>

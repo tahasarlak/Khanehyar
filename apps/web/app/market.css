@@ -1271,3 +1271,29 @@
   }
 }
 /* END KHANEHYAR SHARED PAGE WIDTH NORMALIZATION V1 */
+
+/* Shared property card variants used by search, favorites, dashboard and owned listings. */
+.hy-property-managed { display:flex; flex-direction:column; height:100%; }
+.hy-property-managed .hy-property-link { height:auto; flex:1 1 auto; }
+.hy-property-detail-row { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:0 20px 12px; color:#8291a2; font-size:11px; }
+.hy-property-status { display:inline-flex; align-items:center; border-radius:999px; padding:5px 10px; font-weight:850; }
+.hy-property-status-published { background:#e7f6ed; color:#13764b; }
+.hy-property-status-pending { background:#fff4d8; color:#946200; }
+.hy-property-status-rejected { background:#fff0ef; color:#b42318; }
+.hy-property-status-archived { background:#eef2f6; color:#526174; }
+.hy-property-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:12px 18px 16px; border-top:1px solid #edf0f3; }
+.hy-card-action { display:inline-flex; align-items:center; justify-content:center; min-height:36px; padding:7px 12px; border:1px solid #dce6ec; border-radius:10px; background:#fff; color:#23445f; font:inherit; font-size:11px; font-weight:850; text-decoration:none; cursor:pointer; }
+.hy-card-action:hover { border-color:#b7d8cb; background:#f4faf7; }
+.hy-card-action-primary { border-color:#147d69; background:#147d69; color:#fff; }
+.hy-card-action-primary:hover { background:#116653; color:#fff; }
+.hy-card-action-danger { border-color:#f1cecb; color:#b42318; }
+.hy-card-action:disabled { opacity:.55; cursor:wait; }
+.kh-favorite-compare { display:inline-flex; align-items:center; gap:6px; color:#52657a; font-size:11px; font-weight:750; }
+.kh-favorite-compare input { accent-color:#147d69; }
+.kh-managed-listing-wrap { min-width:0; }
+.kh-listing-rejection { margin-top:10px; padding:12px 14px; border:1px solid #f4c7c3; border-radius:12px; background:#fff6f5; color:#9f2520; font-size:12px; line-height:1.8; }
+.kh-listing-rejection p { margin:4px 0 0; white-space:pre-wrap; }
+.ud-recent-property-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.kh-managed-property-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+@media(max-width:900px) { .ud-recent-property-grid,.kh-managed-property-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:640px) { .ud-recent-property-grid,.kh-managed-property-grid { grid-template-columns:minmax(0,1fr); } .hy-property-image { height:210px; } .hy-property-body { padding:17px; } .hy-property-title { min-height:0; } .hy-property-actions { padding:11px 14px 14px; } }

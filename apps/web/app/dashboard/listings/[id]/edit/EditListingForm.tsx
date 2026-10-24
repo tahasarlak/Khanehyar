@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import ListingImageUploader, { type ExistingListingImage } from "../../../../_components/ListingImageUploader";
 
 type Property = {
   id: string;
@@ -26,7 +27,7 @@ type Property = {
   furnished: boolean | null; readyToMove: boolean | null; balcony: boolean | null; terrace: boolean | null; garden: boolean | null;
   amenities: string[]; monthlyRent: string | null; deposit: string | null; allowDepositConversion: boolean;
   advertiserType: "UNSPECIFIED" | "OWNER" | "AGENT" | "BUILDER"; showExactLocation: boolean;
-  images: { id: string; url: string; sortOrder: number; altText: string | null }[];
+  images: (ExistingListingImage & { sortOrder: number })[];
 };
 
 export default function EditListingForm() {
@@ -38,7 +39,7 @@ export default function EditListingForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
-  const [selectedImagePreviews, setSelectedImagePreviews] = useState<string[]>([]);
+  const [selectedImageLabels, setSelectedImageLabels] = useState<string[]>([]);
   const [imageBusyId, setImageBusyId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -78,12 +79,6 @@ export default function EditListingForm() {
     void load();
     return () => controller.abort();
   }, [params.id]);
-
-  useEffect(() => {
-    const urls = selectedImages.map((file) => URL.createObjectURL(file));
-    setSelectedImagePreviews(urls);
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, [selectedImages]);
 
   function update<K extends keyof Property>(key: K, value: Property[K]) {
     setForm((previous) =>
@@ -141,10 +136,12 @@ export default function EditListingForm() {
       if (selectedImages.length > 0) {
         const imageData = new FormData();
         selectedImages.forEach((file) => imageData.append("images", file, file.name));
+        imageData.append("imageLabels", JSON.stringify(selectedImageLabels.map((label) => label || null)));
         const imageResponse = await fetch(`/api/my/listings/${encodeURIComponent(params.id)}/images`, { method: "POST", body: imageData, credentials: "same-origin" });
         const imageResult = await imageResponse.json() as { error?: string };
         if (!imageResponse.ok) throw new Error(imageResult.error || "اطلاعات آگهی ذخیره شد اما بارگذاری تصاویر ناموفق بود.");
         setSelectedImages([]);
+        setSelectedImageLabels([]);
       }
 
       router.push("/dashboard/listings");
@@ -167,11 +164,38 @@ export default function EditListingForm() {
     } catch (caught) { setError(caught instanceof Error ? caught.message : "حذف تصویر ناموفق بود."); }
     finally { setImageBusyId(null); }
   }
-  function chooseImages(files: FileList | null) {
-    const chosen = Array.from(files ?? []);
-    if ((form?.images.length ?? 0) + chosen.length > 8) { setError("هر آگهی حداکثر ۸ تصویر می‌تواند داشته باشد."); setSelectedImages([]); return; }
-    if (chosen.some((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 8 * 1024 * 1024)) { setError("تصاویر باید JPG، PNG یا WebP و هرکدام حداکثر ۸ مگابایت باشند."); setSelectedImages([]); return; }
-    setError(""); setSelectedImages(chosen);
+
+  async function updateImageLabel(imageId: string, label: string) {
+    if (!form || imageBusyId) return;
+    const previousImage = form.images.find((image) => image.id === imageId);
+    if (!previousImage || (previousImage.label ?? "") === label) return;
+    setImageBusyId(imageId); setError("");
+    try {
+      const response = await fetch(`/api/my/listings/${encodeURIComponent(params.id)}/images/${encodeURIComponent(imageId)}`, {
+        method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: label || null }),
+      });
+      const data = await response.json() as { error?: string; image?: { label: string | null } };
+      if (!response.ok) throw new Error(data.error || "ذخیره برچسب عکس ناموفق بود.");
+      setForm((previous) => previous ? { ...previous, images: previous.images.map((image) => image.id === imageId ? { ...image, label: data.image?.label ?? null } : image) } : previous);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "ذخیره برچسب عکس ناموفق بود."); }
+    finally { setImageBusyId(null); }
+  }
+
+  function chooseImages(files: File[]) {
+    const chosen = files;
+    if ((form?.images.length ?? 0) + selectedImages.length + chosen.length > 8) { setError("هر آگهی حداکثر ۸ تصویر می‌تواند داشته باشد."); return; }
+    if (chosen.some((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 8 * 1024 * 1024)) { setError("تصاویر باید JPG، PNG یا WebP و هرکدام حداکثر ۸ مگابایت باشند."); return; }
+    setError(""); setSelectedImages((previous) => [...previous, ...chosen]); setSelectedImageLabels((previous) => [...previous, ...chosen.map(() => "")]);
+  }
+
+  function removeSelectedImage(index: number) {
+    setSelectedImages((previous) => previous.filter((_, fileIndex) => fileIndex !== index));
+    setSelectedImageLabels((previous) => previous.filter((_, labelIndex) => labelIndex !== index));
+  }
+
+  function updateSelectedImageLabel(index: number, label: string) {
+    setSelectedImageLabels((previous) => previous.map((value, labelIndex) => labelIndex === index ? label : value));
   }
 
   if (loading) {
@@ -386,12 +410,19 @@ export default function EditListingForm() {
           <label className="md:col-span-2">امکانات (با ویرگول جدا کن)<input className={inputClass} value={form.amenities.join("، ")} onChange={(e) => update("amenities", e.target.value.split(/[،,]/).map((item) => item.trim()).filter(Boolean).slice(0,30))} /></label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={form.allowDepositConversion} onChange={(e) => update("allowDepositConversion", e.target.checked)} /> امکان تبدیل رهن و اجاره</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={form.showExactLocation} onChange={(e) => update("showExactLocation", e.target.checked)} /> نمایش نشانی دقیق</label>
-          <section className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <h2 className="font-bold text-slate-900">تصاویر آگهی</h2><p className="mt-1 text-sm text-slate-600">حداکثر ۸ تصویر JPG، PNG یا WebP؛ هر تصویر تا ۸ مگابایت.</p>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">{form.images.map((image) => <figure key={image.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white"><img src={image.url} alt={image.altText || form.title} className="h-28 w-full object-cover"/><figcaption className="flex items-center justify-between gap-2 p-2 text-xs"><span>تصویر ثبت‌شده</span><button type="button" disabled={imageBusyId === image.id} onClick={() => void deleteImage(image.id)} className="text-red-700 disabled:opacity-50">{imageBusyId === image.id ? "در حال حذف…" : "حذف"}</button></figcaption></figure>)}</div>
-            <label className="mt-4 block text-sm font-semibold">افزودن تصاویر جدید<input className="mt-2 block w-full text-sm" type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => chooseImages(e.target.files)} /></label>
-            {selectedImages.length > 0 && <p className="mt-2 text-sm text-emerald-800">{selectedImages.length.toLocaleString("fa-IR")} تصویر برای بارگذاری انتخاب شده است.</p>}
-            {selectedImagePreviews.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">{selectedImagePreviews.map((url,index)=><figure key={url} className="overflow-hidden rounded-lg border border-slate-200 bg-white"><img src={url} alt={`پیش‌نمایش تصویر ${index+1}`} className="h-28 w-full object-cover"/><figcaption className="p-2 text-xs">تصویر جدید {index+1}</figcaption></figure>)}</div>}
+          <section className="md:col-span-2">
+            <ListingImageUploader
+              selectedFiles={selectedImages}
+              selectedLabels={selectedImageLabels}
+              onFilesAdded={chooseImages}
+              onRemoveSelected={removeSelectedImage}
+              onSelectedLabelChange={updateSelectedImageLabel}
+              existingImages={form.images}
+              onDeleteExisting={(imageId) => void deleteImage(imageId)}
+              onExistingLabelChange={updateImageLabel}
+              busyExistingId={imageBusyId}
+              error={error}
+            />
           </section>
 
           {error && (

@@ -94,7 +94,7 @@ export async function POST(request: NextRequest, context: Context) {
   }
 
   const listing = await prisma.listing.findFirst({
-    where: { id, status: "PUBLISHED" },
+    where: { id, status: "PUBLISHED", deletedAt: null },
     select: { id: true, ownerId: true },
   });
 

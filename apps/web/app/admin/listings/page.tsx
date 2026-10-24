@@ -150,7 +150,7 @@ export default function AdminListingsPage() {
           </div>
 
           <div className="flex flex-wrap gap-4">
-            <Link href="/admin/messages" className="text-emerald-700">گزارش‌های پیام‌رسان</Link>
+            <Link href="/admin/deleted-listings" className="text-emerald-700">آگهی‌های حذف‌شده</Link><Link href="/admin/listing-audit" className="text-emerald-700">تاریخچه حسابرسی</Link><Link href="/admin/messages" className="text-emerald-700">گزارش‌های پیام‌رسان</Link>
             <Link href="/" className="text-emerald-700">بازگشت به خانه‌یار</Link>
           </div>
         </div>

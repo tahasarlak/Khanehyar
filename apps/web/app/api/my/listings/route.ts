@@ -16,13 +16,15 @@ export async function GET() {
   }
 
   const listings = await prisma.listing.findMany({
-    where: { ownerId: user.id },
+    where: { ownerId: user.id, deletedAt: null },
     orderBy: { createdAt: "desc" },
     take: 100,
     select: {
       id: true,
       title: true,
       city: true,
+      area: true,
+      rooms: true,
       status: true,
       listingType: true,
       propertyType: true,
@@ -47,6 +49,7 @@ export async function GET() {
       listings: listings.map((listing) => ({
         ...listing,
         price: listing.price.toString(),
+        area: listing.area.toString(),
         imageUrl: listing.images[0]?.url ?? null,
       })),
     },

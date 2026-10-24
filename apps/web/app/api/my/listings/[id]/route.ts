@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ListingStatus, Prisma } from "@prisma/client";
 import { unlink } from "node:fs/promises";
 import path from "node:path";
 import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../../../src/lib/rate-limit";
@@ -46,28 +47,49 @@ export async function DELETE(request: Request, context: Context) {
     );
   }
 
-  const imageRows = await prisma.listingImage.findMany({
-    where: { listingId: id, listing: { ownerId: user.id } },
-    select: { url: true },
-  });
-  const result = await prisma.listing.deleteMany({
-    where: { id, ownerId: user.id },
+  const deletedAt = new Date();
+  const deleteExpiresAt = new Date(deletedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const result = await prisma.$transaction(async (tx) => {
+    const listing = await tx.listing.findFirst({
+      where: { id, ownerId: user.id, deletedAt: null },
+      select: { id: true, title: true, status: true, price: true, city: true, updatedAt: true },
+    });
+    if (!listing) return false;
+
+    const changed = await tx.listing.updateMany({
+      where: { id, ownerId: user.id, deletedAt: null },
+      data: { deletedAt, deleteExpiresAt, deletedById: user.id },
+    });
+    if (changed.count !== 1) return false;
+
+    await tx.listingAuditLog.create({
+      data: {
+        listingId: id,
+        listingTitle: listing.title,
+        actorId: user.id,
+        actorRole: user.role,
+        action: "DELETED",
+        reason: "حذف توسط مالک؛ امکان بازیابی مالک تا ۷ روز",
+        before: { status: listing.status, price: listing.price.toString(), city: listing.city, updatedAt: listing.updatedAt.toISOString() },
+        after: { deletedAt: deletedAt.toISOString(), deleteExpiresAt: deleteExpiresAt.toISOString() },
+      },
+    });
+    return true;
   });
 
-  if (result.count === 0) {
+  if (!result) {
     return NextResponse.json(
       { error: "آگهی پیدا نشد یا اجازه حذف آن را ندارید." },
       { status: 404 },
     );
   }
 
-  const uploadDir = process.env.LISTING_UPLOAD_DIR || path.join(process.cwd(), ".data", "listing-uploads");
-  await Promise.all(imageRows.map(async (image) => {
-    const match = /^\/api\/listing-images\/([0-9a-f-]{36}\.(?:jpg|png|webp))$/i.exec(image.url);
-    if (match) await unlink(path.join(uploadDir, path.basename(match[1]))).catch(() => undefined);
-  }));
-
-  return NextResponse.json({ message: "آگهی با موفقیت حذف شد." });
+  return NextResponse.json({
+    message: "آگهی حذف شد. تا ۷ روز می‌توانید آن را بازیابی کنید.",
+    deletedAt: deletedAt.toISOString(),
+    deleteExpiresAt: deleteExpiresAt.toISOString(),
+  });
 }
 
 import { listingSchema } from "@real-estate/shared";
@@ -92,7 +114,7 @@ export async function GET(_request: Request, context: Context) {
   }
 
   const listing = await prisma.listing.findFirst({
-    where: { id, ownerId: user.id },
+    where: { id, ownerId: user.id, deletedAt: null },
     select: {
       id: true,
       title: true,
@@ -109,7 +131,7 @@ export async function GET(_request: Request, context: Context) {
       heatingType: true, coolingType: true, documentType: true, orientation: true, naturalLight: true,
       furnished: true, readyToMove: true, balcony: true, terrace: true, garden: true, amenities: true,
       monthlyRent: true, deposit: true, allowDepositConversion: true, advertiserType: true, showExactLocation: true,
-      images: { orderBy: { sortOrder: "asc" }, select: { id: true, url: true, sortOrder: true, altText: true } },
+      images: { orderBy: { sortOrder: "asc" }, select: { id: true, url: true, sortOrder: true, label: true, altText: true } },
       city: true,
       address: true,
       latitude: true,
@@ -259,9 +281,8 @@ export async function PATCH(request: Request, context: Context) {
 
   const data = validation.data;
 
-  const result = await prisma.listing.updateMany({
-    where: { id, ownerId: user.id },
-    data: {
+  const updateData = {
+
       title: data.title,
       description: data.description,
       listingType: data.listingType,
@@ -284,11 +305,45 @@ export async function PATCH(request: Request, context: Context) {
       terrace: data.terrace ?? null, garden: data.garden ?? null, amenities: data.amenities,
       monthlyRent: data.monthlyRent ?? null, deposit: data.deposit ?? null,
       allowDepositConversion: data.allowDepositConversion, advertiserType: data.advertiserType, showExactLocation: data.showExactLocation,
-      status: "PENDING",
-    },
+      status: ListingStatus.PENDING,
+    };
+
+  const result = await prisma.$transaction(async (tx) => {
+    const before = await tx.listing.findFirst({
+      where: { id, ownerId: user.id, deletedAt: null },
+    });
+    if (!before) return false;
+    const updated = await tx.listing.updateMany({
+      where: { id, ownerId: user.id, deletedAt: null },
+      data: updateData,
+    });
+    if (updated.count !== 1) return false;
+    const beforeValues = JSON.parse(JSON.stringify(Object.fromEntries(
+      Object.keys(updateData).map((key) => [key, (before as unknown as Record<string, unknown>)[key]]),
+    ))) as Record<string, unknown>;
+    const afterValues = JSON.parse(JSON.stringify(updateData)) as Record<string, unknown>;
+    const changedFields = Object.keys(afterValues).filter(
+      (key) => JSON.stringify(beforeValues[key]) !== JSON.stringify(afterValues[key]),
+    );
+    const beforeChanged = Object.fromEntries(changedFields.map((key) => [key, beforeValues[key]]));
+    const afterChanged = Object.fromEntries(changedFields.map((key) => [key, afterValues[key]]));
+
+    await tx.listingAuditLog.create({
+      data: {
+        listingId: id,
+        listingTitle: data.title,
+        actorId: user.id,
+        actorRole: user.role,
+        action: "UPDATED",
+        reason: "ویرایش آگهی توسط مالک؛ برای بررسی مجدد به صف بررسی بازگشت",
+        before: JSON.parse(JSON.stringify({ changedFields, values: beforeChanged })) as Prisma.InputJsonValue,
+        after: JSON.parse(JSON.stringify({ changedFields, values: afterChanged })) as Prisma.InputJsonValue,
+      },
+    });
+    return true;
   });
 
-  if (result.count === 0) {
+  if (!result) {
     return NextResponse.json(
       { error: "آگهی پیدا نشد یا متعلق به شما نیست." },
       { status: 404 },
@@ -298,6 +353,6 @@ export async function PATCH(request: Request, context: Context) {
   return NextResponse.json({
     message: "تغییرات ذخیره شد و آگهی منتظر تأیید مجدد است.",
     id,
-    status: "PENDING",
+    status: ListingStatus.PENDING,
   });
 }

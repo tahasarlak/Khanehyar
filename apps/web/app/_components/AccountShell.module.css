@@ -665,3 +665,166 @@
 
 /* KHANEHYAR DASHBOARD EXPERIENCE V3 */
 .topbarActions{display:flex;align-items:center;gap:10px;min-width:0}.topbarPageTitle{display:block;color:var(--account-navy);font-size:15px!important;font-weight:900}.notificationLink{position:relative;display:grid;width:40px;height:40px;flex:0 0 40px;place-items:center;border:1px solid var(--account-border);border-radius:13px;background:#fff;color:var(--account-navy);text-decoration:none;font-size:19px;transition:background .16s ease,border-color .16s ease,transform .16s ease}.notificationLink:hover{background:#edf7f3;border-color:#c5e4d8;transform:translateY(-1px)}.notificationBadge{position:absolute;top:-5px;right:-5px;min-width:17px;padding:1px 4px;border:2px solid #fff;border-radius:999px;background:#c9434a;color:#fff;font-size:9px;line-height:1.4;text-align:center}.sidebarBottom :global(.hy-signout-wrap){margin-top:4px}.sidebarBottom :global(.hy-signout){min-height:40px;justify-content:flex-start;border:1px solid #f0dada;border-radius:10px;color:#a33a40;background:#fff8f8}@media(max-width:640px){.topbarActions{gap:6px}.notificationLink{width:36px;height:36px;flex-basis:36px;border-radius:11px}.topbarPageTitle{max-width:38vw;font-size:13px!important}.topbar{min-height:62px}}
+
+
+/* KHANEHYAR ACCOUNT SIDEBAR TOGGLE V1: desktop collapse + tablet/mobile drawer */
+.menuToggle {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid var(--account-border);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+}
+.menuToggle span {
+  display: block;
+  width: 17px;
+  height: 2px;
+  border-radius: 4px;
+  background: var(--account-navy);
+}
+.shell {
+  grid-template-columns: 260px minmax(0, 1fr);
+  transition: grid-template-columns .2s ease;
+}
+.sidebarCollapsed {
+  grid-template-columns: 78px minmax(0, 1fr);
+}
+.sidebarCollapsed .sidebar { padding-inline: 10px; }
+.sidebarCollapsed .brand { justify-content: center; padding-inline: 0; }
+.sidebarCollapsed .brand > span:last-child,
+.sidebarCollapsed .menuTitle,
+.sidebarCollapsed .menuLink > span:nth-child(2),
+.sidebarCollapsed .sidebarBottom > a,
+.sidebarCollapsed .sidebarBottom :global(.hy-signout-wrap) { display: none; }
+.sidebarCollapsed .menuLink { justify-content: center; padding-inline: 8px; }
+.sidebarCollapsed .menuIcon { width: 28px; font-size: 21px; }
+.sidebarCollapsed .badge { position: absolute; margin: 0; transform: translate(-12px, -13px); }
+.sidebarCollapsed .menuLink { position: relative; }
+.sidebarCollapsed .sidebarBottom { padding-inline: 0; }
+.sidebarCollapsed .topbarIdentity { gap: 10px; }
+
+@media (min-width: 901px) {
+  .drawerClose, .drawerBackdrop { display: none !important; }
+  .sidebar { transform: none; visibility: visible; }
+}
+
+@media (max-width: 900px) {
+  .shell, .sidebarCollapsed { display: block; min-height: 100dvh; padding-bottom: 72px; }
+  .sidebar {
+    position: fixed;
+    z-index: 120;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(84vw, 320px);
+    height: 100dvh;
+    min-height: 0;
+    padding: 22px 16px calc(24px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    border: 0;
+    background: #fff;
+    box-shadow: -16px 0 45px rgb(16 38 62 / 16%);
+    transform: translateX(110%);
+    visibility: hidden;
+    transition: transform .22s ease, visibility .22s ease;
+  }
+  .sidebarOpen { transform: translateX(0); visibility: visible; }
+  .drawerBackdrop {
+    display: block;
+    position: fixed;
+    z-index: 110;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgb(12 31 49 / 48%);
+    backdrop-filter: blur(2px);
+  }
+  .drawerClose {
+    display: grid;
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid var(--account-border);
+    border-radius: 11px;
+    background: #fff;
+    color: #173b60;
+    font-size: 25px;
+    cursor: pointer;
+  }
+  .brand { padding: 4px 8px 22px; padding-left: 44px; }
+  .menuTitle { display: block; }
+  .menu { display: grid; gap: 6px; overflow: visible; padding: 0; }
+  .menuLink { width: 100%; min-width: 0; min-height: 48px; white-space: normal; font-size: 13px; }
+  .sidebarBottom { display: grid; }
+  .sidebarCollapsed .sidebar { padding: 22px 16px calc(24px + env(safe-area-inset-bottom)); }
+  .sidebarCollapsed .brand { justify-content: flex-start; padding-inline: 8px 44px; }
+  .sidebarCollapsed .brand > span:last-child,
+  .sidebarCollapsed .menuTitle,
+  .sidebarCollapsed .menuLink > span:nth-child(2),
+  .sidebarCollapsed .sidebarBottom > a,
+  .sidebarCollapsed .sidebarBottom :global(.hy-signout-wrap) { display: revert; }
+  .sidebarCollapsed .menuLink { justify-content: flex-start; padding-inline: 12px; }
+  .sidebarCollapsed .menuIcon { width: 25px; }
+  .sidebarCollapsed .badge { position: static; margin-right: auto; transform: none; }
+  .topbar { position: sticky; top: 0; z-index: 40; }
+  .mobileNav { display: grid; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell, .sidebar { transition: none; }
+}
+/* END KHANEHYAR ACCOUNT SIDEBAR TOGGLE V1 */
+
+
+/* KHANEHYAR SIDEBAR HAMBURGER POSITION V2: desktop control sits neatly above the sidebar; mobile keeps its header control so the drawer can be opened. */
+.sidebarMenuToggle {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  align-self: flex-start;
+  margin: 0 4px 16px;
+  border: 1px solid var(--account-border);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff 0%, #f8fbfd 100%);
+  box-shadow: 0 3px 10px rgb(20 49 78 / 7%);
+  cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, transform .16s ease;
+}
+.sidebarMenuToggle:hover {
+  background: #edf7f3;
+  border-color: #c6e4da;
+  transform: translateY(-1px);
+}
+.sidebarMenuToggle span {
+  display: block;
+  width: 17px;
+  height: 2px;
+  border-radius: 4px;
+  background: var(--account-navy);
+}
+@media (min-width: 901px) {
+  .topbar .menuToggle { display: none !important; }
+  .sidebarMenuToggle { display: flex; }
+  .sidebarCollapsed .sidebarMenuToggle { align-self: center; margin-inline: 0; }
+}
+@media (max-width: 900px) {
+  .topbar .menuToggle { display: flex; }
+  .sidebarMenuToggle { display: none !important; }
+}
+/* END KHANEHYAR SIDEBAR HAMBURGER POSITION V2 */

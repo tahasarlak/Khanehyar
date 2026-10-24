@@ -94,8 +94,10 @@ export async function PATCH(request: Request, context: Context) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      const before = await tx.listing.findFirst({ where: { id, status: "PENDING", deletedAt: null }, select: { id: true, title: true, status: true } });
+      if (!before) return false;
       const updated = await tx.listing.updateMany({
-        where: { id, status: "PENDING" },
+        where: { id, status: "PENDING", deletedAt: null },
         data: { status },
       });
 
@@ -104,14 +106,11 @@ export async function PATCH(request: Request, context: Context) {
       }
 
       await tx.listingReview.create({
-        data: {
-          listingId: id,
-          reviewerId: user.id,
-          decision: status,
-          reason: reason || null,
-        },
+        data: { listingId: id, reviewerId: user.id, decision: status, reason: reason || null },
       });
-
+      await tx.listingAuditLog.create({
+        data: { listingId: id, listingTitle: before.title, actorId: user.id, actorRole: user.role, action: "STATUS_CHANGED", reason: reason || (status === "PUBLISHED" ? "تأیید مدیر" : "رد توسط مدیر"), before: { status: before.status }, after: { status } },
+      });
       return true;
     });
 
