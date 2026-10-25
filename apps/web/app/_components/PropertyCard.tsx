@@ -12,6 +12,9 @@ export type PropertyCardData = {
   rooms: number | null;
   propertyType: string;
   listingType: string;
+  urgentSale?: boolean;
+  rentalPeriod?: string | null;
+  viewCount?: number;
   images: { url: string }[];
 };
 
@@ -58,11 +61,13 @@ export default function PropertyCard({
         <div className="hy-property-image">
           {photo ? <Image src={photo} alt={`تصویر ملک ${listing.title}`} fill unoptimized sizes="(max-width: 620px) 100vw, (max-width: 900px) 50vw, 33vw" className="hy-property-photo" /> : <div className="hy-property-placeholder"><span aria-hidden="true">⌂</span><small>خانه‌یار</small></div>}
           <span className="hy-property-badge">{listing.listingType === "RENT" ? "اجاره" : "فروش"}</span>
+          {listing.urgentSale && listing.listingType === "SALE" && <span className="hy-property-badge hy-property-badge-urgent">فروش فوری</span>}
+          {listing.listingType === "RENT" && listing.rentalPeriod && listing.rentalPeriod !== "LONG_TERM" && <span className="hy-property-badge hy-property-badge-period">{({DAILY:"روزانه",WEEKLY:"هفتگی",HOURLY:"ساعتی"} as Record<string,string>)[listing.rentalPeriod] ?? "اجاره کوتاه‌مدت"}</span>}
         </div>
         <div className="hy-property-body">
           <div className="hy-property-meta"><span>{typeNames[listing.propertyType] ?? "ملک"}</span><span aria-hidden="true">•</span><span>{listing.city}</span></div>
           <h3 className="hy-property-title">{listing.title}</h3>
-          <div className="hy-property-specs"><span>{area} متر مربع</span>{listing.rooms !== null && <span>{listing.rooms.toLocaleString("fa-IR")} اتاق</span>}</div>
+          <div className="hy-property-specs"><span>{area} متر مربع</span>{listing.rooms !== null && <span>{listing.rooms.toLocaleString("fa-IR")} اتاق</span>}{typeof listing.viewCount === "number" && <span>{listing.viewCount.toLocaleString("fa-IR")} بازدید</span>}</div>
           <div className="hy-property-bottom"><div><small>قیمت درج‌شده</small><strong>{price} {currencyNames[listing.currency] ?? listing.currency}</strong></div><span className="hy-property-arrow" aria-hidden="true">←</span></div>
         </div>
       </Link>

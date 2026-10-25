@@ -15,6 +15,8 @@ type MapPoint = {
   longitude: number;
   imageUrl: string | null;
   listingType: "SALE" | "RENT";
+  urgentSale?: boolean;
+  rentalPeriod?: string | null;
 };
 
 const TILE = 256;
@@ -66,7 +68,7 @@ export default function ListingMap({ points }: { points: MapPoint[] }) {
   const [size, setSize] = useState({ width: 900, height: 600 });
   const [zoom, setZoom] = useState(() => initialZoom(points));
   const [center, setCenter] = useState(() => {
-    if (!points.length) return { latitude: 55.751244, longitude: 37.618423 };
+    if (!points.length) return { latitude: 35.6892, longitude: 51.3890 };
     return {
       latitude: points.reduce((sum, p) => sum + p.latitude, 0) / points.length,
       longitude: points.reduce((sum, p) => sum + p.longitude, 0) / points.length,
@@ -183,7 +185,7 @@ export default function ListingMap({ points }: { points: MapPoint[] }) {
       </div>
       {selected && <div className="hy-map-selected">
         {selected.imageUrl ? <img src={selected.imageUrl || undefined} alt="" /> : <div className="hy-map-no-image">⌂</div>}
-        <div className="hy-map-selected-copy"><span>{selected.city} · {selected.listingType === "RENT" ? "اجاره" : "فروش"}</span><strong>{selected.title}</strong><b>{formatMoney(selected.price, selected.currency)}</b></div>
+        <div className="hy-map-selected-copy"><span>{selected.city} · {selected.listingType === "RENT" ? (selected.rentalPeriod === "DAILY" ? "اجاره روزانه" : selected.rentalPeriod === "WEEKLY" ? "اجاره هفتگی" : selected.rentalPeriod === "HOURLY" ? "اجاره ساعتی" : "اجاره بلندمدت") : "فروش"}{selected.urgentSale && selected.listingType === "SALE" ? " · فروش فوری" : ""}</span><strong>{selected.title}</strong><b>{formatMoney(selected.price, selected.currency)}</b></div>
         <Link href={`/listings/${selected.id}`}>جزئیات ملک <span aria-hidden="true">←</span></Link>
       </div>}
       <p className="hy-map-privacy">موقعیت‌ها در صورت غیرفعال بودن نمایش موقعیت دقیق، به‌صورت تقریبی نشان داده می‌شوند.</p>

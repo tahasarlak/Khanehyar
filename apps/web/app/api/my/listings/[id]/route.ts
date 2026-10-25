@@ -121,6 +121,7 @@ export async function GET(_request: Request, context: Context) {
       description: true,
       listingType: true,
       propertyType: true,
+      urgentSale: true, rentalPeriod: true,
       price: true,
       currency: true,
       area: true,
@@ -223,7 +224,7 @@ export async function PATCH(request: Request, context: Context) {
 
   const input = body as Record<string, unknown>;
   const allowedKeys = new Set([
-    "title", "description", "listingType", "propertyType",
+    "title", "description", "listingType", "propertyType", "urgentSale", "rentalPeriod",
     "price", "currency", "area", "rooms", "city", "address",
     "latitude", "longitude", "floor", "totalFloors", "yearBuilt", "bathrooms", "parkingSpaces",
     "hasElevator", "hasStorage", "heatingType", "coolingType", "documentType", "orientation", "naturalLight",
@@ -287,6 +288,8 @@ export async function PATCH(request: Request, context: Context) {
       description: data.description,
       listingType: data.listingType,
       propertyType: data.propertyType,
+      urgentSale: data.listingType === "SALE" && data.urgentSale,
+      rentalPeriod: data.listingType === "RENT" ? (data.rentalPeriod ?? "LONG_TERM") : null,
       price: data.price,
       currency: data.currency,
       area: data.area,
@@ -327,6 +330,10 @@ export async function PATCH(request: Request, context: Context) {
     );
     const beforeChanged = Object.fromEntries(changedFields.map((key) => [key, beforeValues[key]]));
     const afterChanged = Object.fromEntries(changedFields.map((key) => [key, afterValues[key]]));
+
+    if (Number(before.price.toString()) !== Number(updateData.price) || before.currency !== updateData.currency) {
+      await tx.listingPriceHistory.create({ data: { listingId: id, oldPrice: before.price, newPrice: new Prisma.Decimal(String(updateData.price)), oldCurrency: before.currency, newCurrency: String(updateData.currency) } });
+    }
 
     await tx.listingAuditLog.create({
       data: {

@@ -36,7 +36,7 @@ type SearchFilters = {
   sort: "newest" | "price_asc" | "price_desc" | "area_desc";
 };
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 6;
 
 const propertyTypes = [
   "APARTMENT",
@@ -251,7 +251,12 @@ async function SearchResults({
 
   return (
     <div className="hy-advanced-layout">
-      <aside className="hy-advanced-sidebar">
+      <details className="hy-advanced-sidebar hy-mobile-filter-panel">
+        <summary className="hy-mobile-filter-summary">
+          <span>فیلترهای جست‌وجو</span>
+          <span className="hy-mobile-filter-summary-hint">برای محدودکردن نتایج باز کن</span>
+        </summary>
+        <div className="hy-mobile-filter-content">
         <div className="hy-filter-header">
           <h2>فیلترهای جست‌وجو</h2>
           <Link href="/search">پاک کردن فیلترها</Link>
@@ -387,7 +392,8 @@ async function SearchResults({
             نمایش نتایج
           </button>
         </form>
-      </aside>
+        </div>
+      </details>
 
       <section className="hy-advanced-results" aria-label="نتایج جست‌وجو">
         <div className="hy-advanced-summary">

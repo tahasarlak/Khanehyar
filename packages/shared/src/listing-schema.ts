@@ -5,6 +5,8 @@ export const listingSchema = z.object({
   description: z.string().trim().min(20, "توضیحات باید حداقل ۲۰ کاراکتر باشد").max(5000),
 
   listingType: z.enum(["SALE", "RENT"]),
+  urgentSale: z.boolean().default(false),
+  rentalPeriod: z.enum(["LONG_TERM", "DAILY", "WEEKLY", "HOURLY"]).nullable().optional(),
   propertyType: z.enum([
     "APARTMENT",
     "HOUSE",
@@ -14,7 +16,7 @@ export const listingSchema = z.object({
   ]),
 
   price: z.number().positive("قیمت باید بیشتر از صفر باشد"),
-  currency: z.string().trim().length(3),
+  currency: z.string().trim().length(3).default("IRT"),
 
   area: z.number().positive("مساحت باید بیشتر از صفر باشد"),
   rooms: z.number().int().nonnegative().nullable(),

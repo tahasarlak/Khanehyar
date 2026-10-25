@@ -98,7 +98,8 @@ export async function POST(request: Request) {
     const rawInput = {
       title: String(formData.get("title") ?? ""), description: String(formData.get("description") ?? ""),
       listingType: String(formData.get("listingType") ?? ""), propertyType: String(formData.get("propertyType") ?? ""),
-      price: Number(formData.get("price")), currency: String(formData.get("currency") ?? "RUB"), area: Number(formData.get("area")),
+      urgentSale: formData.get("urgentSale") === "true", rentalPeriod: String(formData.get("rentalPeriod") ?? "LONG_TERM"),
+      price: Number(formData.get("price")), currency: String(formData.get("currency") ?? "IRT"), area: Number(formData.get("area")),
       rooms: optionalNumber("rooms"), city: String(formData.get("city") ?? ""), address: String(formData.get("address") ?? "").trim() || null,
       latitude: null, longitude: null, yearBuilt: optionalNumber("yearBuilt"), bathrooms: optionalNumber("bathrooms"), parkingSpaces: optionalNumber("parkingSpaces"),
       hasElevator: optionalBoolean("hasElevator"), hasStorage: optionalBoolean("hasStorage"),
@@ -156,6 +157,8 @@ export async function POST(request: Request) {
         description: validation.data.description,
         listingType: validation.data.listingType,
         propertyType: validation.data.propertyType,
+        urgentSale: validation.data.listingType === "SALE" && validation.data.urgentSale,
+        rentalPeriod: validation.data.listingType === "RENT" ? (validation.data.rentalPeriod ?? "LONG_TERM") : null,
         price: validation.data.price,
         currency: validation.data.currency,
         area: validation.data.area,

@@ -10,6 +10,8 @@ type Property = {
   title: string;
   description: string;
   listingType: "SALE" | "RENT";
+  urgentSale: boolean;
+  rentalPeriod: "LONG_TERM" | "DAILY" | "WEEKLY" | "HOURLY" | null;
   propertyType: "APARTMENT" | "HOUSE" | "VILLA" | "LAND" | "COMMERCIAL";
   price: string;
   currency: string;
@@ -97,6 +99,8 @@ export default function EditListingForm() {
       title: form.title,
       description: form.description,
       listingType: form.listingType,
+      urgentSale: form.urgentSale,
+      rentalPeriod: form.rentalPeriod,
       propertyType: form.propertyType,
       price: Number(form.price),
       currency: form.currency.toUpperCase(),
@@ -399,6 +403,8 @@ export default function EditListingForm() {
           <label>تعداد حمام / سرویس<input type="number" min="0" className={inputClass} value={form.bathrooms ?? ""} onChange={(e) => update("bathrooms", e.target.value === "" ? null : Number(e.target.value))} /></label>
           <label>تعداد جای پارک<input type="number" min="0" className={inputClass} value={form.parkingSpaces ?? ""} onChange={(e) => update("parkingSpaces", e.target.value === "" ? null : Number(e.target.value))} /></label>
           <label>اجاره ماهانه<input type="number" min="0.01" step="0.01" className={inputClass} value={form.monthlyRent ?? ""} onChange={(e) => update("monthlyRent", e.target.value || null)} /></label>
+          <label>مدت اجاره<select className={inputClass} value={form.rentalPeriod ?? "LONG_TERM"} onChange={(e) => update("rentalPeriod", e.target.value as NonNullable<Property["rentalPeriod"]>)}><option value="LONG_TERM">بلندمدت</option><option value="DAILY">روزانه</option><option value="WEEKLY">هفتگی</option><option value="HOURLY">ساعتی</option></select></label>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={form.urgentSale} onChange={(e) => update("urgentSale", e.target.checked)} /> فروش فوری (فقط برای فروش)</label>
           <label>ودیعه / رهن<input type="number" min="0" step="0.01" className={inputClass} value={form.deposit ?? ""} onChange={(e) => update("deposit", e.target.value || null)} /></label>
           {([ ["hasElevator","آسانسور"], ["hasStorage","انباری"], ["furnished","مبله"], ["readyToMove","آماده تحویل"], ["balcony","بالکن"], ["terrace","تراس"], ["garden","حیاط یا باغچه"] ] as const).map(([key,label]) => <label key={key}>{label}<select className={inputClass} value={form[key] === null ? "" : String(form[key])} onChange={(e) => update(key, e.target.value === "" ? null : e.target.value === "true")}><option value="">مشخص نشده</option><option value="true">دارد / بله</option><option value="false">ندارد / خیر</option></select></label>)}
           <label>گرمایش<input className={inputClass} maxLength={80} value={form.heatingType ?? ""} onChange={(e) => update("heatingType", e.target.value || null)} /></label>

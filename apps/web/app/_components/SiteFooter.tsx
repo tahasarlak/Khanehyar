@@ -12,6 +12,9 @@ export default function SiteFooter() {
         <div className={styles.column}>
           <h2>دسترسی سریع</h2>
           <Link href="/search">جست‌وجوی ملک</Link>
+          <Link href="/projects">پروژه‌های ساختمانی</Link>
+          <Link href="/stays">هتل و اقامتگاه</Link>
+          <Link href="/agents">مشاوران و املاکی‌ها</Link>
           <Link href="/search?deal=SALE">خرید ملک</Link>
           <Link href="/search?deal=RENT">اجاره ملک</Link>
           <Link href="/listings/new">ثبت آگهی</Link>
@@ -38,3 +41,5 @@ export default function SiteFooter() {
     </footer>
   );
 }
+
+

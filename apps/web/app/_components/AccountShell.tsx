@@ -13,7 +13,11 @@ const links = [
   { href: "/dashboard/favorites", label: "علاقه‌مندی‌ها", icon: "♡" },
   { href: "/dashboard/messages", label: "صندوق پیام‌ها", icon: "✉" },
   { href: "/dashboard/notifications", label: "اعلان‌ها", icon: "♧" },
-  { href: "/dashboard/settings", label: "تنظیمات", icon: "⚙" },
+  { href: "/dashboard/projects/new", label: "ثبت پروژه ساختمانی", icon: "▧" },
+  { href: "/dashboard/stays/new", label: "ثبت اقامتگاه", icon: "⌂" },
+  { href: "/dashboard/agent-profile", label: "صفحه مشاور / املاک", icon: "♙" },
+  { href: "/dashboard/wallet", label: "کیف پول", icon: "◈" },
+  { href: "/dashboard/verification", label: "احراز هویت", icon: "✓" },  { href: "/dashboard/settings", label: "تنظیمات", icon: "⚙" },
   { href: "/profile", label: "پروفایل من", icon: "◎" },
 ];
 
@@ -34,11 +38,17 @@ function getPageTitle(pathname: string, role: string) {
   if (pathname.startsWith("/dashboard/messages/") && pathname !== "/dashboard/messages") return "گفت‌وگو";
   if (pathname === "/dashboard/messages") return "صندوق پیام‌ها";
   if (pathname.startsWith("/dashboard/notifications")) return "اعلان‌ها";
-  if (pathname.startsWith("/dashboard/settings")) return "تنظیمات";
+  if (pathname === "/dashboard/wallet") return "کیف پول";
+  if (pathname.startsWith("/dashboard/verification")) return "احراز هویت";
+  if (pathname.startsWith("/dashboard/agent-profile")) return "صفحه مشاور / املاک";
+  if (pathname.startsWith("/dashboard/projects")) return "پروژه‌های ساختمانی";
+  if (pathname.startsWith("/dashboard/stays")) return "اقامتگاه‌ها";  if (pathname.startsWith("/dashboard/settings")) return "تنظیمات";
   if (pathname.startsWith("/dashboard/favorites") || pathname === "/favorites") return "علاقه‌مندی‌ها";
   if (pathname === "/profile") return "پروفایل من";
   if (pathname === "/admin/listings") return "مدیریت آگهی‌ها";
   if (pathname === "/admin/reviews") return "تاریخچه بررسی";
+  if (pathname === "/admin/verification") return "بررسی احراز هویت";
+  if (pathname === "/admin/marketplace") return "بررسی پروژه و اقامتگاه";
   if (pathname === "/admin/messages") return "گزارش‌های پیام‌رسان";
   return role === "ADMIN" ? "پنل مدیریت" : "حساب کاربری";
 }
@@ -83,6 +93,8 @@ export default function AccountShell({ children, userName, email, unreadMessages
     ...links,
     { href: "/admin/listings", label: "مدیریت آگهی‌ها", icon: "⚙" },
     { href: "/admin/reviews", label: "تاریخچه بررسی", icon: "✓" },
+    { href: "/admin/verification", label: "بررسی احراز هویت", icon: "✓" },
+    { href: "/admin/marketplace", label: "بررسی پروژه و اقامتگاه", icon: "▧" },
     { href: "/admin/messages", label: "گزارش‌های پیام‌رسان", icon: "⚑" },
   ] : links;
 
@@ -138,3 +150,5 @@ export default function AccountShell({ children, userName, email, unreadMessages
     </div>
   );
 }
+
+

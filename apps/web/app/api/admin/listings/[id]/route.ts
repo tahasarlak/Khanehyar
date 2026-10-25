@@ -98,7 +98,7 @@ export async function PATCH(request: Request, context: Context) {
       if (!before) return false;
       const updated = await tx.listing.updateMany({
         where: { id, status: "PENDING", deletedAt: null },
-        data: { status },
+        data: { status, publishedAt: status === "PUBLISHED" ? new Date() : null },
       });
 
       if (updated.count === 0) {

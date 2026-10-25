@@ -3,6 +3,8 @@ import Image from "next/image";
 import type { Metadata } from "next";
 
 import InquiryForm from "./InquiryForm";
+import PriceOfferForm from "./PriceOfferForm";
+import ListingViewTracker from "./ListingViewTracker";
 import PrintListingButton from "./PrintListingButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -146,6 +148,9 @@ function imageIsSafe(url: string) {
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("fa-IR", { dateStyle: "long" }).format(date);
 }
+function formatDateTime(date: Date) {
+  return new Intl.DateTimeFormat("fa-IR", { dateStyle: "long", timeStyle: "short" }).format(date);
+}
 
 export default async function ListingDetailPage({ params }: Props) {
   const { id } = await params;
@@ -158,6 +163,11 @@ export default async function ListingDetailPage({ params }: Props) {
       description: true,
       listingType: true,
       propertyType: true,
+      urgentSale: true,
+      rentalPeriod: true,
+      viewCount: true,
+      publishedAt: true,
+      priceHistory: { orderBy: { changedAt: "desc" }, take: 10, select: { oldPrice: true, newPrice: true, oldCurrency: true, newCurrency: true, changedAt: true } },
       price: true,
       currency: true,
       area: true,
@@ -213,8 +223,17 @@ export default async function ListingDetailPage({ params }: Props) {
   const pricePerMeter = !isRent && areaValue > 0 && Number.isFinite(priceValue)
     ? formatNumber(priceValue / areaValue)
     : null;
-  const publishedDate = formatDate(listing.createdAt);
+  const publishedDate = formatDateTime(listing.publishedAt ?? listing.createdAt);
   const updatedDate = formatDate(listing.updatedAt);
+  const effectivePrice = isRent ? Number((listing.monthlyRent ?? listing.price).toString()) : priceValue;
+  const comparableListings = await prisma.listing.findMany({
+    where: { id: { not: listing.id }, status: "PUBLISHED", deletedAt: null, city: listing.city, propertyType: listing.propertyType, listingType: listing.listingType, currency: listing.currency, area: { gte: areaValue * 0.7, lte: areaValue * 1.3 } },
+    take: 300, select: { price: true, monthlyRent: true, area: true },
+  });
+  const comparableRates = comparableListings.map((item) => ({ rate: Number((isRent ? (item.monthlyRent ?? item.price) : item.price).toString()) / Number(item.area.toString()), price: Number((isRent ? (item.monthlyRent ?? item.price) : item.price).toString()) })).filter((item) => Number.isFinite(item.rate) && item.rate > 0);
+  const averagePricePerMeter = comparableRates.length >= 5 ? comparableRates.reduce((sum, item) => sum + item.rate, 0) / comparableRates.length : null;
+  const isBelowAverage = averagePricePerMeter !== null && areaValue > 0 && effectivePrice / areaValue < averagePricePerMeter * 0.9;
+  const averageDifferencePercent = averagePricePerMeter && areaValue > 0 ? Math.round((1 - (effectivePrice / areaValue) / averagePricePerMeter) * 100) : null;
   const mapUrl = listing.showExactLocation && listing.latitude !== null && listing.longitude !== null
     ? `https://www.openstreetmap.org/export/embed.html?bbox=${listing.longitude - 0.008}%2C${listing.latitude - 0.005}%2C${listing.longitude + 0.008}%2C${listing.latitude + 0.005}&layer=mapnik&marker=${listing.latitude}%2C${listing.longitude}`
     : null;
@@ -281,7 +300,7 @@ export default async function ListingDetailPage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org", "@type": "RealEstateListing", name: listing.title,
         description: listing.description?.trim() || listing.title,
-        datePosted: listing.createdAt.toISOString(), dateModified: listing.updatedAt.toISOString(),
+        datePosted: (listing.publishedAt ?? listing.createdAt).toISOString(), dateModified: listing.updatedAt.toISOString(),
         url: getSiteOrigin() ? `${getSiteOrigin()}/listings/${encodeURIComponent(listing.id)}` : undefined,
         image: pictures,
         address: { "@type": "PostalAddress", addressLocality: listing.city, streetAddress: listing.showExactLocation ? (listing.address || undefined) : undefined },
@@ -301,6 +320,7 @@ export default async function ListingDetailPage({ params }: Props) {
         floorSize: { "@type": "QuantitativeValue", value: areaValue, unitCode: "MTK" },
         numberOfRooms: listing.rooms ?? undefined
       }).replace(/<\//g, "<\\/") }} />
+      <ListingViewTracker listingId={listing.id} initialCount={listing.viewCount} />
       <main className="hd-container">
         <nav className="hd-breadcrumb" aria-label="مسیر صفحه">
           <Link href="/">خانه‌یار</Link><span>/</span><Link href="/search">آگهی‌های املاک</Link><span>/</span><span aria-current="page">{propertyName}</span>
@@ -309,9 +329,10 @@ export default async function ListingDetailPage({ params }: Props) {
         <div className="hd-heading">
           <div className="hd-heading-copy">
             <div className="hd-tags"><span>{isRent ? "برای اجاره" : "برای فروش"}</span><span>{propertyName}</span></div>
+            <div className="hd-market-badges">{listing.urgentSale && !isRent && <span className="hd-market-badge is-urgent">فروش فوری</span>}{isBelowAverage && <span className="hd-market-badge">حدود {Math.max(0, averageDifferencePercent ?? 0).toLocaleString("fa-IR")}٪ پایین‌تر از میانگین آگهی‌های مشابه</span>}{isRent && listing.rentalPeriod && <span className="hd-market-badge">{({LONG_TERM:"اجاره بلندمدت",DAILY:"اجاره روزانه",WEEKLY:"اجاره هفتگی",HOURLY:"اجاره ساعتی"} as const)[listing.rentalPeriod]}</span>}</div>
             <h1>{listing.title}</h1>
             <p className="hd-address-line"><span aria-hidden="true">⌖</span>{listing.city}{listing.showExactLocation && listing.address ? `، ${listing.address}` : ""}{listing.address && !listing.showExactLocation ? " · نشانی دقیق پس از هماهنگی" : ""}</p>
-            <div className="hd-heading-meta"><span>کد آگهی: {listing.id.slice(-8).toLocaleUpperCase()}</span><span>ثبت‌شده در {publishedDate}</span></div>
+            <div className="hd-heading-meta"><span>کد آگهی: {listing.id.slice(-8).toLocaleUpperCase()}</span><span>منتشرشده در {publishedDate}</span><ListingViewTracker listingId={listing.id} initialCount={listing.viewCount} /></div>
           </div>
           <div className="hd-favorite-actions"><ShareListing /><PrintListingButton /><FavoriteButton listingId={listing.id} /></div>
         </div>
@@ -361,6 +382,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <p className="hd-owner-disclaimer">اطلاعات بالا از حساب کاربری نمایش داده شده است و به‌تنهایی به معنی احراز هویت یا تأیید مالکیت ملک نیست.</p>
             </section>
 
+            {listing.priceHistory.length > 0 && <section className="hd-panel hd-price-history"><div className="hd-section-heading"><span className="hd-section-icon" aria-hidden="true">↕</span><div><h2>تاریخچه تغییر قیمت</h2><p>تغییرات ثبت‌شدهٔ قیمت این آگهی</p></div></div><ol>{listing.priceHistory.map((item) => <li key={`${item.changedAt.toISOString()}-${item.newPrice.toString()}`}>{formatDate(item.changedAt)}: از {formatNumber(item.oldPrice.toString())} {currencyNames[item.oldCurrency] ?? item.oldCurrency} به {formatNumber(item.newPrice.toString())} {currencyNames[item.newCurrency] ?? item.newCurrency}</li>)}</ol></section>}
             <section className="hd-panel hd-last-updated">
               <span aria-hidden="true">◷</span><div><strong>آخرین به‌روزرسانی اطلاعات</strong><p>{updatedDate}</p></div>
             </section>
@@ -371,6 +393,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <div className="hd-price-label">{isRent ? "مبلغ درج‌شده در آگهی اجاره" : "قیمت پیشنهادی فروش"}</div>
               <div className="hd-price" dir="auto">{price}<span>{currency}</span></div>
               {pricePerMeter && <div className="hd-price-per-meter">حدود {pricePerMeter} {currency} به‌ازای هر متر مربع</div>}
+              {averagePricePerMeter !== null && <div className="hd-market-panel"><strong>مقایسه با آگهی‌های مشابه</strong><p>{isRent ? "میانگین اجارهٔ ماهانه به‌ازای هر متر" : "میانگین قیمت هر متر"} در آگهی‌های منتشرشدهٔ {listing.city} با نوع ملک و واحد پول مشابه، در محدودهٔ متراژ نزدیک، حدود {formatNumber(averagePricePerMeter)} {currency} است.</p><small>بر اساس {comparableRates.length.toLocaleString("fa-IR")} آگهی؛ این عدد برآورد آماری آگهی‌هاست و کارشناسی رسمی قیمت نیست.</small></div>}
               <div className="hd-price-divider" />
               {isRent && listing.monthlyRent !== null && <div className="hd-info-row"><span>اجاره ماهانه</span><strong>{formatNumber(listing.monthlyRent.toString())} {currency}</strong></div>}
               {isRent && listing.deposit !== null && <div className="hd-info-row"><span>ودیعه</span><strong>{formatNumber(listing.deposit.toString())} {currency}</strong></div>}
@@ -381,6 +404,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <div className="hd-info-row"><span>تاریخ ثبت</span><strong>{publishedDate}</strong></div>
               <div className="hd-price-note">مبلغ بر اساس اطلاعات ثبت‌شده توسط آگهی‌دهنده است. پیش از توافق، قیمت نهایی، مدارک و شرایط معامله را بررسی کنید.</div>
               <div id="hd-contact"><InquiryForm listingId={listing.id} /></div>
+              <PriceOfferForm listingId={listing.id} currency={listing.currency} currentPrice={effectivePrice} isRent={isRent} />
               <a href="#hd-contact" className="hd-action-primary hd-visit-link">درخواست بازدید یا اطلاعات بیشتر</a>
               <Link href="/search" className="hd-action-secondary">مشاهده همه املاک</Link>
             </div>
