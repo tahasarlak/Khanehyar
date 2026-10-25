@@ -7,13 +7,14 @@ import { prisma } from "../../../src/lib/prisma";
 import { getCurrentUser } from "../../../src/lib/auth";
 import { listingSchema } from "@real-estate/shared";
 
-const imageExtensions: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-async function hasValidImageSignature(file: File) {
+type ImageFormat = { mime: "image/jpeg" | "image/png" | "image/webp"; extension: "jpg" | "png" | "webp" };
+async function detectImageFormat(file: File): Promise<ImageFormat | null> {
   const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
-  if (file.type === "image/jpeg") return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
-  if (file.type === "image/png") return [0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a].every((value,index) => bytes[index] === value);
-  if (file.type === "image/webp") return String.fromCharCode(...bytes.slice(0,4)) === "RIFF" && String.fromCharCode(...bytes.slice(8,12)) === "WEBP";
-  return false;
+  // Detect the real format from the file signature; MIME type and filename are user-controlled.
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return { mime: "image/jpeg", extension: "jpg" };
+  if (bytes.length >= 8 && [0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a].every((value,index) => bytes[index] === value)) return { mime: "image/png", extension: "png" };
+  if (bytes.length >= 12 && String.fromCharCode(...bytes.slice(0,4)) === "RIFF" && String.fromCharCode(...bytes.slice(8,12)) === "WEBP") return { mime: "image/webp", extension: "webp" };
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -70,8 +71,14 @@ export async function POST(request: Request) {
     const imageEntries = formData.getAll("images");
     const imageFiles = imageEntries.filter((entry): entry is File => entry instanceof File && entry.size > 0);
     if (imageFiles.length > 8) return NextResponse.json({ error: "حداکثر ۸ تصویر می‌توانی برای هر آگهی ثبت کنی." }, { status: 400 });
-    if (imageFiles.some((file) => !imageExtensions[file.type] || file.size > 8 * 1024 * 1024)) return NextResponse.json({ error: "تصاویر باید JPG، PNG یا WebP و هرکدام حداکثر ۸ مگابایت باشند." }, { status: 400 });
-    for (const file of imageFiles) if (!(await hasValidImageSignature(file))) return NextResponse.json({ error: "محتوای یکی از تصاویر معتبر نیست." }, { status: 400 });
+    if (imageFiles.some((file) => file.size > 8 * 1024 * 1024)) return NextResponse.json({ error: "حجم هر تصویر باید حداکثر ۸ مگابایت باشد." }, { status: 400 });
+    const imageFormats = await Promise.all(imageFiles.map(detectImageFormat));
+    const invalidImageIndex = imageFormats.findIndex((format) => format === null);
+    if (invalidImageIndex !== -1) {
+      console.warn("Listing image upload rejected: unsupported image signature", { declaredType: imageFiles[invalidImageIndex].type, size: imageFiles[invalidImageIndex].size });
+      return NextResponse.json({ error: "فرمت واقعی یکی از تصاویر قابل تشخیص نیست. لطفاً تصویر را به JPG، PNG یا WebP تبدیل و دوباره انتخاب کن." }, { status: 400 });
+    }
+    imageFormats.forEach((format, index) => { if (format && imageFiles[index].type && imageFiles[index].type !== format.mime) console.info("Listing image MIME normalized from file signature", { declaredType: imageFiles[index].type, detectedType: format.mime }); });
     if (imageEntries.some((entry) => typeof entry === "string" && entry.trim() !== "")) return NextResponse.json({ error: "فایل تصویر نامعتبر است." }, { status: 400 });
     const allowedImageLabels = new Set(["نمای بیرونی", "پذیرایی", "آشپزخانه", "اتاق خواب", "سرویس بهداشتی", "حمام", "بالکن و تراس", "حیاط و باغ", "منظره", "نقشهٔ ملک", "سایر"]);
     let imageLabels: (string | null)[] = imageFiles.map(() => null);
@@ -182,7 +189,7 @@ export async function POST(request: Request) {
       const uploadDir = process.env.LISTING_UPLOAD_DIR || path.join(process.cwd(), ".data", "listing-uploads");
       await mkdir(uploadDir, { recursive: true });
       for (const [index, file] of imageFiles.entries()) {
-        const extension = imageExtensions[file.type]; const imageId = randomUUID(); const filename = `${imageId}.${extension}`;
+        const extension = imageFormats[index]!.extension; const imageId = randomUUID(); const filename = `${imageId}.${extension}`;
         const diskPath = path.join(uploadDir, filename);
         await writeFile(diskPath, Buffer.from(await file.arrayBuffer()), { flag: "wx" }); storedFilePaths.push(diskPath);
         await prisma.listingImage.create({ data: { id: imageId, url: `/api/listing-images/${filename}`, sortOrder: index, label: imageLabels[index] ?? null, altText: validation.data.title.slice(0, 200), listingId: listing.id } });

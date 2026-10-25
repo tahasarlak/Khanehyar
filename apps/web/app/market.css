@@ -1297,3 +1297,5 @@
 .kh-managed-property-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
 @media(max-width:900px) { .ud-recent-property-grid,.kh-managed-property-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:640px) { .ud-recent-property-grid,.kh-managed-property-grid { grid-template-columns:minmax(0,1fr); } .hy-property-image { height:210px; } .hy-property-body { padding:17px; } .hy-property-title { min-height:0; } .hy-property-actions { padding:11px 14px 14px; } }
+
+.hy-map-entry{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 14px;border:1px solid #dbe7e1;border-radius:12px;background:#fff;color:#176b57;font-weight:700;text-decoration:none}.hy-map-entry:hover{background:#f0fdf4}

@@ -4,7 +4,9 @@ import { Suspense } from "react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/src/lib/prisma";
 import PropertyCard from "../_components/PropertyCard";
+import ListingMap from "../_components/ListingMap";
 import "../market.css";
+import "./map-view.css";
 
 type RawValue = string | string[] | undefined;
 
@@ -19,6 +21,7 @@ type SearchParams = {
   rooms?: RawValue;
   sort?: RawValue;
   page?: RawValue;
+  view?: RawValue;
 };
 
 type SearchFilters = {
@@ -205,6 +208,7 @@ async function SearchResults({
   const filters = parseFilters(params);
   const where = buildWhere(filters);
 
+  const view = single(params.view) === "map" ? "map" : "list";
   const requestedPage = parsePage(params.page);
   const total = await prisma.listing.count({ where });
 
@@ -214,8 +218,8 @@ async function SearchResults({
   const listings = await prisma.listing.findMany({
     where,
     orderBy: sortBy(filters.sort),
-    skip: (currentPage - 1) * PAGE_SIZE,
-    take: PAGE_SIZE,
+    skip: view === "map" ? 0 : (currentPage - 1) * PAGE_SIZE,
+    take: view === "map" ? 500 : PAGE_SIZE,
     select: {
       id: true,
       title: true,
@@ -226,6 +230,9 @@ async function SearchResults({
       rooms: true,
       propertyType: true,
       listingType: true,
+      latitude: true,
+      longitude: true,
+      showExactLocation: true,
       images: {
         take: 1,
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
@@ -233,6 +240,8 @@ async function SearchResults({
       },
     },
   });
+
+  const mappedListings = listings.filter((listing) => listing.latitude !== null && listing.longitude !== null);
 
   const firstResult =
     total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
@@ -256,7 +265,7 @@ async function SearchResults({
               type="search"
               defaultValue={filters.city}
               maxLength={100}
-              placeholder="مثلاً مسکو"
+              placeholder="مثلاً تهران"
             />
           </label>
 
@@ -388,13 +397,26 @@ async function SearchResults({
               {total.toLocaleString("fa-IR")} آگهی مطابق فیلترها
             </p>
           </div>
-          <span className="hy-results-range">
-            نمایش {firstResult.toLocaleString("fa-IR")} تا{" "}
-            {lastResult.toLocaleString("fa-IR")}
-          </span>
+          <div className="hy-results-actions">
+            <span className="hy-results-range">
+              {view === "map" ? "نمایش همهٔ نتایج روی نقشه" : <>نمایش {firstResult.toLocaleString("fa-IR")} تا {lastResult.toLocaleString("fa-IR")}</>}
+            </span>
+            <div className="hy-view-switch" aria-label="حالت نمایش نتایج">
+              <Link href={pageUrl(filters, 1)} aria-current={view === "list" ? "page" : undefined} className={view === "list" ? "is-active" : ""}>فهرست</Link>
+              <Link href={`${pageUrl(filters, 1)}${pageUrl(filters, 1).includes("?") ? "&" : "?"}view=map`} aria-current={view === "map" ? "page" : undefined} className={view === "map" ? "is-active" : ""}>نقشه</Link>
+            </div>
+          </div>
         </div>
 
-        {listings.length ? (
+        {view === "map" ? (
+          mappedListings.length ? <ListingMap points={mappedListings.map((listing) => {
+            // Never send exact coordinates to the public map unless the owner explicitly enabled them.
+            const hash = [...listing.id].reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 7);
+            const offsetLat = listing.showExactLocation ? 0 : (((hash % 1000) / 1000) - 0.5) * 0.012;
+            const offsetLon = listing.showExactLocation ? 0 : ((((hash >>> 4) % 1000) / 1000) - 0.5) * 0.016;
+            return { id: listing.id, title: listing.title, city: listing.city, price: String(listing.price), currency: listing.currency, latitude: listing.latitude! + offsetLat, longitude: listing.longitude! + offsetLon, imageUrl: listing.images[0]?.url ?? null, listingType: listing.listingType };
+          })} /> : <div className="hy-empty"><h3>برای این فیلترها مختصاتی ثبت نشده</h3><p>فهرست را ببین یا فیلترها را تغییر بده.</p><Link href={pageUrl(filters, 1)} className="hy-button hy-button-primary">نمایش فهرست</Link></div>
+        ) : listings.length ? (
           <div className="hy-advanced-property-grid">
             {listings.map((listing) => (
               <PropertyCard key={listing.id} listing={listing} />
@@ -414,7 +436,7 @@ async function SearchResults({
           </div>
         )}
 
-        {totalPages > 1 && (
+        {view === "list" && totalPages > 1 && (
           <nav
             className="hy-pagination"
             aria-label="صفحه‌بندی آگهی‌ها"

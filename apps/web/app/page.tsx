@@ -116,6 +116,7 @@ export default async function HomePage() {
                 <span>✓ جست‌وجوی آسان</span>
                 <span>✓ ثبت آگهی آنلاین</span>
               </div>
+              <Link href="/search?view=map" className="hy-map-entry">⌖ مشاهدهٔ آگهی‌ها روی نقشه</Link>
             </div>
 
             <div className="hy-hero-visual" aria-hidden="true">
