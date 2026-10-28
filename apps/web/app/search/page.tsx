@@ -219,7 +219,7 @@ async function SearchResults({
     where,
     orderBy: sortBy(filters.sort),
     skip: view === "map" ? 0 : (currentPage - 1) * PAGE_SIZE,
-    take: view === "map" ? 500 : PAGE_SIZE,
+    take: view === "map" ? Math.min(total, 3000) : PAGE_SIZE,
     select: {
       id: true,
       title: true,
@@ -233,6 +233,7 @@ async function SearchResults({
       latitude: true,
       longitude: true,
       showExactLocation: true,
+      showOnMap: true,
       images: {
         take: 1,
         orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
@@ -241,7 +242,35 @@ async function SearchResults({
     },
   });
 
-  const mappedListings = listings.filter((listing) => listing.latitude !== null && listing.longitude !== null);
+  const mappedListings = listings.filter((listing) => listing.showOnMap);
+  const cityCoordinates: Record<string, { latitude: number; longitude: number }> = {
+    "تهران": { latitude: 35.6892, longitude: 51.3890 }, "مشهد": { latitude: 36.2972, longitude: 59.6067 },
+    "اصفهان": { latitude: 32.6546, longitude: 51.6680 }, "شیراز": { latitude: 29.5918, longitude: 52.5837 },
+    "تبریز": { latitude: 38.0962, longitude: 46.2738 }, "کرج": { latitude: 35.8400, longitude: 50.9391 },
+    "قم": { latitude: 34.6416, longitude: 50.8746 }, "اهواز": { latitude: 31.3183, longitude: 48.6706 },
+    "رشت": { latitude: 37.2808, longitude: 49.5832 }, "کرمان": { latitude: 30.2839, longitude: 57.0834 },
+    "یزد": { latitude: 31.8974, longitude: 54.3569 }, "قزوین": { latitude: 36.2688, longitude: 50.0041 },
+    "ساری": { latitude: 36.5633, longitude: 53.0601 }, "اراک": { latitude: 34.0917, longitude: 49.6892 }, "همدان": { latitude: 34.7992, longitude: 48.5146 },
+    "کرمانشاه": { latitude: 34.3142, longitude: 47.0650 }, "سنندج": { latitude: 35.3219, longitude: 46.9862 },
+    "زاهدان": { latitude: 29.4963, longitude: 60.8629 }, "گرگان": { latitude: 36.8456, longitude: 54.4393 },
+    "بجنورد": { latitude: 37.4747, longitude: 57.3290 }, "بیرجند": { latitude: 32.8663, longitude: 59.2211 },
+    "کاشان": { latitude: 33.9850, longitude: 51.4100 }, "بوشهر": { latitude: 28.9234, longitude: 50.8203 },
+    "خرم‌آباد": { latitude: 33.4878, longitude: 48.3558 }, "خرم آباد": { latitude: 33.4878, longitude: 48.3558 },
+    "ایلام": { latitude: 33.6374, longitude: 46.4227 }, "زنجان": { latitude: 36.6736, longitude: 48.4787 },
+    "اردبیل": { latitude: 38.2498, longitude: 48.2933 }, "ارومیه": { latitude: 37.5527, longitude: 45.0761 },
+    "سمنان": { latitude: 35.5769, longitude: 53.3950 }, "شهرکرد": { latitude: 32.3256, longitude: 50.8644 },
+    "یاسوج": { latitude: 30.6682, longitude: 51.5879 }, "مراغه": { latitude: 37.3892, longitude: 46.2374 },
+    "کیش": { latitude: 26.5320, longitude: 53.9850 }, "قشم": { latitude: 26.9581, longitude: 56.2719 },
+    "پردیس": { latitude: 35.7410, longitude: 51.8200 }, "اندیشه": { latitude: 35.6800, longitude: 51.0200 },
+    "شهریار": { latitude: 35.6596, longitude: 51.0590 }, "اسلامشهر": { latitude: 35.5446, longitude: 51.2300 },
+    "پرند": { latitude: 35.4710, longitude: 51.0400 }, "پاکدشت": { latitude: 35.4740, longitude: 51.6860 },
+    "دزفول": { latitude: 32.3831, longitude: 48.4236 }, "آبادان": { latitude: 30.3473, longitude: 48.2934 },
+    "مرودشت": { latitude: 29.8742, longitude: 52.8025 }, "بابل": { latitude: 36.5387, longitude: 52.6765 },
+    "آمل": { latitude: 36.4696, longitude: 52.3507 }, "لاهیجان": { latitude: 37.2072, longitude: 50.0039 },
+    "نیشابور": { latitude: 36.2133, longitude: 58.7958 }, "سبزوار": { latitude: 36.2126, longitude: 57.6819 },
+    "رفسنجان": { latitude: 30.4067, longitude: 55.9939 }, "سیرجان": { latitude: 29.4514, longitude: 55.6814 },
+    "بندر انزلی": { latitude: 37.4727, longitude: 49.4622 }, "بندرعباس": { latitude: 27.1832, longitude: 56.2666 },
+  };
 
   const firstResult =
     total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
@@ -416,12 +445,17 @@ async function SearchResults({
 
         {view === "map" ? (
           mappedListings.length ? <ListingMap points={mappedListings.map((listing) => {
-            // Never send exact coordinates to the public map unless the owner explicitly enabled them.
+            // Public maps use exact coordinates only when the owner has explicitly enabled them.
+            const base = listing.latitude !== null && listing.longitude !== null
+              ? { latitude: listing.latitude, longitude: listing.longitude }
+              : cityCoordinates[listing.city] ?? { latitude: 32.4279, longitude: 53.6880 };
             const hash = [...listing.id].reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 7);
-            const offsetLat = listing.showExactLocation ? 0 : (((hash % 1000) / 1000) - 0.5) * 0.012;
-            const offsetLon = listing.showExactLocation ? 0 : ((((hash >>> 4) % 1000) / 1000) - 0.5) * 0.016;
-            return { id: listing.id, title: listing.title, city: listing.city, price: String(listing.price), currency: listing.currency, latitude: listing.latitude! + offsetLat, longitude: listing.longitude! + offsetLon, imageUrl: listing.images[0]?.url ?? null, listingType: listing.listingType };
-          })} /> : <div className="hy-empty"><h3>برای این فیلترها مختصاتی ثبت نشده</h3><p>فهرست را ببین یا فیلترها را تغییر بده.</p><Link href={pageUrl(filters, 1)} className="hy-button hy-button-primary">نمایش فهرست</Link></div>
+            const hasExactCoordinates = listing.latitude !== null && listing.longitude !== null;
+            const exactAllowed = listing.showExactLocation && hasExactCoordinates;
+            const offsetLat = exactAllowed ? 0 : (((hash % 1000) / 1000) - 0.5) * (hasExactCoordinates ? 0.012 : 0.04);
+            const offsetLon = exactAllowed ? 0 : ((((hash >>> 4) % 1000) / 1000) - 0.5) * (hasExactCoordinates ? 0.016 : 0.05);
+            return { id: listing.id, title: listing.title, city: listing.city, price: String(listing.price), currency: listing.currency, latitude: base.latitude + offsetLat, longitude: base.longitude + offsetLon, imageUrl: listing.images[0]?.url ?? null, listingType: listing.listingType };
+          })} /> : <div className="hy-empty"><h3>آگهی قابل نمایش روی نقشه وجود ندارد</h3><p>ممکن است آگهی‌دهنده نمایش روی نقشه را غیرفعال کرده باشد یا شهر ملک هنوز نقطهٔ مرجع نداشته باشد.</p><Link href={pageUrl(filters, 1)} className="hy-button hy-button-primary">نمایش فهرست</Link></div>
         ) : listings.length ? (
           <div className="hy-advanced-property-grid">
             {listings.map((listing) => (

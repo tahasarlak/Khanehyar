@@ -134,18 +134,52 @@ export default function PropertyGallery({ title, images }: Props) {
   </>;
 }
 
-export function ShareListing() {
+export function ShareListing({ title }: { title: string }) {
+  const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  async function share() {
+  const [status, setStatus] = useState("");
+  const [currentUrl, setCurrentUrl] = useState("");
+  useEffect(() => { setCurrentUrl(window.location.href); }, []);
+  const encodedUrl = encodeURIComponent(currentUrl);
+  const encodedText = encodeURIComponent(`${title} | خانه‌یار`);
+  const shareLinks = [
+    { name: "تلگرام", href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`, mark: "TG" },
+    { name: "واتساپ", href: `https://wa.me/?text=${encodedText}%20${encodedUrl}`, mark: "WA" },
+    { name: "فیسبوک", href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`, mark: "f" },
+    { name: "ایکس", href: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`, mark: "X" },
+    { name: "لینکدین", href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`, mark: "in" },
+    { name: "ایمیل", href: `mailto:?subject=${encodedText}&body=${encodedUrl}`, mark: "@" },
+  ];
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true); setStatus("لینک آگهی کپی شد.");
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch { setStatus("کپی خودکار ممکن نیست؛ آدرس صفحه را از نوار مرورگر کپی کن."); }
+  }
+  async function nativeShare() {
     try {
       if (navigator.share) {
-        await navigator.share({ title: document.title, url: window.location.href });
-        return;
+        await navigator.share({ title, text: `${title} | خانه‌یار`, url: window.location.href });
+        setOpen(false);
+      } else {
+        await copyLink();
       }
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2200);
-    } catch { setCopied(false); }
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) setStatus("اشتراک‌گذاری انجام نشد.");
+    }
   }
-  return <button type="button" onClick={share} className="hd-share" aria-label="اشتراک‌گذاری لینک آگهی">{copied ? "✓ لینک کپی شد" : "↗ اشتراک‌گذاری"}</button>;
+  return <div className="hd-share-control">
+    <button type="button" onClick={() => { setOpen((value) => !value); setStatus(""); }} className="hd-icon-action hd-share" aria-label="اشتراک‌گذاری آگهی" title="اشتراک‌گذاری آگهی" aria-expanded={open} aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/></svg>
+    </button>
+    {open && <div className="hd-share-popover" role="dialog" aria-label="روش‌های اشتراک‌گذاری">
+      <div className="hd-share-popover-head"><strong>اشتراک‌گذاری آگهی</strong><button type="button" onClick={() => setOpen(false)} aria-label="بستن">×</button></div>
+      <button type="button" className="hd-share-native" onClick={() => void nativeShare()}><span aria-hidden="true">↗</span> برنامه‌های گوشی و سایر روش‌ها</button>
+      <div className="hd-share-services">{shareLinks.map((item) => <a key={item.name} href={item.href} target={item.name === "ایمیل" ? undefined : "_blank"} rel="noreferrer" aria-label={`اشتراک‌گذاری در ${item.name}`}><span>{item.mark}</span><small>{item.name}</small></a>)}</div>
+      <button type="button" className="hd-share-copy" onClick={() => void copyLink()}><span aria-hidden="true">{copied ? "✓" : "▢"}</span>{copied ? "کپی شد" : "کپی لینک آگهی"}</button>
+      <p className="hd-share-note">در گوشی، گزینهٔ اشتراک‌گذاری سیستم می‌تواند پیام‌رسان‌های نصب‌شده از جمله برنامه‌های ایرانی را نمایش دهد.</p>
+      {status && <p className="hd-share-status" role="status">{status}</p>}
+    </div>}
+  </div>;
 }

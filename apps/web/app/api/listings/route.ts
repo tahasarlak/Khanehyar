@@ -109,7 +109,7 @@ export async function POST(request: Request) {
       balcony: optionalBoolean("balcony"), terrace: optionalBoolean("terrace"), garden: optionalBoolean("garden"),
       amenities: formData.getAll("amenities").filter((value): value is string => typeof value === "string"),
       monthlyRent: optionalNumber("monthlyRent"), deposit: optionalNumber("deposit"), allowDepositConversion: formData.get("allowDepositConversion") === "true",
-      advertiserType: String(formData.get("advertiserType") ?? "UNSPECIFIED"), showExactLocation: formData.get("showExactLocation") === "true", imageUrls: [],
+      advertiserType: String(formData.get("advertiserType") ?? "UNSPECIFIED"), showExactLocation: formData.get("showExactLocation") === "true", showOnMap: formData.has("showOnMap") ? formData.getAll("showOnMap").includes("true") : true, imageUrls: [],
     };
 
     const validation = listingSchema.safeParse(rawInput);
@@ -175,7 +175,7 @@ export async function POST(request: Request) {
         furnished: validation.data.furnished ?? null, readyToMove: validation.data.readyToMove ?? null, balcony: validation.data.balcony ?? null,
         terrace: validation.data.terrace ?? null, garden: validation.data.garden ?? null, amenities: validation.data.amenities,
         monthlyRent: validation.data.monthlyRent ?? null, deposit: validation.data.deposit ?? null,
-        allowDepositConversion: validation.data.allowDepositConversion, advertiserType: validation.data.advertiserType, showExactLocation: validation.data.showExactLocation,
+        allowDepositConversion: validation.data.allowDepositConversion, advertiserType: validation.data.advertiserType, showExactLocation: validation.data.showExactLocation, showOnMap: validation.data.showOnMap,
         ownerId: user.id,
       },
       select: {

@@ -5,6 +5,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import "./ListingMap.css";
 
+type ApproximateLocation = { latitude: number; longitude: number; city?: string | null; country?: string | null };
+type NearbyPlace = { id: string; name: string; category: string; categoryLabel: string; icon: string; latitude: number; longitude: number; distance?: number };
+
 type MapPoint = {
   id: string;
   title: string;
@@ -76,6 +79,28 @@ export default function ListingMap({ points }: { points: MapPoint[] }) {
   });
   const [selectedId, setSelectedId] = useState<string | null>(points[0]?.id ?? null);
   const [dragging, setDragging] = useState(false);
+  const [approximateLocation, setApproximateLocation] = useState<ApproximateLocation | null>(null);
+  const [locationUnavailable, setLocationUnavailable] = useState(false);
+  const [nearbyRadius, setNearbyRadius] = useState(1000);
+  const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [nearbyError, setNearbyError] = useState("");
+  const [nearbyCategory, setNearbyCategory] = useState("all");
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [nearbyRetry, setNearbyRetry] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/location/approximate", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() as Promise<{ location?: ApproximateLocation | null }> : { location: null })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        if (data.location && Number.isFinite(data.location.latitude) && Number.isFinite(data.location.longitude)) setApproximateLocation(data.location);
+        else setLocationUnavailable(true);
+      })
+      .catch(() => { if (!controller.signal.aborted) setLocationUnavailable(true); });
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const element = containerRef.current;
@@ -87,6 +112,11 @@ export default function ListingMap({ points }: { points: MapPoint[] }) {
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
+
+
+
+  const visibleNearbyPlaces = useMemo(() => nearbyPlaces.filter((place) => nearbyCategory === "all" || place.category === nearbyCategory), [nearbyPlaces, nearbyCategory]);
+  const formatDistance = (value: number) => value < 1000 ? `${Math.round(value).toLocaleString("fa-IR")} متر` : `${(value / 1000).toLocaleString("fa-IR", { maximumFractionDigits: 1 })} کیلومتر`;
 
   const centerWorld = useMemo(() => worldPoint(center.latitude, center.longitude, zoom), [center, zoom]);
   const tileLayout = useMemo(() => {
@@ -131,6 +161,31 @@ export default function ListingMap({ points }: { points: MapPoint[] }) {
   }, [visiblePoints]);
 
   const selected = points.find((point) => point.id === selectedId) ?? null;
+
+  useEffect(() => {
+    if (!selected) { setNearbyPlaces([]); return; }
+    const controller = new AbortController();
+    setNearbyLoading(true); setNearbyError(""); setSelectedPlaceId(null);
+    fetch(`/api/map/nearby?lat=${encodeURIComponent(selected.latitude)}&lon=${encodeURIComponent(selected.longitude)}&radius=${nearbyRadius}`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const data = await response.json() as { places?: NearbyPlace[]; error?: string };
+        if (!response.ok) throw new Error(data.error || "دریافت امکانات اطراف ناموفق بود.");
+        return data;
+      })
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        const distance = (place: NearbyPlace) => {
+          const toRad = (value: number) => value * Math.PI / 180;
+          const dLat = toRad(place.latitude - selected.latitude); const dLon = toRad(place.longitude - selected.longitude);
+          const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(selected.latitude)) * Math.cos(toRad(place.latitude)) * Math.sin(dLon / 2) ** 2;
+          return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+        };
+        setNearbyPlaces((data.places || []).map((place) => ({ ...place, distance: distance(place) })).sort((a, b) => (a.distance || 0) - (b.distance || 0)));
+      })
+      .catch((error) => { if (!controller.signal.aborted) setNearbyError(error instanceof Error ? error.message : "دریافت امکانات اطراف ناموفق بود."); })
+      .finally(() => { if (!controller.signal.aborted) setNearbyLoading(false); });
+    return () => controller.abort();
+  }, [selected?.id, selected?.latitude, selected?.longitude, nearbyRadius, nearbyRetry]);
   const zoomBy = useCallback((delta: number) => setZoom((current) => clamp(current + delta, MIN_ZOOM, MAX_ZOOM)), []);
 
   function onPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -159,6 +214,7 @@ export default function ListingMap({ points }: { points: MapPoint[] }) {
         <div className="hy-map-controls">
           <button type="button" aria-label="بزرگ‌نمایی" onClick={() => zoomBy(1)}>+</button>
           <button type="button" aria-label="کوچک‌نمایی" onClick={() => zoomBy(-1)}>−</button>
+          {approximateLocation && <button type="button" className="hy-map-near-me" aria-label="نمایش محدودهٔ تقریبی محل اتصال اینترنت من" onClick={() => { setCenter({ latitude: approximateLocation.latitude, longitude: approximateLocation.longitude }); setZoom(12); setSelectedId(null); }}>محدودهٔ من</button>}
           <button type="button" aria-label="بازگشت به محدودهٔ آگهی‌ها" onClick={() => {
             if (!points.length) return;
             setCenter({ latitude: points.reduce((sum, p) => sum + p.latitude, 0) / points.length, longitude: points.reduce((sum, p) => sum + p.longitude, 0) / points.length });
@@ -181,6 +237,21 @@ export default function ListingMap({ points }: { points: MapPoint[] }) {
             } else setSelectedId(point.id);
           }} aria-label={isCluster ? `${group.items.length} آگهی؛ برای بزرگ‌نمایی کلیک کن` : `مشاهده ${point.title}`} title={isCluster ? `${group.items.length} آگهی` : point.title}><span>{isCluster ? new Intl.NumberFormat("fa-IR").format(group.items.length) : point.listingType === "RENT" ? "اجاره" : "فروش"}</span></button>;
         })}
+        {visibleNearbyPlaces.map((place) => {
+          const projected = worldPoint(place.latitude, place.longitude, zoom);
+          const left = size.width / 2 + projected.x - centerWorld.x;
+          const top = size.height / 2 + projected.y - centerWorld.y;
+          if (left < -20 || left > size.width + 20 || top < -24 || top > size.height + 20) return null;
+          return <button key={place.id} type="button" className={`hy-map-poi-marker${selectedPlaceId === place.id ? " is-selected" : ""}`} style={{ left, top }} onClick={() => setSelectedPlaceId(place.id)} aria-label={`${place.name}، ${formatDistance(place.distance || 0)}`} title={`${place.name} · ${formatDistance(place.distance || 0)}`}><span>{place.icon}</span></button>;
+        })}
+        {approximateLocation && (() => {
+          const projected = worldPoint(approximateLocation.latitude, approximateLocation.longitude, zoom);
+          const left = size.width / 2 + projected.x - centerWorld.x;
+          const top = size.height / 2 + projected.y - centerWorld.y;
+          return left > -24 && left < size.width + 24 && top > -30 && top < size.height + 24
+            ? <div className="hy-map-user-location" style={{ left, top }} title="محدودهٔ تقریبی اتصال اینترنت شما"><span /><b>محدودهٔ تقریبی شما</b></div>
+            : null;
+        })()}
         <div className="hy-map-attribution">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors</div>
       </div>
       {selected && <div className="hy-map-selected">
@@ -188,7 +259,12 @@ export default function ListingMap({ points }: { points: MapPoint[] }) {
         <div className="hy-map-selected-copy"><span>{selected.city} · {selected.listingType === "RENT" ? (selected.rentalPeriod === "DAILY" ? "اجاره روزانه" : selected.rentalPeriod === "WEEKLY" ? "اجاره هفتگی" : selected.rentalPeriod === "HOURLY" ? "اجاره ساعتی" : "اجاره بلندمدت") : "فروش"}{selected.urgentSale && selected.listingType === "SALE" ? " · فروش فوری" : ""}</span><strong>{selected.title}</strong><b>{formatMoney(selected.price, selected.currency)}</b></div>
         <Link href={`/listings/${selected.id}`}>جزئیات ملک <span aria-hidden="true">←</span></Link>
       </div>}
-      <p className="hy-map-privacy">موقعیت‌ها در صورت غیرفعال بودن نمایش موقعیت دقیق، به‌صورت تقریبی نشان داده می‌شوند.</p>
+      <section className="hy-map-nearby" aria-label="امکانات اطراف ملک انتخاب‌شده">
+        <div className="hy-map-nearby-head"><div><strong>امکانات اطراف {selected ? "ملک انتخاب‌شده" : "محدوده"}</strong><span>{nearbyLoading ? "در حال جست‌وجو در نقشه…" : `${visibleNearbyPlaces.length.toLocaleString("fa-IR")} مکان نزدیک`}</span></div><div className="hy-map-radius" aria-label="شعاع جست‌وجوی امکانات">{[500,1000,3000,5000].map((value) => <button key={value} type="button" aria-pressed={nearbyRadius === value} className={nearbyRadius === value ? "is-active" : ""} onClick={() => setNearbyRadius(value)}>{value < 1000 ? `${value} م` : `${value / 1000} ک‌م`}</button>)}</div></div>
+        <div className="hy-map-poi-categories">{[{id:"all",label:"همه"},{id:"education",label:"آموزش"},{id:"shopping",label:"خرید"},{id:"health",label:"سلامت"},{id:"transit",label:"حمل‌ونقل"},{id:"green",label:"پارک و ورزش"},{id:"food",label:"غذا و کافه"},{id:"services",label:"خدمات"}].map((item) => <button key={item.id} type="button" aria-pressed={nearbyCategory === item.id} className={nearbyCategory === item.id ? "is-active" : ""} onClick={() => setNearbyCategory(item.id)}>{item.label}</button>)}</div>
+        {nearbyError ? <div className="hy-map-nearby-state" role="status"><span>{nearbyError}</span><button type="button" onClick={() => setNearbyRetry((value) => value + 1)}>تلاش دوباره</button></div> : visibleNearbyPlaces.length ? <div className="hy-map-nearby-list">{visibleNearbyPlaces.slice(0, 8).map((place) => <button type="button" key={place.id} className={`hy-map-nearby-item${selectedPlaceId === place.id ? " is-selected" : ""}`} onClick={() => { setSelectedPlaceId(place.id); setCenter({ latitude: place.latitude, longitude: place.longitude }); setZoom((value) => Math.max(value, 14)); }}><span className="hy-map-nearby-icon">{place.icon}</span><span className="hy-map-nearby-copy"><strong>{place.name}</strong><small>{place.categoryLabel}</small></span><b>{formatDistance(place.distance || 0)}</b></button>)}</div> : <div className="hy-map-nearby-state">{nearbyLoading ? "در حال دریافت اطلاعات امکانات اطراف…" : "مکانی در این دسته و شعاع پیدا نشد؛ شعاع را بیشتر کن یا دستهٔ دیگری را انتخاب کن."}</div>}
+      </section>
+      <p className="hy-map-privacy">موقعیت ملک‌ها در صورت غیرفعال بودن نمایش دقیق، تقریبی است. برای تخمین محدودهٔ شما، IP اتصال به سرویس موقعیت‌یابی ارسال می‌شود؛ GPS استفاده نمی‌شود و نتیجه ممکن است دقیق نباشد.{locationUnavailable ? " موقعیت تقریبی اتصال اینترنت در دسترس نیست." : ""} فاصله‌ها خط مستقیم و تقریبی‌اند؛ فاصلهٔ مسیر واقعی متفاوت است. امکانات از OpenStreetMap/Overpass می‌آیند و ممکن است کامل نباشند.</p>
     </div>
   );
 }

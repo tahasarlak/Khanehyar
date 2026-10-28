@@ -588,13 +588,10 @@ body {
   }
 }
 
-/* KHANEHYAR_ACCOUNT_APP_CHROME_V2
-   Account routes use the account shell instead of the duplicate public-site header/footer/dock. */
-body:has(.kh-account-shell) > header,
-body:has(.kh-account-shell) > nav,
-body:has(.kh-account-shell) > footer {
-  display: none !important;
-}
+/* KHANEHYAR_ACCOUNT_APP_CHROME_V3
+   Public chrome visibility is controlled by SiteChromeGate using the active route.
+   Avoid body:has(.kh-account-shell) for hiding shared chrome: App Router can retain
+   prior route trees during transitions, which can leave the public header hidden. */
 body:has(.kh-account-shell) .site-content {
   min-width: 0;
 }

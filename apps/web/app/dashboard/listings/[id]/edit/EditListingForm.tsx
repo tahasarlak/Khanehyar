@@ -28,7 +28,7 @@ type Property = {
   documentType: string | null; orientation: string | null; naturalLight: string | null;
   furnished: boolean | null; readyToMove: boolean | null; balcony: boolean | null; terrace: boolean | null; garden: boolean | null;
   amenities: string[]; monthlyRent: string | null; deposit: string | null; allowDepositConversion: boolean;
-  advertiserType: "UNSPECIFIED" | "OWNER" | "AGENT" | "BUILDER"; showExactLocation: boolean;
+  advertiserType: "UNSPECIFIED" | "OWNER" | "AGENT" | "BUILDER"; showExactLocation: boolean; showOnMap: boolean;
   images: (ExistingListingImage & { sortOrder: number })[];
 };
 
@@ -119,7 +119,7 @@ export default function EditListingForm() {
       amenities: form.amenities,
       monthlyRent: form.monthlyRent === null || form.monthlyRent === "" ? null : Number(form.monthlyRent),
       deposit: form.deposit === null || form.deposit === "" ? null : Number(form.deposit),
-      allowDepositConversion: form.allowDepositConversion, advertiserType: form.advertiserType, showExactLocation: form.showExactLocation,
+      allowDepositConversion: form.allowDepositConversion, advertiserType: form.advertiserType, showExactLocation: form.showExactLocation, showOnMap: form.showOnMap,
     };
 
     try {
@@ -416,6 +416,7 @@ export default function EditListingForm() {
           <label className="md:col-span-2">امکانات (با ویرگول جدا کن)<input className={inputClass} value={form.amenities.join("، ")} onChange={(e) => update("amenities", e.target.value.split(/[،,]/).map((item) => item.trim()).filter(Boolean).slice(0,30))} /></label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={form.allowDepositConversion} onChange={(e) => update("allowDepositConversion", e.target.checked)} /> امکان تبدیل رهن و اجاره</label>
           <label className="flex items-center gap-2"><input type="checkbox" checked={form.showExactLocation} onChange={(e) => update("showExactLocation", e.target.checked)} /> نمایش نشانی دقیق</label>
+          <label className="flex items-center gap-2"><input type="checkbox" checked={form.showOnMap} onChange={(e) => update("showOnMap", e.target.checked)} /> نمایش تقریبی موقعیت ملک روی نقشه</label>
           <section className="md:col-span-2">
             <ListingImageUploader
               selectedFiles={selectedImages}

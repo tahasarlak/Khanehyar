@@ -6,6 +6,7 @@ import "./globals.css";
 import SiteHeader from "./_components/SiteHeader";
 import SiteFooter from "./_components/SiteFooter";
 import SiteNavigation from "./_components/SiteNavigation";
+import SiteChromeGate from "./_components/SiteChromeGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,11 +34,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col" dir="rtl">
         <Suspense fallback={<div aria-hidden="true" style={{ minHeight: 80 }} />}>
-        <SiteHeader />
+          <SiteChromeGate><SiteHeader /></SiteChromeGate>
         </Suspense>
         <div className="site-content">{children}</div>
-        <Suspense fallback={null}><SiteNavigation /></Suspense>
-        <SiteFooter />
+        <Suspense fallback={null}>
+          <SiteChromeGate><SiteNavigation /></SiteChromeGate>
+        </Suspense>
+        <Suspense fallback={null}>
+          <SiteChromeGate><SiteFooter /></SiteChromeGate>
+        </Suspense>
       </body>
     </html>
   );

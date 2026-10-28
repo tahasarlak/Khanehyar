@@ -48,6 +48,7 @@ export const listingSchema = z.object({
   allowDepositConversion: z.boolean().default(false),
   advertiserType: z.enum(["UNSPECIFIED", "OWNER", "AGENT", "BUILDER"]).default("UNSPECIFIED"),
   showExactLocation: z.boolean().default(false),
+  showOnMap: z.boolean().default(true),
   imageUrls: z.array(z.url()).max(30).default([]),
 });
 

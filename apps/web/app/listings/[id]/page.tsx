@@ -5,7 +5,6 @@ import type { Metadata } from "next";
 import InquiryForm from "./InquiryForm";
 import PriceOfferForm from "./PriceOfferForm";
 import ListingViewTracker from "./ListingViewTracker";
-import PrintListingButton from "./PrintListingButton";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/src/lib/prisma";
@@ -195,6 +194,7 @@ export default async function ListingDetailPage({ params }: Props) {
       allowDepositConversion: true,
       advertiserType: true,
       showExactLocation: true,
+      showOnMap: true,
       city: true,
       address: true,
       latitude: true,
@@ -234,11 +234,47 @@ export default async function ListingDetailPage({ params }: Props) {
   const averagePricePerMeter = comparableRates.length >= 5 ? comparableRates.reduce((sum, item) => sum + item.rate, 0) / comparableRates.length : null;
   const isBelowAverage = averagePricePerMeter !== null && areaValue > 0 && effectivePrice / areaValue < averagePricePerMeter * 0.9;
   const averageDifferencePercent = averagePricePerMeter && areaValue > 0 ? Math.round((1 - (effectivePrice / areaValue) / averagePricePerMeter) * 100) : null;
-  const mapUrl = listing.showExactLocation && listing.latitude !== null && listing.longitude !== null
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${listing.longitude - 0.008}%2C${listing.latitude - 0.005}%2C${listing.longitude + 0.008}%2C${listing.latitude + 0.005}&layer=mapnik&marker=${listing.latitude}%2C${listing.longitude}`
+  const cityCoordinates: Record<string, { latitude: number; longitude: number }> = {
+    "تهران": { latitude: 35.6892, longitude: 51.3890 }, "مشهد": { latitude: 36.2972, longitude: 59.6067 },
+    "اصفهان": { latitude: 32.6546, longitude: 51.6680 }, "شیراز": { latitude: 29.5918, longitude: 52.5837 },
+    "تبریز": { latitude: 38.0962, longitude: 46.2738 }, "کرج": { latitude: 35.8400, longitude: 50.9391 },
+    "قم": { latitude: 34.6416, longitude: 50.8746 }, "اهواز": { latitude: 31.3183, longitude: 48.6706 },
+    "رشت": { latitude: 37.2808, longitude: 49.5832 }, "کرمان": { latitude: 30.2839, longitude: 57.0834 },
+    "یزد": { latitude: 31.8974, longitude: 54.3569 }, "قزوین": { latitude: 36.2688, longitude: 50.0041 },
+    "ساری": { latitude: 36.5633, longitude: 53.0601 }, "اراک": { latitude: 34.0917, longitude: 49.6892 }, "همدان": { latitude: 34.7992, longitude: 48.5146 },
+    "کرمانشاه": { latitude: 34.3142, longitude: 47.0650 }, "سنندج": { latitude: 35.3219, longitude: 46.9862 },
+    "زاهدان": { latitude: 29.4963, longitude: 60.8629 }, "گرگان": { latitude: 36.8456, longitude: 54.4393 },
+    "بجنورد": { latitude: 37.4747, longitude: 57.3290 }, "بیرجند": { latitude: 32.8663, longitude: 59.2211 },
+    "کاشان": { latitude: 33.9850, longitude: 51.4100 }, "بوشهر": { latitude: 28.9234, longitude: 50.8203 },
+    "خرم‌آباد": { latitude: 33.4878, longitude: 48.3558 }, "خرم آباد": { latitude: 33.4878, longitude: 48.3558 },
+    "ایلام": { latitude: 33.6374, longitude: 46.4227 }, "زنجان": { latitude: 36.6736, longitude: 48.4787 },
+    "اردبیل": { latitude: 38.2498, longitude: 48.2933 }, "ارومیه": { latitude: 37.5527, longitude: 45.0761 },
+    "سمنان": { latitude: 35.5769, longitude: 53.3950 }, "شهرکرد": { latitude: 32.3256, longitude: 50.8644 },
+    "یاسوج": { latitude: 30.6682, longitude: 51.5879 }, "مراغه": { latitude: 37.3892, longitude: 46.2374 },
+    "کیش": { latitude: 26.5320, longitude: 53.9850 }, "قشم": { latitude: 26.9581, longitude: 56.2719 },
+    "پردیس": { latitude: 35.7410, longitude: 51.8200 }, "اندیشه": { latitude: 35.6800, longitude: 51.0200 },
+    "شهریار": { latitude: 35.6596, longitude: 51.0590 }, "اسلامشهر": { latitude: 35.5446, longitude: 51.2300 },
+    "پرند": { latitude: 35.4710, longitude: 51.0400 }, "پاکدشت": { latitude: 35.4740, longitude: 51.6860 },
+    "دزفول": { latitude: 32.3831, longitude: 48.4236 }, "آبادان": { latitude: 30.3473, longitude: 48.2934 },
+    "مرودشت": { latitude: 29.8742, longitude: 52.8025 }, "بابل": { latitude: 36.5387, longitude: 52.6765 },
+    "آمل": { latitude: 36.4696, longitude: 52.3507 }, "لاهیجان": { latitude: 37.2072, longitude: 50.0039 },
+    "نیشابور": { latitude: 36.2133, longitude: 58.7958 }, "سبزوار": { latitude: 36.2126, longitude: 57.6819 },
+    "رفسنجان": { latitude: 30.4067, longitude: 55.9939 }, "سیرجان": { latitude: 29.4514, longitude: 55.6814 },
+    "بندر انزلی": { latitude: 37.4727, longitude: 49.4622 }, "بندرعباس": { latitude: 27.1832, longitude: 56.2666 },
+  };
+  const baseCoords = listing.latitude !== null && listing.longitude !== null
+    ? { latitude: listing.latitude, longitude: listing.longitude }
+    : cityCoordinates[listing.city] ?? null;
+  const coordHash = [...listing.id].reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 7);
+  const mapCoords = baseCoords && listing.showOnMap ? {
+    latitude: baseCoords.latitude + (listing.showExactLocation && listing.latitude !== null ? 0 : (((coordHash % 1000) / 1000) - 0.5) * 0.012),
+    longitude: baseCoords.longitude + (listing.showExactLocation && listing.longitude !== null ? 0 : ((((coordHash >>> 4) % 1000) / 1000) - 0.5) * 0.016),
+  } : null;
+  const mapUrl = mapCoords
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${mapCoords.longitude - 0.012}%2C${mapCoords.latitude - 0.008}%2C${mapCoords.longitude + 0.012}%2C${mapCoords.latitude + 0.008}&layer=mapnik&marker=${mapCoords.latitude}%2C${mapCoords.longitude}`
     : null;
-  const mapLink = listing.showExactLocation && listing.latitude !== null && listing.longitude !== null
-    ? `https://www.openstreetmap.org/?mlat=${listing.latitude}&mlon=${listing.longitude}#map=16/${listing.latitude}/${listing.longitude}`
+  const mapLink = mapCoords
+    ? `https://www.openstreetmap.org/?mlat=${mapCoords.latitude}&mlon=${mapCoords.longitude}#map=${listing.showExactLocation ? 16 : 13}/${mapCoords.latitude}/${mapCoords.longitude}`
     : null;
 
   const facts: { label: string; value: string; icon: string }[] = [
@@ -320,7 +356,6 @@ export default async function ListingDetailPage({ params }: Props) {
         floorSize: { "@type": "QuantitativeValue", value: areaValue, unitCode: "MTK" },
         numberOfRooms: listing.rooms ?? undefined
       }).replace(/<\//g, "<\\/") }} />
-      <ListingViewTracker listingId={listing.id} initialCount={listing.viewCount} />
       <main className="hd-container">
         <nav className="hd-breadcrumb" aria-label="مسیر صفحه">
           <Link href="/">خانه‌یار</Link><span>/</span><Link href="/search">آگهی‌های املاک</Link><span>/</span><span aria-current="page">{propertyName}</span>
@@ -332,9 +367,9 @@ export default async function ListingDetailPage({ params }: Props) {
             <div className="hd-market-badges">{listing.urgentSale && !isRent && <span className="hd-market-badge is-urgent">فروش فوری</span>}{isBelowAverage && <span className="hd-market-badge">حدود {Math.max(0, averageDifferencePercent ?? 0).toLocaleString("fa-IR")}٪ پایین‌تر از میانگین آگهی‌های مشابه</span>}{isRent && listing.rentalPeriod && <span className="hd-market-badge">{({LONG_TERM:"اجاره بلندمدت",DAILY:"اجاره روزانه",WEEKLY:"اجاره هفتگی",HOURLY:"اجاره ساعتی"} as const)[listing.rentalPeriod]}</span>}</div>
             <h1>{listing.title}</h1>
             <p className="hd-address-line"><span aria-hidden="true">⌖</span>{listing.city}{listing.showExactLocation && listing.address ? `، ${listing.address}` : ""}{listing.address && !listing.showExactLocation ? " · نشانی دقیق پس از هماهنگی" : ""}</p>
-            <div className="hd-heading-meta"><span>کد آگهی: {listing.id.slice(-8).toLocaleUpperCase()}</span><span>منتشرشده در {publishedDate}</span><ListingViewTracker listingId={listing.id} initialCount={listing.viewCount} /></div>
+            <div className="hd-heading-meta"><span className="hd-meta-item">کد آگهی: {listing.id.slice(-8).toLocaleUpperCase()}</span><span className="hd-meta-item">منتشرشده در {publishedDate}</span><span className="hd-meta-item hd-view-meta"><ListingViewTracker listingId={listing.id} initialCount={listing.viewCount} /></span></div>
           </div>
-          <div className="hd-favorite-actions"><ShareListing /><PrintListingButton /><FavoriteButton listingId={listing.id} /></div>
+          <div className="hd-favorite-actions" aria-label="اقدام‌های آگهی"><ShareListing title={listing.title} /><FavoriteButton listingId={listing.id} /></div>
         </div>
 
         <PropertyGallery title={listing.title} images={pictures} />
@@ -366,7 +401,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <div className="hd-section-heading"><span className="hd-section-icon" aria-hidden="true">⌖</span><div><h2>موقعیت و محله</h2><p>اطلاعات مکانی ثبت‌شده برای این آگهی</p></div></div>
               <div className="hd-location">
                 <div className="hd-location-symbol" aria-hidden="true">⌖</div>
-                <div className="hd-location-copy"><strong>{listing.city}</strong><p>{listing.showExactLocation && listing.address ? listing.address : "نشانی دقیق برای حفظ حریم خصوصی نمایش داده نمی‌شود؛ برای هماهنگی با آگهی‌دهنده تماس بگیرید."}</p><small>{mapUrl ? "نقشه بر اساس مختصات ثبت‌شده آگهی نمایش داده می‌شود." : "موقعیت روی نقشه نمایش داده نمی‌شود چون مختصات ملک ثبت نشده است."}</small></div>
+                <div className="hd-location-copy"><strong>{listing.city}</strong><p>{listing.showExactLocation && listing.address ? listing.address : "موقعیت تقریبی محله نمایش داده می‌شود؛ نشانی دقیق برای عموم منتشر نمی‌شود."}</p><small>{!listing.showOnMap ? "نمایش موقعیت این آگهی روی نقشه توسط آگهی‌دهنده غیرفعال شده است." : mapUrl ? (listing.showExactLocation ? "نشانگر بر اساس مختصات ثبت‌شده آگهی است." : "نشانگر تقریبی محدودهٔ ملک است؛ برای حفظ حریم خصوصی کمی جابه‌جا شده.") : "برای این شهر هنوز نقطهٔ مرجع نقشه تعریف نشده است."}</small></div>
               </div>
               {mapUrl && mapLink && <div className="hd-map-wrap"><iframe title={`نقشه موقعیت ${listing.title}`} src={mapUrl} loading="lazy" referrerPolicy="no-referrer" className="hd-map" /><a className="hd-map-link" href={mapLink} target="_blank" rel="noreferrer">مشاهده نقشه بزرگ‌تر ↗</a></div>}
               <p className="hd-privacy-note">برای حفظ حریم خصوصی، پیش از مراجعه حضوری موقعیت و نشانی را با آگهی‌دهنده هماهنگ کنید.</p>

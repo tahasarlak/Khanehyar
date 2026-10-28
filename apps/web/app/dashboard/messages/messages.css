@@ -2092,3 +2092,35 @@
 }
 /* END KHANEHYAR_MOBILE_CHAT_VIEWPORT_V2 */
 
+
+/* KHANEHYAR MESSENGER UX POLISH V2 */
+.hm-telegram-inbox-page{background:#f2f5f7!important;color:#243b4b!important}
+.hm-telegram-inbox-shell{box-shadow:0 14px 45px #17364a0b!important}
+.hm-telegram-inbox-sidebar{border-inline-end:1px solid #e2e9ed!important;background:#fff!important}
+.hm-telegram-inbox-sidebar .hm-conversation-search{margin:12px!important;width:calc(100% - 24px)!important;border:1px solid #e3eaee!important;border-radius:12px!important;box-shadow:none!important}
+.hm-telegram-inbox-sidebar .hm-conversation-search input{font:inherit;font-size:12px!important}
+.hm-telegram-inbox-sidebar .hm-conversation-card{min-height:84px!important;padding:13px 12px!important;gap:11px!important}
+.hm-telegram-inbox-sidebar .hm-conversation-avatar{width:48px!important;height:48px!important;flex:0 0 48px!important;border-radius:14px!important;background:#edf5f1!important;color:#17745c!important}
+.hm-telegram-inbox-sidebar .hm-conversation-main{min-width:0!important}
+.hm-telegram-inbox-sidebar .hm-conversation-top{gap:8px!important;align-items:center!important}
+.hm-telegram-inbox-sidebar .hm-conversation-top strong{color:#1b3548!important;font-size:12px!important;font-weight:850!important}
+.hm-telegram-inbox-sidebar .hm-conversation-top time{white-space:nowrap!important;font-size:9px!important;color:#8796a2!important}
+.hm-telegram-inbox-sidebar .hm-conversation-listing{margin-top:3px!important;color:#647887!important;font-size:10px!important}
+.hm-telegram-inbox-sidebar .hm-conversation-preview{margin-top:3px!important;color:#7a8b97!important;font-size:11px!important;line-height:1.7!important}
+.hm-telegram-inbox-sidebar .hm-conversation-unread{min-width:20px!important;height:20px!important;background:#16836a!important;font-size:10px!important}
+.hm-telegram-inbox-stage{background-color:#f4f7f8!important;background-image:radial-gradient(#d8e3e5 .8px,transparent .8px)!important;background-size:17px 17px!important}
+.hm-telegram-stage-content{max-width:440px!important;padding:30px!important;text-align:center!important}
+.hm-telegram-stage-mark{width:76px!important;height:76px!important;border-radius:24px!important;background:linear-gradient(145deg,#1c7e68,#135e57)!important;box-shadow:0 12px 32px #176b5725!important}
+.hm-telegram-stage-content h2{font-size:24px!important;letter-spacing:-.3px!important;color:#17384b!important}
+.hm-telegram-stage-content p{font-size:13px!important;line-height:2!important;color:#738593!important}
+.hm-messenger-ltr-page{background:#f3f6f8!important}
+.hm-messenger-ltr-page .hm-messenger-layout{gap:14px!important}
+.hm-messenger-ltr-page .hm-messenger-sidebar,.hm-messenger-ltr-page .hm-messenger-active-chat{border:1px solid #e0e8ed!important;border-radius:18px!important;background:#fff!important;box-shadow:0 8px 28px #1a3a5008!important;overflow:hidden!important}
+.hm-messenger-ltr-page .hm-messenger-sidebar-head{padding:15px 17px!important;background:#fbfcfd!important}
+.hm-messenger-ltr-page .hm-chat-header{margin:12px!important;padding:16px 18px!important;border-radius:14px!important;box-shadow:none!important}
+.hm-messenger-ltr-page .hm-chat-messages{margin:0 12px!important;max-height:calc(100vh - 330px)!important;border-radius:14px!important;background:#f7fafb!important}
+.hm-messenger-ltr-page .hm-chat-compose{padding:14px 16px!important}
+.hm-messenger-ltr-page .hm-chat-compose textarea{min-height:72px!important;border-radius:12px!important;background:#fbfdfd!important}
+.hm-messenger-ltr-page .hm-chat-bubble{box-shadow:0 2px 8px #19364c08!important}
+.hm-messenger-ltr-page .hm-chat-own{background:#e8f7f0!important;border-color:#d2ebdf!important}
+@media(max-width:640px){.hm-telegram-inbox-shell{border-radius:0!important}.hm-telegram-inbox-sidebar .hm-conversation-card{min-height:76px!important}.hm-messenger-ltr-page .hm-messenger-layout{gap:8px!important}.hm-messenger-ltr-page .hm-chat-messages{margin:0 7px!important;padding:12px!important}.hm-messenger-ltr-page .hm-chat-header{margin:7px!important;padding:13px!important}.hm-messenger-ltr-page .hm-chat-compose{padding:12px!important}}

@@ -131,7 +131,7 @@ export async function GET(_request: Request, context: Context) {
       yearBuilt: true, bathrooms: true, parkingSpaces: true, hasElevator: true, hasStorage: true,
       heatingType: true, coolingType: true, documentType: true, orientation: true, naturalLight: true,
       furnished: true, readyToMove: true, balcony: true, terrace: true, garden: true, amenities: true,
-      monthlyRent: true, deposit: true, allowDepositConversion: true, advertiserType: true, showExactLocation: true,
+      monthlyRent: true, deposit: true, allowDepositConversion: true, advertiserType: true, showExactLocation: true, showOnMap: true,
       images: { orderBy: { sortOrder: "asc" }, select: { id: true, url: true, sortOrder: true, label: true, altText: true } },
       city: true,
       address: true,
@@ -229,7 +229,7 @@ export async function PATCH(request: Request, context: Context) {
     "latitude", "longitude", "floor", "totalFloors", "yearBuilt", "bathrooms", "parkingSpaces",
     "hasElevator", "hasStorage", "heatingType", "coolingType", "documentType", "orientation", "naturalLight",
     "furnished", "readyToMove", "balcony", "terrace", "garden", "amenities", "monthlyRent", "deposit",
-    "allowDepositConversion", "advertiserType", "showExactLocation",
+    "allowDepositConversion", "advertiserType", "showExactLocation", "showOnMap",
   ]);
 
   if (Object.keys(input).some((key) => !allowedKeys.has(key))) {
@@ -307,7 +307,7 @@ export async function PATCH(request: Request, context: Context) {
       furnished: data.furnished ?? null, readyToMove: data.readyToMove ?? null, balcony: data.balcony ?? null,
       terrace: data.terrace ?? null, garden: data.garden ?? null, amenities: data.amenities,
       monthlyRent: data.monthlyRent ?? null, deposit: data.deposit ?? null,
-      allowDepositConversion: data.allowDepositConversion, advertiserType: data.advertiserType, showExactLocation: data.showExactLocation,
+      allowDepositConversion: data.allowDepositConversion, advertiserType: data.advertiserType, showExactLocation: data.showExactLocation, showOnMap: data.showOnMap,
       status: ListingStatus.PENDING,
     };
 
