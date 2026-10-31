@@ -118,6 +118,12 @@ model Listing {
   orientation            String?   @db.VarChar(50)
   naturalLight           String?   @db.VarChar(50)
   furnished              Boolean?
+  ceilingHeight           Decimal?  @db.Decimal(4, 2)
+  architecturalStyle      String?   @db.VarChar(80)
+  windowView              String?   @db.VarChar(80)
+  furnishedItems          String[]  @default([])
+  accessibilitySuitable   Boolean?
+  accessibilityFeatures   String[]  @default([])
   readyToMove            Boolean?
   balcony                Boolean?
   terrace                Boolean?

@@ -130,7 +130,7 @@ export async function GET(_request: Request, context: Context) {
       totalFloors: true,
       yearBuilt: true, bathrooms: true, parkingSpaces: true, hasElevator: true, hasStorage: true,
       heatingType: true, coolingType: true, documentType: true, orientation: true, naturalLight: true,
-      furnished: true, readyToMove: true, balcony: true, terrace: true, garden: true, amenities: true,
+      furnished: true, ceilingHeight: true, architecturalStyle: true, windowView: true, furnishedItems: true, accessibilitySuitable: true, accessibilityFeatures: true, readyToMove: true, balcony: true, terrace: true, garden: true, amenities: true,
       monthlyRent: true, deposit: true, allowDepositConversion: true, advertiserType: true, showExactLocation: true, showOnMap: true,
       images: { orderBy: { sortOrder: "asc" }, select: { id: true, url: true, sortOrder: true, label: true, altText: true } },
       city: true,
@@ -228,7 +228,7 @@ export async function PATCH(request: Request, context: Context) {
     "price", "currency", "area", "rooms", "city", "address",
     "latitude", "longitude", "floor", "totalFloors", "yearBuilt", "bathrooms", "parkingSpaces",
     "hasElevator", "hasStorage", "heatingType", "coolingType", "documentType", "orientation", "naturalLight",
-    "furnished", "readyToMove", "balcony", "terrace", "garden", "amenities", "monthlyRent", "deposit",
+    "furnished", "ceilingHeight", "architecturalStyle", "windowView", "furnishedItems", "accessibilitySuitable", "accessibilityFeatures", "readyToMove", "balcony", "terrace", "garden", "amenities", "monthlyRent", "deposit",
     "allowDepositConversion", "advertiserType", "showExactLocation", "showOnMap",
   ]);
 
@@ -304,7 +304,7 @@ export async function PATCH(request: Request, context: Context) {
       hasElevator: data.hasElevator ?? null, hasStorage: data.hasStorage ?? null,
       heatingType: data.heatingType ?? null, coolingType: data.coolingType ?? null, documentType: data.documentType ?? null,
       orientation: data.orientation ?? null, naturalLight: data.naturalLight ?? null,
-      furnished: data.furnished ?? null, readyToMove: data.readyToMove ?? null, balcony: data.balcony ?? null,
+      furnished: data.furnished ?? null, ceilingHeight: data.ceilingHeight ?? null, architecturalStyle: data.architecturalStyle ?? null, windowView: data.windowView ?? null, furnishedItems: data.furnishedItems, accessibilitySuitable: data.accessibilitySuitable ?? null, accessibilityFeatures: data.accessibilityFeatures, readyToMove: data.readyToMove ?? null, balcony: data.balcony ?? null,
       terrace: data.terrace ?? null, garden: data.garden ?? null, amenities: data.amenities,
       monthlyRent: data.monthlyRent ?? null, deposit: data.deposit ?? null,
       allowDepositConversion: data.allowDepositConversion, advertiserType: data.advertiserType, showExactLocation: data.showExactLocation, showOnMap: data.showOnMap,

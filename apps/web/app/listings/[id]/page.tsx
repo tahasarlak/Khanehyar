@@ -184,6 +184,7 @@ export default async function ListingDetailPage({ params }: Props) {
       orientation: true,
       naturalLight: true,
       furnished: true,
+      ceilingHeight: true, architecturalStyle: true, windowView: true, furnishedItems: true, accessibilitySuitable: true, accessibilityFeatures: true,
       readyToMove: true,
       balcony: true,
       terrace: true,
@@ -292,6 +293,10 @@ export default async function ListingDetailPage({ params }: Props) {
   if (listing.bathrooms !== null) detailFacts.push({ label: "سرویس بهداشتی و حمام", value: listing.bathrooms.toLocaleString("fa-IR") });
   if (listing.parkingSpaces !== null) detailFacts.push({ label: "ظرفیت پارکینگ", value: listing.parkingSpaces === 0 ? "بدون پارکینگ" : `${listing.parkingSpaces.toLocaleString("fa-IR")} خودرو` });
   if (listing.yearBuilt !== null) detailFacts.push({ label: "سال ساخت", value: listing.yearBuilt.toLocaleString("fa-IR") });
+  if (listing.ceilingHeight !== null) detailFacts.push({ label: "ارتفاع سقف", value: `${formatNumber(listing.ceilingHeight.toString(), 2)} متر` });
+  if (listing.architecturalStyle) detailFacts.push({ label: "سبک معماری", value: listing.architecturalStyle });
+  if (listing.windowView) detailFacts.push({ label: "منظرهٔ پنجره", value: listing.windowView });
+  if (listing.accessibilitySuitable !== null) detailFacts.push({ label: "مناسب افراد دارای معلولیت", value: listing.accessibilitySuitable ? "بله" : "خیر" });
   if (listing.documentType) detailFacts.push({ label: "نوع سند", value: listing.documentType });
   if (listing.orientation) detailFacts.push({ label: "جهت ملک", value: listing.orientation });
   if (listing.naturalLight) detailFacts.push({ label: "نورگیری", value: listing.naturalLight });
@@ -389,6 +394,8 @@ export default async function ListingDetailPage({ params }: Props) {
             {(detailFacts.length > 0 || listing.amenities.length > 0) && <section className="hd-panel hd-details-panel">
               <div className="hd-section-heading"><span className="hd-section-icon" aria-hidden="true">✦</span><div><h2>امکانات و مشخصات تکمیلی</h2><p>جزئیات فنی و امکاناتی که برای این ملک ثبت شده‌اند</p></div></div>
               {detailFacts.length > 0 && <dl className="hd-detail-grid">{detailFacts.map((fact) => <div className="hd-detail-item" key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}</dl>}
+              {listing.furnishedItems.length > 0 && <div className="hd-amenities"><h3>وسایل موجود در ملک مبله</h3><ul>{listing.furnishedItems.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul></div>}
+              {listing.accessibilityFeatures.length > 0 && <div className="hd-amenities"><h3>امکانات دسترس‌پذیری</h3><ul>{listing.accessibilityFeatures.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul></div>}
               {listing.amenities.length > 0 && <div className="hd-amenities"><h3>امکانات رفاهی</h3><ul>{listing.amenities.map((amenity) => <li key={amenity}><span aria-hidden="true">✓</span>{amenityLabels[amenity] ?? amenity.replace(/[_-]/g, " ")}</li>)}</ul></div>}
             </section>}
 
