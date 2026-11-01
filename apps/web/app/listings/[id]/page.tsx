@@ -2,7 +2,7 @@ import { getSiteOrigin } from "@/src/lib/site-url";
 import Image from "next/image";
 import type { Metadata } from "next";
 
-import InquiryForm from "./InquiryForm";
+
 import PriceOfferForm from "./PriceOfferForm";
 import ListingViewTracker from "./ListingViewTracker";
 import Link from "next/link";
@@ -10,6 +10,9 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/src/lib/prisma";
 import PropertyGallery, { ShareListing } from "./PropertyGallery";
 import FavoriteButton from "../../_components/FavoriteButton";
+import MobileListingActions from "./MobileListingActions";
+import ListingContactBar from "./ListingContactBar";
+import ListingNearbyMetro from "./ListingNearbyMetro";
 import "./detail.css";
 
 export const instant = false;
@@ -184,7 +187,6 @@ export default async function ListingDetailPage({ params }: Props) {
       orientation: true,
       naturalLight: true,
       furnished: true,
-      ceilingHeight: true, architecturalStyle: true, windowView: true, furnishedItems: true, accessibilitySuitable: true, accessibilityFeatures: true,
       readyToMove: true,
       balcony: true,
       terrace: true,
@@ -206,7 +208,7 @@ export default async function ListingDetailPage({ params }: Props) {
       images: {
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         take: 20,
-        select: { url: true },
+        select: { url: true, label: true, altText: true },
       },
     },
   });
@@ -214,12 +216,14 @@ export default async function ListingDetailPage({ params }: Props) {
   if (!listing) notFound();
 
   const pictures = listing.images.map((item) => item.url).filter(imageIsSafe);
+  const floorPlanImage = listing.images.find((item) => /^(floor.?plan|plan|نقشه|پلان)$/i.test(item.label || ""))?.url;
   const isRent = listing.listingType === "RENT";
   const propertyName = propertyNames[listing.propertyType] ?? "ملک";
   const currency = currencyNames[listing.currency] ?? listing.currency;
   const priceValue = Number(listing.price.toString());
   const areaValue = Number(listing.area.toString());
   const price = formatNumber(listing.price.toString());
+  const displayPrice = isRent && listing.monthlyRent !== null ? formatNumber(listing.monthlyRent.toString()) : price;
   const area = formatNumber(listing.area.toString(), 2);
   const pricePerMeter = !isRent && areaValue > 0 && Number.isFinite(priceValue)
     ? formatNumber(priceValue / areaValue)
@@ -280,23 +284,16 @@ export default async function ListingDetailPage({ params }: Props) {
 
   const facts: { label: string; value: string; icon: string }[] = [
     { label: "نوع ملک", value: propertyName, icon: "⌂" },
-    { label: "نوع معامله", value: isRent ? "اجاره" : "فروش", icon: "↔" },
-    { label: "متراژ", value: `${area} متر مربع`, icon: "▦" },
-    { label: "شهر", value: listing.city, icon: "⌖" },
+    { label: "معامله", value: isRent ? "اجاره" : "فروش", icon: "↔" },
+    { label: "متراژ", value: `${area} متر`, icon: "▦" },
+    { label: "اتاق", value: listing.rooms === null ? (listing.floor === null ? "ثبت نشده" : `طبقه ${listing.floor.toLocaleString("fa-IR")}`) : listing.rooms.toLocaleString("fa-IR"), icon: "▤" },
   ];
-  if (listing.rooms !== null) facts.push({ label: "تعداد اتاق", value: listing.rooms.toLocaleString("fa-IR"), icon: "▤" });
-  if (listing.floor !== null) facts.push({ label: "طبقه", value: listing.floor.toLocaleString("fa-IR"), icon: "⇅" });
-  if (listing.totalFloors !== null) facts.push({ label: "تعداد طبقات ساختمان", value: listing.totalFloors.toLocaleString("fa-IR"), icon: "▥" });
 
   const yesNo = (value: boolean | null | undefined) => value === null || value === undefined ? null : value ? "دارد" : "ندارد";
   const detailFacts: { label: string; value: string }[] = [];
   if (listing.bathrooms !== null) detailFacts.push({ label: "سرویس بهداشتی و حمام", value: listing.bathrooms.toLocaleString("fa-IR") });
   if (listing.parkingSpaces !== null) detailFacts.push({ label: "ظرفیت پارکینگ", value: listing.parkingSpaces === 0 ? "بدون پارکینگ" : `${listing.parkingSpaces.toLocaleString("fa-IR")} خودرو` });
   if (listing.yearBuilt !== null) detailFacts.push({ label: "سال ساخت", value: listing.yearBuilt.toLocaleString("fa-IR") });
-  if (listing.ceilingHeight !== null) detailFacts.push({ label: "ارتفاع سقف", value: `${formatNumber(listing.ceilingHeight.toString(), 2)} متر` });
-  if (listing.architecturalStyle) detailFacts.push({ label: "سبک معماری", value: listing.architecturalStyle });
-  if (listing.windowView) detailFacts.push({ label: "منظرهٔ پنجره", value: listing.windowView });
-  if (listing.accessibilitySuitable !== null) detailFacts.push({ label: "مناسب افراد دارای معلولیت", value: listing.accessibilitySuitable ? "بله" : "خیر" });
   if (listing.documentType) detailFacts.push({ label: "نوع سند", value: listing.documentType });
   if (listing.orientation) detailFacts.push({ label: "جهت ملک", value: listing.orientation });
   if (listing.naturalLight) detailFacts.push({ label: "نورگیری", value: listing.naturalLight });
@@ -361,6 +358,7 @@ export default async function ListingDetailPage({ params }: Props) {
         floorSize: { "@type": "QuantitativeValue", value: areaValue, unitCode: "MTK" },
         numberOfRooms: listing.rooms ?? undefined
       }).replace(/<\//g, "<\\/") }} />
+      <MobileListingActions listingId={listing.id} title={listing.title} price={displayPrice} currency={currency} dealLabel={isRent ? "اجاره" : "فروش"} />
       <main className="hd-container">
         <nav className="hd-breadcrumb" aria-label="مسیر صفحه">
           <Link href="/">خانه‌یار</Link><span>/</span><Link href="/search">آگهی‌های املاک</Link><span>/</span><span aria-current="page">{propertyName}</span>
@@ -378,24 +376,28 @@ export default async function ListingDetailPage({ params }: Props) {
         </div>
 
         <PropertyGallery title={listing.title} images={pictures} />
+        {floorPlanImage && <a className="hd-floorplan-shortcut" href={floorPlanImage} target="_blank" rel="noreferrer">⌗ مشاهدهٔ پلان یا نقشهٔ واحد</a>}
+
+        <section className="hd-price-summary" id="hd-price-summary" aria-label="قیمت و پیشنهاد قیمت">
+          <div className="hd-price-summary-main"><div><span className="hd-price-label">{isRent ? "مبلغ اجاره" : "قیمت ملک"}</span><strong className="hd-price">{displayPrice}<small>{currency}</small></strong>{isRent && listing.monthlyRent !== null && <span className="hd-price-summary-sub">اجاره ماهانه</span>}{pricePerMeter && <span className="hd-price-summary-sub">{pricePerMeter} {currency} به‌ازای هر متر</span>}</div><div className="hd-price-summary-tags">{isRent ? <span>اجاره</span> : <span>فروش</span>}{listing.urgentSale && !isRent && <span className="is-urgent">فروش فوری</span>}{isRent && listing.rentalPeriod && <span>{({LONG_TERM:"بلندمدت",DAILY:"روزانه",WEEKLY:"هفتگی",HOURLY:"ساعتی"} as const)[listing.rentalPeriod]}</span>}{isBelowAverage && <span>حدود {Math.max(0, averageDifferencePercent ?? 0).toLocaleString("fa-IR")}٪ زیر میانگین</span>}</div></div>
+          <PriceOfferForm listingId={listing.id} currency={listing.currency} currentPrice={effectivePrice} isRent={isRent} />
+        </section>
+        <ListingContactBar listingId={listing.id} />
 
         <div className="hd-layout">
           <div className="hd-main-column">
             <section className="hd-panel hd-overview-panel">
-              <div className="hd-section-heading">
-                <span className="hd-section-icon" aria-hidden="true">▦</span>
-                <div><h2>نگاهی سریع به ملک</h2><p>مهم‌ترین اطلاعات برای تصمیم‌گیری در یک نگاه</p></div>
-              </div>
+              
               <div className="hd-facts">
                 {facts.map((fact) => <div key={fact.label} className="hd-fact"><span className="hd-fact-icon" aria-hidden="true">{fact.icon}</span><div><dt>{fact.label}</dt><dd>{fact.value}</dd></div></div>)}
               </div>
+              <div className="hd-quick-address"><span>⌖</span><div><strong>{listing.city}</strong><small>{listing.showExactLocation && listing.address ? listing.address : "نشانی دقیق پس از هماهنگی با آگهی‌دهنده"}</small></div></div>
+              <ListingNearbyMetro latitude={listing.showOnMap && listing.latitude !== null && listing.longitude !== null ? (mapCoords?.latitude ?? null) : null} longitude={listing.showOnMap && listing.latitude !== null && listing.longitude !== null ? (mapCoords?.longitude ?? null) : null} />
             </section>
 
             {(detailFacts.length > 0 || listing.amenities.length > 0) && <section className="hd-panel hd-details-panel">
               <div className="hd-section-heading"><span className="hd-section-icon" aria-hidden="true">✦</span><div><h2>امکانات و مشخصات تکمیلی</h2><p>جزئیات فنی و امکاناتی که برای این ملک ثبت شده‌اند</p></div></div>
               {detailFacts.length > 0 && <dl className="hd-detail-grid">{detailFacts.map((fact) => <div className="hd-detail-item" key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}</dl>}
-              {listing.furnishedItems.length > 0 && <div className="hd-amenities"><h3>وسایل موجود در ملک مبله</h3><ul>{listing.furnishedItems.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul></div>}
-              {listing.accessibilityFeatures.length > 0 && <div className="hd-amenities"><h3>امکانات دسترس‌پذیری</h3><ul>{listing.accessibilityFeatures.map((item) => <li key={item}><span aria-hidden="true">✓</span>{item}</li>)}</ul></div>}
               {listing.amenities.length > 0 && <div className="hd-amenities"><h3>امکانات رفاهی</h3><ul>{listing.amenities.map((amenity) => <li key={amenity}><span aria-hidden="true">✓</span>{amenityLabels[amenity] ?? amenity.replace(/[_-]/g, " ")}</li>)}</ul></div>}
             </section>}
 
@@ -419,7 +421,7 @@ export default async function ListingDetailPage({ params }: Props) {
               <div className="hd-owner-card">
                 {listing.owner.avatarUrl ? <Image src={listing.owner.avatarUrl} alt={`تصویر ${ownerName}`} width={58} height={58} unoptimized className="hd-owner-avatar-image" /> : <div className="hd-owner-avatar" aria-hidden="true">{ownerInitial}</div>}
                 <div className="hd-owner-details"><strong>{ownerName}</strong><span>{listing.owner.role === "ADMIN" ? "حساب مدیر" : "عضو خانه‌یار"}</span><small>عضویت از {ownerMemberSince}</small></div>
-                <a href="#hd-contact" className="hd-owner-contact">ارسال پیام</a>
+                <span className="hd-owner-contact">آگهی‌دهنده</span>
               </div>
               <p className="hd-owner-disclaimer">اطلاعات بالا از حساب کاربری نمایش داده شده است و به‌تنهایی به معنی احراز هویت یا تأیید مالکیت ملک نیست.</p>
             </section>
@@ -430,26 +432,7 @@ export default async function ListingDetailPage({ params }: Props) {
             </section>
           </div>
 
-          <aside className="hd-sidebar" aria-label="قیمت و اطلاعات آگهی">
-            <div className="hd-price-card">
-              <div className="hd-price-label">{isRent ? "مبلغ درج‌شده در آگهی اجاره" : "قیمت پیشنهادی فروش"}</div>
-              <div className="hd-price" dir="auto">{price}<span>{currency}</span></div>
-              {pricePerMeter && <div className="hd-price-per-meter">حدود {pricePerMeter} {currency} به‌ازای هر متر مربع</div>}
-              {averagePricePerMeter !== null && <div className="hd-market-panel"><strong>مقایسه با آگهی‌های مشابه</strong><p>{isRent ? "میانگین اجارهٔ ماهانه به‌ازای هر متر" : "میانگین قیمت هر متر"} در آگهی‌های منتشرشدهٔ {listing.city} با نوع ملک و واحد پول مشابه، در محدودهٔ متراژ نزدیک، حدود {formatNumber(averagePricePerMeter)} {currency} است.</p><small>بر اساس {comparableRates.length.toLocaleString("fa-IR")} آگهی؛ این عدد برآورد آماری آگهی‌هاست و کارشناسی رسمی قیمت نیست.</small></div>}
-              <div className="hd-price-divider" />
-              {isRent && listing.monthlyRent !== null && <div className="hd-info-row"><span>اجاره ماهانه</span><strong>{formatNumber(listing.monthlyRent.toString())} {currency}</strong></div>}
-              {isRent && listing.deposit !== null && <div className="hd-info-row"><span>ودیعه</span><strong>{formatNumber(listing.deposit.toString())} {currency}</strong></div>}
-              {isRent && listing.allowDepositConversion && <p className="hd-conversion-note">امکان گفت‌وگو درباره تبدیل بخشی از ودیعه و اجاره وجود دارد؛ شرایط نهایی را با آگهی‌دهنده هماهنگ کنید.</p>}
-              <div className="hd-info-row"><span>نوع معامله</span><strong>{isRent ? "اجاره" : "فروش"}</strong></div>
-              <div className="hd-info-row"><span>متراژ</span><strong>{area} متر مربع</strong></div>
-              {listing.rooms !== null && <div className="hd-info-row"><span>تعداد اتاق</span><strong>{listing.rooms.toLocaleString("fa-IR")}</strong></div>}
-              <div className="hd-info-row"><span>تاریخ ثبت</span><strong>{publishedDate}</strong></div>
-              <div className="hd-price-note">مبلغ بر اساس اطلاعات ثبت‌شده توسط آگهی‌دهنده است. پیش از توافق، قیمت نهایی، مدارک و شرایط معامله را بررسی کنید.</div>
-              <div id="hd-contact"><InquiryForm listingId={listing.id} /></div>
-              <PriceOfferForm listingId={listing.id} currency={listing.currency} currentPrice={effectivePrice} isRent={isRent} />
-              <a href="#hd-contact" className="hd-action-primary hd-visit-link">درخواست بازدید یا اطلاعات بیشتر</a>
-              <Link href="/search" className="hd-action-secondary">مشاهده همه املاک</Link>
-            </div>
+          <aside className="hd-sidebar" aria-label="اطلاعات امنیت معامله">
             <div className="hd-safety-card"><strong>◇ نکته امنیتی خانه‌یار</strong><p>پیش از بازدید و بررسی مدارک، وجهی پرداخت نکنید. انتشار آگهی به معنی تضمین مالکیت یا صحت تمام اطلاعات آن نیست.</p><Link href="/safety">راهنمای امنیت معاملات ←</Link></div>
           </aside>
         </div>
@@ -472,7 +455,6 @@ export default async function ListingDetailPage({ params }: Props) {
 
         <div className="hd-bottom-link"><Link href="/search">← بازگشت به جست‌وجوی املاک</Link></div>
       </main>
-      <div className="hd-mobile-dock" aria-label="اقدام سریع"><div><small>قیمت ملک</small><strong>{price} <span>{currency}</span></strong></div><a href="#hd-contact">درخواست بازدید</a></div>
     </div>
   );
 }

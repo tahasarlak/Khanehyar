@@ -6,6 +6,7 @@ type PlaceResult = { id: string; name: string; category: string; categoryLabel: 
 
 function classify(tags: Tags) {
   const amenity = tags.amenity || ""; const shop = tags.shop || ""; const leisure = tags.leisure || ""; const railway = tags.railway || ""; const pt = tags.public_transport || "";
+  if (railway === "subway_entrance" || tags.subway === "yes" || tags.station === "subway") return { category: "metro", categoryLabel: "مترو", icon: "🚇" };
   if (/school|kindergarten|university|college|library|language_school/.test(amenity)) return { category: "education", categoryLabel: "آموزش", icon: "🎓" };
   if (/supermarket|convenience|bakery|mall|department_store|greengrocer|marketplace/.test(`${shop} ${amenity}`)) return { category: "shopping", categoryLabel: "خرید", icon: "🛍️" };
   if (/hospital|clinic|doctors|dentist|pharmacy|healthcare/.test(`${amenity} ${tags.healthcare || ""}`)) return { category: "health", categoryLabel: "سلامت", icon: "✚" };

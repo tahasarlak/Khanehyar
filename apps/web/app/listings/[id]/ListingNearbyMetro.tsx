@@ -1,0 +1,9 @@
+"use client";
+import {useEffect,useState} from "react";
+type Place={id:string;name:string;category:string;latitude:number;longitude:number};
+function distance(a:number,b:number,c:number,d:number){const r=6371000,p=Math.PI/180,dp=(c-a)*p,dl=(d-b)*p;const x=Math.sin(dp/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(dl/2)**2;return 2*r*Math.asin(Math.sqrt(x));}
+export default function ListingNearbyMetro({latitude,longitude}:{latitude:number|null;longitude:number|null}){
+ const [places,setPlaces]=useState<(Place&{distance:number})[]>([]);const [state,setState]=useState<"loading"|"ready"|"empty"|"error">("loading");
+ useEffect(()=>{if(latitude===null||longitude===null){setState("empty");return;}const controller=new AbortController();fetch(`/api/map/nearby?lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}&radius=5000`,{cache:"no-store",signal:controller.signal}).then(async r=>{if(!r.ok)throw new Error();return r.json();}).then(data=>{const items=(data.places||[]) as Place[];const metro=items.filter(p=>p.category==="metro").map(p=>({...p,distance:distance(latitude,longitude,p.latitude,p.longitude)})).sort((a,b)=>a.distance-b.distance).slice(0,3);setPlaces(metro);setState(metro.length?"ready":"empty");}).catch(()=>{if(!controller.signal.aborted)setState("error");});return()=>controller.abort();},[latitude,longitude]);
+ return <div className="hd-nearby-metro" dir="rtl"><strong>دسترسی به مترو</strong>{state==="loading"&&<span>در حال بررسی ایستگاه‌های نزدیک…</span>}{state==="error"&&<span>اطلاعات ایستگاه‌ها فعلاً در دسترس نیست.</span>}{state==="empty"&&<span>ایستگاه متروی تأییدشده‌ای در محدودهٔ این موقعیت پیدا نشد.</span>}{state==="ready"&&places.map(p=><div className="hd-metro-row" key={p.id}><span>{p.name}</span><b>{Math.max(1,Math.round(p.distance/80)).toLocaleString("fa-IR")} دقیقه پیاده</b></div>)}<small>زمان پیاده‌روی تخمینی بر اساس فاصلهٔ مستقیم است، نه مسیر مسیریاب.</small></div>;
+}

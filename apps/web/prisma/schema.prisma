@@ -78,6 +78,11 @@ model User {
 
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  listingNotes ListingNote[]
+  savedListingItems SavedListingItem[]
+  hiddenListings HiddenListing[]
+  listingReports ListingReport[] @relation("ListingReportReporter")
+
 }
 
 model Listing {
@@ -159,6 +164,11 @@ model Listing {
   @@index([publishedAt])
   @@index([urgentSale, status, listingType])
   @@index([rentalPeriod, status])
+  listingNotes ListingNote[]
+  savedListingItems SavedListingItem[]
+  hiddenListings HiddenListing[]
+  listingReports ListingReport[]
+
 }
 
 model ListingPriceHistory {
@@ -669,3 +679,59 @@ model PaidFeaturePurchase {
 }
 
 
+
+model ListingNote {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([listingId, updatedAt])
+}
+model SavedListingItem {
+  id             String   @id @default(cuid())
+  userId         String
+  listingId      String
+  collectionName String   @default("ذخیره‌شده‌ها") @db.VarChar(80)
+  createdAt      DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId, collectionName, createdAt])
+}
+model HiddenListing {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId, createdAt])
+}
+model ListingReport {
+  id         String   @id @default(cuid())
+  reporterId String
+  listingId  String
+  reason     String   @db.VarChar(120)
+  details    String?  @db.VarChar(1000)
+  status     String   @default("OPEN") @db.VarChar(20)
+  createdAt  DateTime @default(now())
+
+  reporter User    @relation("ListingReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  listing  Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([reporterId, listingId])
+  @@index([status, createdAt])
+  @@index([listingId, createdAt])
+}
