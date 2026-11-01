@@ -187,6 +187,16 @@ export default async function ListingDetailPage({ params }: Props) {
       orientation: true,
       naturalLight: true,
       furnished: true,
+      ceilingHeight: true,
+      architecturalStyle: true,
+      windowView: true,
+      furnishedItems: true,
+      accessibilitySuitable: true,
+      accessibilityFeatures: true,
+      buildingType: true, constructionStatus: true, structureType: true, facadeType: true,
+      elevatorCount: true, unitCount: true, parkingType: true, serviceCharge: true,
+      commission: true, advancePayment: true, minimumContractMonths: true,
+      petsAllowed: true, familyOnly: true, smokingAllowed: true, priceNegotiable: true,
       readyToMove: true,
       balcony: true,
       terrace: true,
@@ -294,6 +304,27 @@ export default async function ListingDetailPage({ params }: Props) {
   if (listing.bathrooms !== null) detailFacts.push({ label: "سرویس بهداشتی و حمام", value: listing.bathrooms.toLocaleString("fa-IR") });
   if (listing.parkingSpaces !== null) detailFacts.push({ label: "ظرفیت پارکینگ", value: listing.parkingSpaces === 0 ? "بدون پارکینگ" : `${listing.parkingSpaces.toLocaleString("fa-IR")} خودرو` });
   if (listing.yearBuilt !== null) detailFacts.push({ label: "سال ساخت", value: listing.yearBuilt.toLocaleString("fa-IR") });
+  if (listing.ceilingHeight !== null) detailFacts.push({ label: "ارتفاع سقف", value: `${formatNumber(listing.ceilingHeight.toString(), 2)} متر` });
+  if (listing.architecturalStyle) detailFacts.push({ label: "سبک معماری", value: listing.architecturalStyle });
+  if (listing.windowView) detailFacts.push({ label: "منظره پنجره", value: listing.windowView });
+  if (listing.furnishedItems.length) detailFacts.push({ label: "وسایل مبله", value: listing.furnishedItems.join("، ") });
+  if (listing.accessibilitySuitable !== null) detailFacts.push({ label: "دسترس‌پذیری معلولان", value: listing.accessibilitySuitable ? (listing.accessibilityFeatures.length ? listing.accessibilityFeatures.join("، ") : "مناسب") : "مناسب نیست" });
+  if (listing.buildingType) detailFacts.push({ label: "نوع ساختمان", value: listing.buildingType });
+  if (listing.constructionStatus) detailFacts.push({ label: "وضعیت ساخت", value: listing.constructionStatus });
+  if (listing.structureType) detailFacts.push({ label: "نوع سازه", value: listing.structureType });
+  if (listing.facadeType) detailFacts.push({ label: "نمای ساختمان", value: listing.facadeType });
+  if (listing.elevatorCount !== null) detailFacts.push({ label: "تعداد آسانسور", value: listing.elevatorCount.toLocaleString("fa-IR") });
+  if (listing.unitCount !== null) detailFacts.push({ label: "تعداد واحدها", value: listing.unitCount.toLocaleString("fa-IR") });
+  if (listing.parkingType) detailFacts.push({ label: "نوع پارکینگ", value: listing.parkingType });
+  if (listing.serviceCharge !== null) detailFacts.push({ label: "شارژ ماهانه", value: `${formatNumber(listing.serviceCharge.toString())} ${currency}` });
+  if (listing.commission !== null) detailFacts.push({ label: "کمیسیون", value: `${formatNumber(listing.commission.toString())} ${currency}` });
+  if (listing.advancePayment !== null) detailFacts.push({ label: "پیش‌پرداخت", value: `${formatNumber(listing.advancePayment.toString())} ${currency}` });
+  if (listing.minimumContractMonths !== null) detailFacts.push({ label: "حداقل مدت قرارداد", value: `${listing.minimumContractMonths.toLocaleString("fa-IR")} ماه` });
+  if (listing.priceNegotiable) detailFacts.push({ label: "قیمت", value: "قابل مذاکره" });
+  for (const [label, value] of [["نگهداری حیوان خانگی", listing.petsAllowed], ["فقط خانواده", listing.familyOnly], ["اجازه سیگار", listing.smokingAllowed]] as const) {
+    const formatted = yesNo(value);
+    if (formatted) detailFacts.push({ label, value: formatted });
+  }
   if (listing.documentType) detailFacts.push({ label: "نوع سند", value: listing.documentType });
   if (listing.orientation) detailFacts.push({ label: "جهت ملک", value: listing.orientation });
   if (listing.naturalLight) detailFacts.push({ label: "نورگیری", value: listing.naturalLight });

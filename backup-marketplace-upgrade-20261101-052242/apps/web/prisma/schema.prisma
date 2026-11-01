@@ -1,0 +1,737 @@
+// Real Estate Platform - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum ListingType {
+  SALE
+  RENT
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+}
+
+enum ListingStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum RentalPeriod {
+  LONG_TERM
+  DAILY
+  WEEKLY
+  HOURLY
+}
+
+model User {
+  ownedDevelopmentProjects DevelopmentProject[] @relation("DevelopmentProjectOwner")
+  projectInterests ProjectInterest[] @relation("ProjectInterestUser")
+  ownedStayListings StayListing[] @relation("StayListingOwner")
+  agentProfile AgentProfile? @relation("AgentProfileUser")
+  agencyProfile AgencyProfile? @relation("AgencyProfileUser")
+  wallet Wallet? @relation("UserWallet")
+  kycVerifications KycVerification[] @relation("KycSubject")
+  kycReviews KycVerification[] @relation("KycReviewer")
+  listingAssignmentOwnership ListingAgentAssignment[] @relation("ListingAssignmentOwner")
+  sentInquiries Inquiry[] @relation("InquirySender")
+  receivedInquiries Inquiry[] @relation("InquiryRecipient")
+  buyerConversations Conversation[] @relation("ConversationBuyer")
+  sellerConversations Conversation[] @relation("ConversationSeller")
+  sentMessages Message[] @relation("MessageSender")
+  messageReactions MessageReaction[]
+  conversationPreferences ConversationPreference[]
+  blockedUsers BlockedUser[] @relation("UserBlocks")
+  blockedBy BlockedUser[] @relation("UserBlockedBy")
+  messageReports MessageReport[]
+  notifications Notification[]
+  reviews ListingReview[]
+  auditLogs ListingAuditLog[] @relation("ListingAuditActor")
+  id           String     @id @default(cuid())
+  name         String?
+  avatarUrl    String?    @db.VarChar(2048)
+  email        String     @unique
+  phone        String?    @unique
+  passwordHash String
+  role         UserRole   @default(USER)
+  emailNotificationsEnabled Boolean @default(true)
+
+  listings     Listing[]
+  favorites    Favorite[]
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  listingNotes ListingNote[]
+  savedListingItems SavedListingItem[]
+  hiddenListings HiddenListing[]
+  listingReports ListingReport[] @relation("ListingReportReporter")
+
+}
+
+model Listing {
+  agentAssignments ListingAgentAssignment[]
+  inquiries Inquiry[]
+  conversations Conversation[]
+  reviews ListingReview[]
+  priceHistory ListingPriceHistory[]
+  id           String        @id @default(cuid())
+  title        String        @db.VarChar(120)
+  description  String        @db.Text
+  listingType  ListingType
+  propertyType PropertyType
+  status       ListingStatus @default(PENDING)
+  deletedAt    DateTime?
+  deleteExpiresAt DateTime?
+  deletedById  String?
+  publishedAt  DateTime?
+  urgentSale   Boolean       @default(false)
+  rentalPeriod RentalPeriod?
+  viewCount    Int           @default(0)
+
+  price        Decimal       @db.Decimal(14, 2)
+  currency     String        @default("IRT") @db.VarChar(3)
+  area         Decimal       @db.Decimal(10, 2)
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?
+
+  yearBuilt              Int?
+  bathrooms              Int?
+  parkingSpaces          Int?
+  hasElevator            Boolean?
+  hasStorage             Boolean?
+  heatingType            String?   @db.VarChar(80)
+  coolingType            String?   @db.VarChar(80)
+  documentType           String?   @db.VarChar(100)
+  orientation            String?   @db.VarChar(50)
+  naturalLight           String?   @db.VarChar(50)
+  furnished              Boolean?
+  ceilingHeight           Decimal?  @db.Decimal(4, 2)
+  architecturalStyle      String?   @db.VarChar(80)
+  windowView              String?   @db.VarChar(80)
+  furnishedItems          String[]  @default([])
+  accessibilitySuitable   Boolean?
+  accessibilityFeatures   String[]  @default([])
+  readyToMove            Boolean?
+  balcony                Boolean?
+  terrace                Boolean?
+  garden                 Boolean?
+  amenities              String[]  @default([])
+  monthlyRent            Decimal?  @db.Decimal(14, 2)
+  deposit                Decimal?  @db.Decimal(14, 2)
+  allowDepositConversion Boolean   @default(false)
+  advertiserType         String?   @db.VarChar(20)
+  showExactLocation      Boolean   @default(false)
+  showOnMap              Boolean   @default(true)
+
+  city         String        @db.VarChar(100)
+  address      String?       @db.VarChar(300)
+  latitude     Float?
+  longitude    Float?
+
+  ownerId      String
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  images       ListingImage[]
+  favorites    Favorite[]
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([status, createdAt])
+  @@index([city, status])
+  @@index([listingType, propertyType, status])
+  @@index([price])
+  @@index([ownerId])
+  @@index([deletedAt, deleteExpiresAt])
+  @@index([publishedAt])
+  @@index([urgentSale, status, listingType])
+  @@index([rentalPeriod, status])
+  listingNotes ListingNote[]
+  savedListingItems SavedListingItem[]
+  hiddenListings HiddenListing[]
+  listingReports ListingReport[]
+
+}
+
+model ListingPriceHistory {
+  id        String   @id @default(cuid())
+  listingId String
+  oldPrice  Decimal  @db.Decimal(14, 2)
+  newPrice  Decimal  @db.Decimal(14, 2)
+  oldCurrency String @db.VarChar(3)
+  newCurrency String @db.VarChar(3)
+  changedAt DateTime @default(now())
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, changedAt])
+}
+
+enum ListingAuditAction {
+  CREATED
+  UPDATED
+  STATUS_CHANGED
+  DELETED
+  RESTORED
+  PERMANENTLY_DELETED
+}
+
+// Deliberately no Listing relation: audit records must survive permanent listing deletion.
+model ListingAuditLog {
+  id           String             @id @default(cuid())
+  listingId    String
+  listingTitle String             @db.VarChar(120)
+  actorId      String?
+  actor        User?              @relation("ListingAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole    UserRole?
+  action       ListingAuditAction
+  reason       String?            @db.VarChar(1000)
+  before       Json?
+  after        Json?
+  createdAt    DateTime           @default(now())
+
+  @@index([listingId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  url       String   @db.VarChar(2048)
+  sortOrder Int      @default(0)
+  label     String?  @db.VarChar(50)
+  altText   String?  @db.VarChar(200)
+
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([listingId, sortOrder])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
+  @@index([listingId])
+}
+
+
+enum ReviewDecision {
+  PUBLISHED
+  REJECTED
+}
+
+model ListingReview {
+  id         String         @id @default(cuid())
+  listingId  String
+  reviewerId String?
+  decision   ReviewDecision
+  reason     String?        @db.VarChar(1000)
+  createdAt  DateTime       @default(now())
+
+  listing    Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([listingId, createdAt])
+  @@index([reviewerId])
+}
+
+
+model Conversation {
+  id        String   @id @default(cuid())
+  listingId String
+  buyerId   String
+  sellerId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  buyer   User    @relation("ConversationBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller  User    @relation("ConversationSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  messages Message[]
+  preferences ConversationPreference[]
+
+  @@unique([listingId, buyerId, sellerId])
+  @@index([buyerId, updatedAt])
+  @@index([sellerId, updatedAt])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String   @db.VarChar(2000)
+  createdAt      DateTime @default(now())
+  readAt         DateTime?
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  replyToId      String?
+  attachmentUrl  String?  @db.VarChar(2048)
+  attachmentName String?  @db.VarChar(255)
+  attachmentMime String?  @db.VarChar(100)
+  attachmentSize Int?
+
+  conversation Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User           @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      Message?       @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]      @relation("MessageReplies")
+  reports      MessageReport[]
+  reactions    MessageReaction[]
+
+  @@index([conversationId, createdAt])
+  @@index([conversationId, readAt])
+  @@index([senderId, createdAt])
+  @@index([replyToId])
+}
+
+
+
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String   @db.VarChar(32)
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model ConversationPreference {
+  userId         String
+  conversationId String
+  archivedAt     DateTime?
+  mutedUntil     DateTime?
+  pinnedAt       DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conversationId])
+  @@index([userId, archivedAt, updatedAt])
+  @@index([userId, mutedUntil])
+}
+
+model BlockedUser {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  reason    String?  @db.VarChar(500)
+
+  blocker User @relation("UserBlocks", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("UserBlockedBy", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId, createdAt])
+}
+
+model MessageReport {
+  id         String   @id @default(cuid())
+  reporterId String
+  messageId  String
+  reason     String   @db.VarChar(1000)
+  status     String   @default("OPEN") @db.VarChar(20)
+  createdAt  DateTime @default(now())
+
+  reporter User    @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  message  Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([reporterId, messageId])
+  @@index([status, createdAt])
+  @@index([messageId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   @db.VarChar(40)
+  title     String   @db.VarChar(160)
+  body      String   @db.VarChar(500)
+  href      String?  @db.VarChar(2048)
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+model Inquiry {
+  id          String   @id @default(cuid())
+  listingId   String
+  senderId    String
+  recipientId String
+  message     String   @db.VarChar(2000)
+  kind        String   @default("MESSAGE") @db.VarChar(20)
+  offerAmount Decimal? @db.Decimal(14, 2)
+  offerCurrency String? @db.VarChar(3)
+  preferredVisitAt DateTime?
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  sender    User    @relation("InquirySender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User    @relation("InquiryRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([listingId])
+}
+
+// Shared PostgreSQL-backed API rate-limit buckets.
+model RateLimitBucket {
+  key       String   @id @db.VarChar(64)
+  count     Int      @default(1)
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+
+
+enum DevelopmentProjectType {
+  PRE_SALE
+  UNDER_CONSTRUCTION
+  PARTICIPATION
+}
+
+enum DevelopmentProjectStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum StayPropertyType {
+  HOTEL
+  MOTEL
+  INN
+  GUESTHOUSE
+  APARTMENT_HOTEL
+  VILLA
+  ECOTOURISM_LODGE
+}
+
+enum KycStatus {
+  NOT_SUBMITTED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum WalletTransactionType {
+  CREDIT
+  DEBIT
+  HOLD
+  RELEASE
+  REFUND
+  ADJUSTMENT
+}
+
+enum PaidFeatureStatus {
+  PENDING
+  PAID
+  CANCELLED
+  REFUNDED
+}
+
+model DevelopmentProject {
+  id                 String                   @id @default(cuid())
+  title              String                   @db.VarChar(160)
+  slug               String                   @unique @db.VarChar(180)
+  description        String                   @db.Text
+  projectType        DevelopmentProjectType
+  status             DevelopmentProjectStatus @default(PENDING)
+  city               String                   @db.VarChar(100)
+  address            String?                  @db.VarChar(300)
+  developerName      String                   @db.VarChar(160)
+  expectedCompletion DateTime?
+  totalUnits         Int?
+  availableUnits     Int?
+  minimumInvestment  Decimal?                 @db.Decimal(16, 2)
+  priceFrom          Decimal?                 @db.Decimal(16, 2)
+  currency           String                   @default("IRR") @db.VarChar(3)
+  amenities          String[]                 @default([])
+  imageUrls          String[]                 @default([])
+  publishedAt        DateTime?
+  ownerId            String
+  owner              User                     @relation("DevelopmentProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  interests          ProjectInterest[]
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  @@index([status, projectType, city])
+  @@index([ownerId, createdAt])
+}
+
+model ProjectInterest {
+  id        String           @id @default(cuid())
+  projectId String
+  userId    String
+  message   String?          @db.VarChar(1200)
+  project   DevelopmentProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User             @relation("ProjectInterestUser", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId, createdAt])
+}
+
+model StayListing {
+  id           String          @id @default(cuid())
+  title        String          @db.VarChar(160)
+  slug         String          @unique @db.VarChar(180)
+  description  String          @db.Text
+  stayType     StayPropertyType
+  city         String          @db.VarChar(100)
+  address      String?         @db.VarChar(300)
+  nightlyRate  Decimal?        @db.Decimal(14, 2)
+  weeklyRate   Decimal?        @db.Decimal(14, 2)
+  hourlyRate   Decimal?        @db.Decimal(14, 2)
+  monthlyRate  Decimal?        @db.Decimal(14, 2)
+  currency     String          @default("IRR") @db.VarChar(3)
+  roomCount    Int?
+  maxGuests    Int?
+  amenities    String[]        @default([])
+  imageUrls    String[]        @default([])
+  status       ListingStatus   @default(PENDING)
+  ownerId      String
+  owner        User            @relation("StayListingOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([status, stayType, city])
+  @@index([ownerId, createdAt])
+}
+
+model AgentProfile {
+  id              String                @id @default(cuid())
+  userId          String                @unique
+  slug            String                @unique @db.VarChar(180)
+  displayName     String                @db.VarChar(140)
+  bio             String?               @db.VarChar(3000)
+  publicPhone     String?               @db.VarChar(30)
+  city            String                @db.VarChar(100)
+  licenseNumber   String?               @db.VarChar(100)
+  verifiedAt      DateTime?
+  user            User                  @relation("AgentProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  memberships     AgentAgencyMember[]
+  listingAssignments ListingAgentAssignment[]
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([city, verifiedAt])
+}
+
+model AgencyProfile {
+  id            String                @id @default(cuid())
+  userId        String                @unique
+  slug          String                @unique @db.VarChar(180)
+  name          String                @db.VarChar(160)
+  description   String?               @db.VarChar(3000)
+  city          String                @db.VarChar(100)
+  address       String?               @db.VarChar(300)
+  publicPhone   String?               @db.VarChar(30)
+  website       String?               @db.VarChar(2048)
+  licenseNumber String?               @db.VarChar(100)
+  verifiedAt    DateTime?
+  user          User                  @relation("AgencyProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  members       AgentAgencyMember[]
+  assignments   ListingAgentAssignment[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([city, verifiedAt])
+}
+
+model AgentAgencyMember {
+  id             String        @id @default(cuid())
+  agentProfileId String
+  agencyProfileId String
+  title          String?       @db.VarChar(100)
+  status         String        @default("ACTIVE") @db.VarChar(20)
+  agentProfile   AgentProfile  @relation(fields: [agentProfileId], references: [id], onDelete: Cascade)
+  agencyProfile  AgencyProfile @relation(fields: [agencyProfileId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+
+  @@unique([agentProfileId, agencyProfileId])
+  @@index([agencyProfileId, status])
+}
+
+model ListingAgentAssignment {
+  id               String         @id @default(cuid())
+  listingId        String         @unique
+  agentProfileId   String
+  agencyProfileId  String?
+  ownerId          String
+  commissionType   String         @default("PERCENT") @db.VarChar(20)
+  commissionValue  Decimal        @db.Decimal(12, 2)
+  commissionNote   String?        @db.VarChar(1000)
+  status           String         @default("ACTIVE") @db.VarChar(20)
+  listing          Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  agentProfile     AgentProfile   @relation(fields: [agentProfileId], references: [id], onDelete: Restrict)
+  agencyProfile    AgencyProfile? @relation(fields: [agencyProfileId], references: [id], onDelete: SetNull)
+  owner            User           @relation("ListingAssignmentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([agentProfileId, status])
+  @@index([agencyProfileId, status])
+}
+
+model Wallet {
+  id           String              @id @default(cuid())
+  userId       String              @unique
+  balance      Decimal             @default(0) @db.Decimal(16, 2)
+  currency     String              @default("IRR") @db.VarChar(3)
+  user         User                @relation("UserWallet", fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+  purchases    PaidFeaturePurchase[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+model WalletTransaction {
+  id          String                @id @default(cuid())
+  walletId    String
+  type        WalletTransactionType
+  amount      Decimal               @db.Decimal(16, 2)
+  currency    String                @default("IRR") @db.VarChar(3)
+  description String                @db.VarChar(500)
+  reference   String?               @unique @db.VarChar(180)
+  metadata    Json?
+  wallet      Wallet                @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  createdAt   DateTime              @default(now())
+
+  @@index([walletId, createdAt])
+  @@index([type, createdAt])
+}
+
+model KycVerification {
+  id             String     @id @default(cuid())
+  userId         String
+  status         KycStatus  @default(PENDING)
+  fullName       String     @db.VarChar(160)
+  nationalIdLast4 String?    @db.VarChar(4)
+  phone          String?    @db.VarChar(30)
+  note           String?    @db.VarChar(1000)
+  rejectionReason String?   @db.VarChar(1000)
+  reviewMethod    String?   @db.VarChar(80)
+  submittedAt    DateTime   @default(now())
+  reviewedAt     DateTime?
+  reviewedById   String?
+  user           User       @relation("KycSubject", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy     User?      @relation("KycReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, submittedAt])
+  @@index([status, submittedAt])
+}
+
+model PaidFeaturePurchase {
+  id             String           @id @default(cuid())
+  walletId       String
+  featureCode    String           @db.VarChar(80)
+  description    String           @db.VarChar(300)
+  amount         Decimal          @db.Decimal(16, 2)
+  currency       String           @default("IRR") @db.VarChar(3)
+  status         PaidFeatureStatus @default(PENDING)
+  listingId      String?
+  wallet         Wallet           @relation(fields: [walletId], references: [id], onDelete: Restrict)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([walletId, createdAt])
+  @@index([status, createdAt])
+}
+
+
+
+model ListingNote {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  content   String   @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([listingId, updatedAt])
+}
+model SavedListingItem {
+  id             String   @id @default(cuid())
+  userId         String
+  listingId      String
+  collectionName String   @default("ذخیره‌شده‌ها") @db.VarChar(80)
+  createdAt      DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId, collectionName, createdAt])
+}
+model HiddenListing {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@index([userId, createdAt])
+}
+model ListingReport {
+  id         String   @id @default(cuid())
+  reporterId String
+  listingId  String
+  reason     String   @db.VarChar(120)
+  details    String?  @db.VarChar(1000)
+  status     String   @default("OPEN") @db.VarChar(20)
+  createdAt  DateTime @default(now())
+
+  reporter User    @relation("ListingReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  listing  Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([reporterId, listingId])
+  @@index([status, createdAt])
+  @@index([listingId, createdAt])
+}

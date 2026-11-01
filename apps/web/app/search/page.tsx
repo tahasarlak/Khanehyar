@@ -22,6 +22,7 @@ type SearchParams = {
   sort?: RawValue;
   page?: RawValue;
   view?: RawValue;
+  floorMin?: RawValue; floorMax?: RawValue; furnished?: RawValue; elevator?: RawValue; parking?: RawValue; urgent?: RawValue; pets?: RawValue; buildingType?: RawValue; constructionStatus?: RawValue; architecturalStyle?: RawValue; windowView?: RawValue; rentalPeriod?: RawValue;
 };
 
 type SearchFilters = {
@@ -33,7 +34,8 @@ type SearchFilters = {
   minArea: string;
   maxArea: string;
   rooms: string;
-  sort: "newest" | "price_asc" | "price_desc" | "area_desc";
+  sort: "newest" | "price_asc" | "price_desc" | "area_desc" | "popular";
+  floorMin: string; floorMax: string; furnished: string; elevator: string; parking: string; urgent: string; pets: string; buildingType: string; constructionStatus: string; architecturalStyle: string; windowView: string; rentalPeriod: string;
 };
 
 const PAGE_SIZE = 6;
@@ -46,12 +48,7 @@ const propertyTypes = [
   "COMMERCIAL",
 ] as const;
 
-const sortOptions = [
-  "newest",
-  "price_asc",
-  "price_desc",
-  "area_desc",
-] as const;
+const sortOptions = ["newest", "price_asc", "price_desc", "area_desc", "popular"] as const;
 
 function single(value: RawValue): string {
   return typeof value === "string" ? value.trim() : "";
@@ -112,6 +109,7 @@ function parseFilters(params: SearchParams): SearchFilters {
     maxArea: areaInput(params.maxArea),
     rooms: roomInput(params.rooms),
     sort,
+    floorMin: moneyInput(params.floorMin), floorMax: moneyInput(params.floorMax), furnished: ["true","false"].includes(single(params.furnished)) ? single(params.furnished) : "", elevator: ["true","false"].includes(single(params.elevator)) ? single(params.elevator) : "", parking: ["true","false"].includes(single(params.parking)) ? single(params.parking) : "", urgent: single(params.urgent) === "true" ? "true" : "", pets: ["true","false"].includes(single(params.pets)) ? single(params.pets) : "", buildingType: single(params.buildingType).slice(0,80), constructionStatus: single(params.constructionStatus).slice(0,80), architecturalStyle: single(params.architecturalStyle).slice(0,80), windowView: single(params.windowView).slice(0,80), rentalPeriod: ["LONG_TERM","DAILY","WEEKLY","HOURLY"].includes(single(params.rentalPeriod)) ? single(params.rentalPeriod) : "",
   };
 }
 
@@ -137,10 +135,10 @@ function buildWhere(filters: SearchFilters): Prisma.ListingWhereInput {
   }
 
   if (filters.minPrice || filters.maxPrice) {
-    where.price = {
-      ...(filters.minPrice ? { gte: filters.minPrice } : {}),
-      ...(filters.maxPrice ? { lte: filters.maxPrice } : {}),
-    };
+    const range = { ...(filters.minPrice ? { gte: filters.minPrice } : {}), ...(filters.maxPrice ? { lte: filters.maxPrice } : {}) };
+    if (filters.deal === "RENT") where.monthlyRent = range;
+    else if (filters.deal === "SALE") where.price = range;
+    else where.OR = [{ listingType: "SALE", price: range }, { listingType: "RENT", monthlyRent: range }];
   }
 
   if (filters.minArea || filters.maxArea) {
@@ -150,21 +148,32 @@ function buildWhere(filters: SearchFilters): Prisma.ListingWhereInput {
     };
   }
 
-  if (filters.rooms) {
-    where.rooms = { gte: Number(filters.rooms) };
-  }
+  if (filters.rooms) where.rooms = { gte: Number(filters.rooms) };
+  if (filters.floorMin || filters.floorMax) where.floor = { ...(filters.floorMin ? { gte: Number(filters.floorMin) } : {}), ...(filters.floorMax ? { lte: Number(filters.floorMax) } : {}) };
+  if (filters.furnished) where.furnished = filters.furnished === "true";
+  if (filters.elevator) where.hasElevator = filters.elevator === "true";
+  if (filters.parking === "true") where.parkingSpaces = { gt: 0 };
+  if (filters.parking === "false") where.parkingSpaces = 0;
+  if (filters.urgent === "true") where.urgentSale = true;
+  if (filters.pets) where.petsAllowed = filters.pets === "true";
+  if (filters.buildingType) where.buildingType = filters.buildingType;
+  if (filters.constructionStatus) where.constructionStatus = filters.constructionStatus;
+  if (filters.architecturalStyle) where.architecturalStyle = filters.architecturalStyle;
+  if (filters.windowView) where.windowView = filters.windowView;
+  if (filters.rentalPeriod) where.rentalPeriod = filters.rentalPeriod as "LONG_TERM" | "DAILY" | "WEEKLY" | "HOURLY";
 
   return where;
 }
 
-function sortBy(value: SearchFilters["sort"]): Prisma.ListingOrderByWithRelationInput[] {
+function sortBy(value: SearchFilters["sort"], deal: SearchFilters["deal"]): Prisma.ListingOrderByWithRelationInput[] {
   switch (value) {
     case "price_asc":
-      return [{ price: "asc" }, { id: "desc" }];
+      return deal === "RENT" ? [{ monthlyRent: "asc" }, { id: "desc" }] : [{ price: "asc" }, { id: "desc" }];
     case "price_desc":
-      return [{ price: "desc" }, { id: "desc" }];
+      return deal === "RENT" ? [{ monthlyRent: "desc" }, { id: "desc" }] : [{ price: "desc" }, { id: "desc" }];
     case "area_desc":
       return [{ area: "desc" }, { id: "desc" }];
+    case "popular": return [{ viewCount: "desc" }, { createdAt: "desc" }];
     default:
       return [{ createdAt: "desc" }, { id: "desc" }];
   }
@@ -182,7 +191,7 @@ function pageUrl(filters: SearchFilters, page: number): string {
     minArea: filters.minArea,
     maxArea: filters.maxArea,
     rooms: filters.rooms,
-    sort: filters.sort === "newest" ? "" : filters.sort,
+    sort: filters.sort === "newest" ? "" : filters.sort, floorMin: filters.floorMin, floorMax: filters.floorMax, furnished: filters.furnished, elevator: filters.elevator, parking: filters.parking, urgent: filters.urgent, pets: filters.pets, buildingType: filters.buildingType, constructionStatus: filters.constructionStatus, architecturalStyle: filters.architecturalStyle, windowView: filters.windowView, rentalPeriod: filters.rentalPeriod,
   };
 
   for (const [key, value] of Object.entries(values)) {
@@ -217,7 +226,7 @@ async function SearchResults({
 
   const listings = await prisma.listing.findMany({
     where,
-    orderBy: sortBy(filters.sort),
+    orderBy: sortBy(filters.sort, filters.deal),
     skip: view === "map" ? 0 : (currentPage - 1) * PAGE_SIZE,
     take: view === "map" ? Math.min(total, 3000) : PAGE_SIZE,
     select: {
@@ -230,6 +239,7 @@ async function SearchResults({
       rooms: true,
       propertyType: true,
       listingType: true,
+      urgentSale: true, rentalPeriod: true, viewCount: true, monthlyRent: true, deposit: true, priceNegotiable: true,
       latitude: true,
       longitude: true,
       showExactLocation: true,
@@ -324,6 +334,8 @@ async function SearchResults({
             </select>
           </label>
 
+          <label className="hy-field"><span>مدت اجاره</span><select name="rentalPeriod" defaultValue={filters.rentalPeriod}><option value="">همه مدت‌ها</option><option value="LONG_TERM">بلندمدت</option><option value="DAILY">روزانه</option><option value="WEEKLY">هفتگی</option><option value="HOURLY">ساعتی</option></select></label>
+
           <fieldset className="hy-filter-group">
             <legend>محدوده قیمت</legend>
             <div className="hy-filter-pair">
@@ -404,13 +416,24 @@ async function SearchResults({
             </select>
           </label>
 
+          <fieldset className="hy-filter-group"><legend>طبقه</legend><div className="hy-filter-pair"><label className="hy-field"><span>از طبقه</span><input name="floorMin" type="number" min="0" max="200" defaultValue={filters.floorMin} placeholder="حداقل"/></label><label className="hy-field"><span>تا طبقه</span><input name="floorMax" type="number" min="0" max="200" defaultValue={filters.floorMax} placeholder="حداکثر"/></label></div></fieldset>
+          <label className="hy-field"><span>مبله</span><select name="furnished" defaultValue={filters.furnished}><option value="">فرقی ندارد</option><option value="true">فقط مبله</option><option value="false">غیرمبله</option></select></label>
+          <label className="hy-field"><span>آسانسور</span><select name="elevator" defaultValue={filters.elevator}><option value="">فرقی ندارد</option><option value="true">دارد</option><option value="false">ندارد</option></select></label>
+          <label className="hy-field"><span>پارکینگ</span><select name="parking" defaultValue={filters.parking}><option value="">فرقی ندارد</option><option value="true">دارای پارکینگ</option><option value="false">بدون پارکینگ</option></select></label>
+          <label className="hy-field"><span>حیوان خانگی</span><select name="pets" defaultValue={filters.pets}><option value="">فرقی ندارد</option><option value="true">مجاز</option><option value="false">غیرمجاز</option></select></label>
+          <label className="hy-field"><span>فروش فوری</span><select name="urgent" defaultValue={filters.urgent}><option value="">همه</option><option value="true">فقط فروش فوری</option></select></label>
+          <label className="hy-field"><span>نوع ساختمان</span><select name="buildingType" defaultValue={filters.buildingType}><option value="">همه</option>{["آپارتمان کم‌واحد","مجتمع مسکونی","برج مسکونی","خانه مستقل","ویلایی","ساختمان اداری-تجاری"].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label className="hy-field"><span>وضعیت ساخت</span><select name="constructionStatus" defaultValue={filters.constructionStatus}><option value="">همه</option>{["آماده سکونت","در حال ساخت","پیش‌فروش","نیازمند بازسازی","کلنگی و آماده تخریب"].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label className="hy-field"><span>سبک معماری</span><select name="architecturalStyle" defaultValue={filters.architecturalStyle}><option value="">همه</option>{["مدرن","کلاسیک","نئوکلاسیک","رومی","مینیمال","اسکاندیناوی","سنتی ایرانی","صنعتی","روستیک","لوکس"].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label className="hy-field"><span>منظره پنجره</span><select name="windowView" defaultValue={filters.windowView}><option value="">همه</option>{["خیابان","کوچه","حیاط","باغ و فضای سبز","جنگل","کوهستان","دریا","خط آسمان شهر","بدون منظرهٔ خاص"].map(x=><option key={x}>{x}</option>)}</select></label>
+
           <label className="hy-field">
             <span>مرتب‌سازی</span>
             <select name="sort" defaultValue={filters.sort}>
               <option value="newest">جدیدترین آگهی‌ها</option>
               <option value="price_asc">ارزان‌ترین</option>
               <option value="price_desc">گران‌ترین</option>
-              <option value="area_desc">بیشترین متراژ</option>
+              <option value="area_desc">بیشترین متراژ</option><option value="popular">پربازدیدترین</option>
             </select>
           </label>
 
@@ -454,7 +477,7 @@ async function SearchResults({
             const exactAllowed = listing.showExactLocation && hasExactCoordinates;
             const offsetLat = exactAllowed ? 0 : (((hash % 1000) / 1000) - 0.5) * (hasExactCoordinates ? 0.012 : 0.04);
             const offsetLon = exactAllowed ? 0 : ((((hash >>> 4) % 1000) / 1000) - 0.5) * (hasExactCoordinates ? 0.016 : 0.05);
-            return { id: listing.id, title: listing.title, city: listing.city, price: String(listing.price), currency: listing.currency, latitude: base.latitude + offsetLat, longitude: base.longitude + offsetLon, imageUrl: listing.images[0]?.url ?? null, listingType: listing.listingType };
+            return { id: listing.id, title: listing.title, city: listing.city, price: String(listing.listingType === "RENT" && listing.monthlyRent !== null ? listing.monthlyRent : listing.price), currency: listing.currency, latitude: base.latitude + offsetLat, longitude: base.longitude + offsetLon, imageUrl: listing.images[0]?.url ?? null, listingType: listing.listingType, urgentSale: listing.urgentSale, rentalPeriod: listing.rentalPeriod };
           })} /> : <div className="hy-empty"><h3>آگهی قابل نمایش روی نقشه وجود ندارد</h3><p>ممکن است آگهی‌دهنده نمایش روی نقشه را غیرفعال کرده باشد یا شهر ملک هنوز نقطهٔ مرجع نداشته باشد.</p><Link href={pageUrl(filters, 1)} className="hy-button hy-button-primary">نمایش فهرست</Link></div>
         ) : listings.length ? (
           <div className="hy-advanced-property-grid">

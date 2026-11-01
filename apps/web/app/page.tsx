@@ -28,6 +28,7 @@ export default async function HomePage() {
       rooms: true,
       propertyType: true,
       listingType: true,
+      urgentSale: true, rentalPeriod: true, viewCount: true, monthlyRent: true, deposit: true, priceNegotiable: true,
       images: {
         take: 1,
         orderBy: { sortOrder: "asc" },
@@ -206,6 +207,17 @@ export default async function HomePage() {
                 </Link>
               </div>
             )}
+          </div>
+        </section>
+
+        <section className="hy-section hy-discovery-section">
+          <div className="hy-wrap">
+            <div className="hy-section-heading"><div><span className="hy-overline">فراتر از آگهی ملک</span><h2>همه خدمات بازار مسکن در خانه‌یار</h2><p>از خرید و اجاره تا پیش‌خرید، اقامت و مشاوران تخصصی.</p></div></div>
+            <div className="hy-category-grid">
+              <Link href="/projects" className="hy-category"><span className="hy-category-icon">🏗</span><strong>پروژه‌های ساختمانی</strong><span className="hy-category-more">پیش‌فروش و مشارکت ←</span></Link>
+              <Link href="/stays" className="hy-category"><span className="hy-category-icon">⌂</span><strong>اقامتگاه‌ها</strong><span className="hy-category-more">هتل، مهمان‌پذیر و ویلا ←</span></Link>
+              <Link href="/agents" className="hy-category"><span className="hy-category-icon">♙</span><strong>مشاوران و آژانس‌ها</strong><span className="hy-category-more">مشاهده پروفایل‌ها ←</span></Link>
+            </div>
           </div>
         </section>
 

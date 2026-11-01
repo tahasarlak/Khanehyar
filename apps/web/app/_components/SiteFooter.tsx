@@ -12,6 +12,8 @@ export default function SiteFooter() {
         <div className={styles.column}>
           <h2>دسترسی سریع</h2>
           <Link href="/search">جست‌وجوی ملک</Link>
+          <Link href="/search?sort=popular">آگهی‌های پربازدید</Link>
+          <Link href="/search?urgent=true">فروش فوری</Link>
           <Link href="/projects">پروژه‌های ساختمانی</Link>
           <Link href="/stays">هتل و اقامتگاه</Link>
           <Link href="/agents">مشاوران و املاکی‌ها</Link>

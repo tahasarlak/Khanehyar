@@ -78,6 +78,9 @@ export default function SiteHeaderMobileMenu({
             <Link href="/search" onClick={close}><span aria-hidden="true">⌕</span><span>جست‌وجوی ملک</span></Link>
             <Link href="/search?deal=SALE" onClick={close}><span aria-hidden="true">↗</span><span>خرید ملک</span></Link>
             <Link href="/search?deal=RENT" onClick={close}><span aria-hidden="true">⌂</span><span>اجاره ملک</span></Link>
+            <Link href="/projects" onClick={close}><span aria-hidden="true">🏗</span><span>پروژه‌های ساختمانی</span></Link>
+            <Link href="/stays" onClick={close}><span aria-hidden="true">⌂</span><span>هتل و اقامتگاه</span></Link>
+            <Link href="/agents" onClick={close}><span aria-hidden="true">♙</span><span>مشاوران املاک</span></Link>
             {authenticated ? <Link href="/dashboard" onClick={close}><span aria-hidden="true">▦</span><span>داشبورد</span></Link> : null}
             {authenticated ? <Link href="/dashboard/listings" onClick={close}><span aria-hidden="true">▤</span><span>آگهی‌های من</span></Link> : null}
             {authenticated ? <Link href="/dashboard/messages" onClick={close}><span aria-hidden="true">✉</span><span>پیام‌ها</span></Link> : null}

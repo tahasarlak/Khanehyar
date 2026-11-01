@@ -87,9 +87,9 @@ async function main() {
     await prisma.listing.upsert({
       where: { id },
       update: {
-        title, description, listingType, propertyType, status: "PUBLISHED",
+        title, description, listingType, propertyType, status: "PUBLISHED", rentalPeriod: listingType === "RENT" ? "LONG_TERM" : null, urgentSale: listingType === "SALE" && index % 11 === 0,
         deletedAt: null, deleteExpiresAt: null, price, currency: "IRT", area, rooms,
-        city: city.name, address: null, latitude, longitude, showExactLocation: false,
+        city: city.name, address: null, latitude, longitude, showExactLocation: false, monthlyRent: listingType === "RENT" ? price : null, deposit: listingType === "RENT" ? String(Math.round(Number(price) * 2)) : null, floor: propertyType === "APARTMENT" ? 1 + (index % 12) : 0, totalFloors: propertyType === "APARTMENT" ? 4 + (index % 20) : 1, yearBuilt: 1380 + (index % 45), bathrooms: propertyType === "LAND" ? null : 1 + (index % 3), parkingSpaces: propertyType === "LAND" ? null : index % 4, hasElevator: propertyType === "APARTMENT" ? index % 5 !== 0 : false, hasStorage: index % 3 === 0, readyToMove: index % 8 !== 0, balcony: propertyType === "APARTMENT" ? index % 2 === 0 : null, terrace: propertyType === "VILLA" ? true : null, garden: propertyType === "VILLA" ? true : null,
         ceilingHeight: propertyType === "LAND" ? null : Number((2.7 + (index % 7) * 0.1).toFixed(2)),
         architecturalStyle: propertyType === "LAND" ? null : (["مدرن", "کلاسیک", "نئوکلاسیک", "رومی", "مینیمال", "سنتی ایرانی"][index % 6]),
         windowView: propertyType === "LAND" ? null : (["خیابان", "کوچه", "حیاط", "باغ و فضای سبز", "خط آسمان شهر", "کوهستان"][index % 6]),
@@ -97,19 +97,20 @@ async function main() {
         furnishedItems: index % 3 === 0 ? [] : (["مبل و میز پذیرایی", "یخچال", "اجاق گاز", "ماشین لباس‌شویی", "تخت‌خواب"].slice(0, 2 + (index % 4))),
         accessibilitySuitable: index % 4 === 0,
         accessibilityFeatures: index % 4 === 0 ? ["ورودی بدون پله", "آسانسور مناسب ویلچر", "درهای عریض"].slice(0, 1 + (index % 3)) : [],
+        buildingType: propertyType === "VILLA" ? "ویلایی" : "آپارتمان کم‌واحد", constructionStatus: index % 9 === 0 ? "نیازمند بازسازی" : "آماده سکونت", structureType: index % 2 ? "بتنی" : "فلزی", facadeType: index % 3 ? "سنگ" : "آجر", elevatorCount: propertyType === "APARTMENT" ? 1 + (index % 3) : 0, unitCount: propertyType === "APARTMENT" ? 6 + (index % 30) : 1, parkingType: index % 4 ? "اختصاصی سندی" : "روباز", serviceCharge: listingType === "RENT" ? 500000 + (index * 25000) : null, commission: null, advancePayment: listingType === "RENT" ? 1000000 + (index * 50000) : null, minimumContractMonths: listingType === "RENT" ? 12 : null, petsAllowed: index % 3 === 0, familyOnly: index % 5 === 0, smokingAllowed: false, priceNegotiable: index % 2 === 0,
         ownerId: user.id,
       },
       create: {
-        id, title, description, listingType, propertyType, status: "PUBLISHED",
+        id, title, description, listingType, propertyType, status: "PUBLISHED", rentalPeriod: listingType === "RENT" ? "LONG_TERM" : null, urgentSale: listingType === "SALE" && index % 11 === 0,
         price, currency: "IRT", area, rooms, city: city.name,
-        address: null, latitude, longitude, showExactLocation: false,
+        address: null, latitude, longitude, showExactLocation: false, monthlyRent: listingType === "RENT" ? price : null, deposit: listingType === "RENT" ? String(Math.round(Number(price) * 2)) : null, floor: propertyType === "APARTMENT" ? 1 + (index % 12) : 0, totalFloors: propertyType === "APARTMENT" ? 4 + (index % 20) : 1, yearBuilt: 1380 + (index % 45), bathrooms: propertyType === "LAND" ? null : 1 + (index % 3), parkingSpaces: propertyType === "LAND" ? null : index % 4, hasElevator: propertyType === "APARTMENT" ? index % 5 !== 0 : false, hasStorage: index % 3 === 0, readyToMove: index % 8 !== 0, balcony: propertyType === "APARTMENT" ? index % 2 === 0 : null, terrace: propertyType === "VILLA" ? true : null, garden: propertyType === "VILLA" ? true : null,
         ceilingHeight: propertyType === "LAND" ? null : Number((2.7 + (index % 7) * 0.1).toFixed(2)),
         architecturalStyle: propertyType === "LAND" ? null : (["مدرن", "کلاسیک", "نئوکلاسیک", "رومی", "مینیمال", "سنتی ایرانی"][index % 6]),
         windowView: propertyType === "LAND" ? null : (["خیابان", "کوچه", "حیاط", "باغ و فضای سبز", "خط آسمان شهر", "کوهستان"][index % 6]),
         furnished: listingType === "RENT" ? index % 3 !== 0 : index % 4 === 0,
         furnishedItems: index % 3 === 0 ? [] : (["مبل و میز پذیرایی", "یخچال", "اجاق گاز", "ماشین لباس‌شویی", "تخت‌خواب"].slice(0, 2 + (index % 4))),
         accessibilitySuitable: index % 4 === 0,
-        accessibilityFeatures: index % 4 === 0 ? ["ورودی بدون پله", "آسانسور مناسب ویلچر", "درهای عریض"].slice(0, 1 + (index % 3)) : [], ownerId: user.id,
+        accessibilityFeatures: index % 4 === 0 ? ["ورودی بدون پله", "آسانسور مناسب ویلچر", "درهای عریض"].slice(0, 1 + (index % 3)) : [], buildingType: propertyType === "VILLA" ? "ویلایی" : "آپارتمان کم‌واحد", constructionStatus: index % 9 === 0 ? "نیازمند بازسازی" : "آماده سکونت", structureType: index % 2 ? "بتنی" : "فلزی", facadeType: index % 3 ? "سنگ" : "آجر", elevatorCount: propertyType === "APARTMENT" ? 1 + (index % 3) : 0, unitCount: propertyType === "APARTMENT" ? 6 + (index % 30) : 1, parkingType: index % 4 ? "اختصاصی سندی" : "روباز", serviceCharge: listingType === "RENT" ? 500000 + (index * 25000) : null, commission: null, advancePayment: listingType === "RENT" ? 1000000 + (index * 50000) : null, minimumContractMonths: listingType === "RENT" ? 12 : null, petsAllowed: index % 3 === 0, familyOnly: index % 5 === 0, smokingAllowed: false, priceNegotiable: index % 2 === 0, ownerId: user.id,
       },
     });
 

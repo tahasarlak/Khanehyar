@@ -26,6 +26,9 @@ export default async function SiteHeader() {
           <Link href="/search">جست‌وجوی ملک</Link>
           <Link href="/search?deal=SALE">خرید ملک</Link>
           <Link href="/search?deal=RENT">اجاره ملک</Link>
+          <Link href="/projects">پروژه‌ها</Link>
+          <Link href="/stays">اقامتگاه‌ها</Link>
+          <Link href="/agents">مشاوران</Link>
           {user ? <Link href="/dashboard/listings">آگهی‌های من</Link> : null}
           {user ? <UnreadMessagesLink /> : null}
         </nav>

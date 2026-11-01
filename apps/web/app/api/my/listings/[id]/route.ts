@@ -130,7 +130,7 @@ export async function GET(_request: Request, context: Context) {
       totalFloors: true,
       yearBuilt: true, bathrooms: true, parkingSpaces: true, hasElevator: true, hasStorage: true,
       heatingType: true, coolingType: true, documentType: true, orientation: true, naturalLight: true,
-      furnished: true, ceilingHeight: true, architecturalStyle: true, windowView: true, furnishedItems: true, accessibilitySuitable: true, accessibilityFeatures: true, readyToMove: true, balcony: true, terrace: true, garden: true, amenities: true,
+      furnished: true, ceilingHeight: true, architecturalStyle: true, windowView: true, furnishedItems: true, accessibilitySuitable: true, accessibilityFeatures: true, buildingType: true, constructionStatus: true, structureType: true, facadeType: true, elevatorCount: true, unitCount: true, parkingType: true, serviceCharge: true, commission: true, advancePayment: true, minimumContractMonths: true, petsAllowed: true, familyOnly: true, smokingAllowed: true, priceNegotiable: true, readyToMove: true, balcony: true, terrace: true, garden: true, amenities: true,
       monthlyRent: true, deposit: true, allowDepositConversion: true, advertiserType: true, showExactLocation: true, showOnMap: true,
       images: { orderBy: { sortOrder: "asc" }, select: { id: true, url: true, sortOrder: true, label: true, altText: true } },
       city: true,
@@ -228,7 +228,7 @@ export async function PATCH(request: Request, context: Context) {
     "price", "currency", "area", "rooms", "city", "address",
     "latitude", "longitude", "floor", "totalFloors", "yearBuilt", "bathrooms", "parkingSpaces",
     "hasElevator", "hasStorage", "heatingType", "coolingType", "documentType", "orientation", "naturalLight",
-    "furnished", "ceilingHeight", "architecturalStyle", "windowView", "furnishedItems", "accessibilitySuitable", "accessibilityFeatures", "readyToMove", "balcony", "terrace", "garden", "amenities", "monthlyRent", "deposit",
+    "furnished", "ceilingHeight", "architecturalStyle", "windowView", "furnishedItems", "accessibilitySuitable", "accessibilityFeatures", "buildingType", "constructionStatus", "structureType", "facadeType", "elevatorCount", "unitCount", "parkingType", "serviceCharge", "commission", "advancePayment", "minimumContractMonths", "petsAllowed", "familyOnly", "smokingAllowed", "priceNegotiable", "readyToMove", "balcony", "terrace", "garden", "amenities", "monthlyRent", "deposit",
     "allowDepositConversion", "advertiserType", "showExactLocation", "showOnMap",
   ]);
 
@@ -304,7 +304,7 @@ export async function PATCH(request: Request, context: Context) {
       hasElevator: data.hasElevator ?? null, hasStorage: data.hasStorage ?? null,
       heatingType: data.heatingType ?? null, coolingType: data.coolingType ?? null, documentType: data.documentType ?? null,
       orientation: data.orientation ?? null, naturalLight: data.naturalLight ?? null,
-      furnished: data.furnished ?? null, ceilingHeight: data.ceilingHeight ?? null, architecturalStyle: data.architecturalStyle ?? null, windowView: data.windowView ?? null, furnishedItems: data.furnishedItems, accessibilitySuitable: data.accessibilitySuitable ?? null, accessibilityFeatures: data.accessibilityFeatures, readyToMove: data.readyToMove ?? null, balcony: data.balcony ?? null,
+      furnished: data.furnished ?? null, ceilingHeight: data.ceilingHeight ?? null, architecturalStyle: data.architecturalStyle ?? null, windowView: data.windowView ?? null, furnishedItems: data.furnishedItems, accessibilitySuitable: data.accessibilitySuitable ?? null, accessibilityFeatures: data.accessibilityFeatures, buildingType: data.buildingType ?? null, constructionStatus: data.constructionStatus ?? null, structureType: data.structureType ?? null, facadeType: data.facadeType ?? null, elevatorCount: data.elevatorCount ?? null, unitCount: data.unitCount ?? null, parkingType: data.parkingType ?? null, serviceCharge: data.serviceCharge ?? null, commission: data.commission ?? null, advancePayment: data.advancePayment ?? null, minimumContractMonths: data.minimumContractMonths ?? null, petsAllowed: data.petsAllowed ?? null, familyOnly: data.familyOnly ?? null, smokingAllowed: data.smokingAllowed ?? null, priceNegotiable: data.priceNegotiable, readyToMove: data.readyToMove ?? null, balcony: data.balcony ?? null,
       terrace: data.terrace ?? null, garden: data.garden ?? null, amenities: data.amenities,
       monthlyRent: data.monthlyRent ?? null, deposit: data.deposit ?? null,
       allowDepositConversion: data.allowDepositConversion, advertiserType: data.advertiserType, showExactLocation: data.showExactLocation, showOnMap: data.showOnMap,

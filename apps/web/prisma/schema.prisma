@@ -129,6 +129,21 @@ model Listing {
   furnishedItems          String[]  @default([])
   accessibilitySuitable   Boolean?
   accessibilityFeatures   String[]  @default([])
+  buildingType            String?   @db.VarChar(80)
+  constructionStatus      String?   @db.VarChar(80)
+  structureType           String?   @db.VarChar(80)
+  facadeType              String?   @db.VarChar(80)
+  elevatorCount           Int?
+  unitCount               Int?
+  parkingType             String?   @db.VarChar(80)
+  serviceCharge           Decimal?  @db.Decimal(14, 2)
+  commission              Decimal?  @db.Decimal(14, 2)
+  advancePayment          Decimal?  @db.Decimal(14, 2)
+  minimumContractMonths   Int?
+  petsAllowed             Boolean?
+  familyOnly              Boolean?
+  smokingAllowed          Boolean?
+  priceNegotiable         Boolean   @default(false)
   readyToMove            Boolean?
   balcony                Boolean?
   terrace                Boolean?

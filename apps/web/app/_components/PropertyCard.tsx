@@ -15,6 +15,12 @@ export type PropertyCardData = {
   urgentSale?: boolean;
   rentalPeriod?: string | null;
   viewCount?: number;
+  monthlyRent?: { toString(): string } | null;
+  deposit?: { toString(): string } | null;
+  priceNegotiable?: boolean;
+  furnished?: boolean | null;
+  hasElevator?: boolean | null;
+  parkingSpaces?: number | null;
   images: { url: string }[];
 };
 
@@ -48,9 +54,13 @@ export default function PropertyCard({
   const photo = listing.images[0]?.url;
   const amount = Number(listing.price.toString());
   const areaValue = Number(listing.area.toString());
-  const price = Number.isFinite(amount)
-    ? new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(amount)
+  const displayAmount = listing.listingType === "RENT" && listing.monthlyRent ? Number(listing.monthlyRent.toString()) : amount;
+  const price = Number.isFinite(displayAmount)
+    ? new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(displayAmount)
     : listing.price.toString();
+  const pricePerMeter = listing.listingType === "SALE" && areaValue > 0 ? new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(amount / areaValue) : null;
+  const rentUnit = listing.rentalPeriod === "DAILY" ? " / شب" : listing.rentalPeriod === "WEEKLY" ? " / هفته" : listing.rentalPeriod === "HOURLY" ? " / ساعت" : " / ماه";
+  /* keep card amount localized and consistent */
   const area = Number.isFinite(areaValue)
     ? new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(areaValue)
     : listing.area.toString();
@@ -68,7 +78,7 @@ export default function PropertyCard({
           <div className="hy-property-meta"><span>{typeNames[listing.propertyType] ?? "ملک"}</span><span aria-hidden="true">•</span><span>{listing.city}</span></div>
           <h3 className="hy-property-title">{listing.title}</h3>
           <div className="hy-property-specs"><span>{area} متر مربع</span>{listing.rooms !== null && <span>{listing.rooms.toLocaleString("fa-IR")} اتاق</span>}{typeof listing.viewCount === "number" && <span>{listing.viewCount.toLocaleString("fa-IR")} بازدید</span>}</div>
-          <div className="hy-property-bottom"><div><small>قیمت درج‌شده</small><strong>{price} {currencyNames[listing.currency] ?? listing.currency}</strong></div><span className="hy-property-arrow" aria-hidden="true">←</span></div>
+          <div className="hy-property-bottom"><div><small>قیمت درج‌شده</small><strong>{price} {currencyNames[listing.currency] ?? listing.currency}{listing.listingType === "RENT" ? rentUnit : ""}</strong>{pricePerMeter && <small>{pricePerMeter} {currencyNames[listing.currency] ?? listing.currency} / متر</small>}{listing.priceNegotiable && <small>قیمت قابل مذاکره</small>}{listing.listingType === "RENT" && listing.deposit && <small>ودیعه: {new Intl.NumberFormat("fa-IR").format(Number(listing.deposit.toString()))} {currencyNames[listing.currency] ?? listing.currency}</small>}</div><span className="hy-property-arrow" aria-hidden="true">←</span></div>
         </div>
       </Link>
       {(showStatus || date) && <div className="hy-property-detail-row">{showStatus && status && <span className={`hy-property-status hy-property-status-${status.toLowerCase()}`}>{statusNames[status] ?? status}</span>}{date && <time>{date}</time>}</div>}
