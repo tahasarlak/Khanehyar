@@ -306,3 +306,196 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+
+/* KHANEHYAR MOBILE NAV + LISTING DETAIL CHROME PATCH */
+.kh-listing-detail-public-chrome { display: contents; }
+@media (max-width: 768px) {
+  .kh-listing-detail-public-chrome { display: none !important; }
+  .site-content { min-width: 0; width: 100%; }
+}
+
+@media (max-width: 640px) {
+  .hd-price-summary .hd-price-offer-widget { display: contents; }
+  .hd-price-summary .hd-offer-form--compact {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8px;
+    width: 100%;
+    margin: 10px 0 0;
+    padding: 10px 0 0;
+    border-top: 1px solid var(--hd-border, #e4e9ef);
+  }
+  .hd-price-summary .hd-offer-amount-label {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    margin: 0;
+    color: var(--hd-muted, #718096);
+    font-size: 10px;
+    font-weight: 800;
+  }
+  .hd-price-summary .hd-offer-amount-label input {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 7px 10px;
+    border: 1px solid var(--hd-border, #dfe7eb);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--hd-text, #23384f);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    direction: ltr;
+    text-align: right;
+  }
+  .hd-offer-icon-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .hd-offer-icon-actions button {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+    border: 1px solid #dfe7eb;
+    border-radius: 10px;
+    background: #f6f8fa;
+    color: #173b60;
+    cursor: pointer;
+  }
+  .hd-offer-icon-actions svg {
+    width: 19px;
+    height: 19px;
+  }
+  .hd-offer-icon-actions .hd-offer-note-toggle.is-active {
+    border-color: #9bcbbb;
+    background: #edf7f2;
+    color: #167a64;
+  }
+  .hd-offer-icon-actions .hd-offer-send {
+    border-color: #167a64;
+    background: #167a64;
+    color: #fff;
+  }
+  .hd-offer-icon-actions .hd-offer-send:disabled {
+    opacity: .6;
+    cursor: wait;
+  }
+  .hd-price-summary .hd-offer-note-field {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    color: var(--hd-muted, #718096);
+    font-size: 10px;
+    font-weight: 800;
+  }
+  .hd-price-summary .hd-offer-note-field textarea {
+    width: 100%;
+    min-height: 64px;
+    padding: 9px 10px;
+    border: 1px solid var(--hd-border, #dfe7eb);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--hd-text, #23384f);
+    font: inherit;
+    font-size: 12px;
+    resize: vertical;
+  }
+  .hd-price-summary .hd-offer-error {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 11px;
+  }
+  .hd-offer-spinner {
+    width: 17px;
+    height: 17px;
+    border: 2px solid #ffffff70;
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: kh-offer-spin .7s linear infinite;
+  }
+}
+@keyframes kh-offer-spin { to { transform: rotate(360deg); } }
+
+
+/* Compact price offer controls: amount + note + send icons */
+.hd-offer-form--compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+.hd-offer-form--compact .hd-offer-amount-label,
+.hd-offer-form--compact .hd-offer-note-field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  color: var(--hd-muted, #718096);
+  font-size: 11px;
+  font-weight: 800;
+}
+.hd-offer-form--compact .hd-offer-amount-label input,
+.hd-offer-form--compact .hd-offer-note-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--hd-border, #dfe7eb);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--hd-text, #23384f);
+  font: inherit;
+}
+.hd-offer-form--compact .hd-offer-amount-label input {
+  min-height: 42px;
+  padding: 7px 10px;
+  direction: ltr;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 800;
+}
+.hd-offer-form--compact .hd-offer-note-field { grid-column: 1 / -1; }
+.hd-offer-form--compact .hd-offer-note-field textarea {
+  min-height: 64px;
+  padding: 9px 10px;
+  font-size: 12px;
+  resize: vertical;
+}
+.hd-offer-icon-actions { display: flex; align-items: center; gap: 7px; }
+.hd-offer-icon-actions button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+  border: 1px solid #dfe7eb;
+  border-radius: 10px;
+  background: #f6f8fa;
+  color: #173b60;
+  cursor: pointer;
+}
+.hd-offer-icon-actions svg { width: 19px; height: 19px; }
+.hd-offer-icon-actions .hd-offer-note-toggle.is-active {
+  border-color: #9bcbbb;
+  background: #edf7f2;
+  color: #167a64;
+}
+.hd-offer-icon-actions .hd-offer-send {
+  border-color: #167a64;
+  background: #167a64;
+  color: #fff;
+}
+.hd-offer-icon-actions .hd-offer-send:disabled { opacity: .6; cursor: wait; }
+.hd-offer-form--compact .hd-offer-error { grid-column: 1 / -1; margin: 0; font-size: 11px; }
+@media (max-width: 640px) {
+  .hd-price-summary .hd-offer-form--compact {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}

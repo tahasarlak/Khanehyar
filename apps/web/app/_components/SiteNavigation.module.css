@@ -64,7 +64,7 @@
   .dock {
     position: fixed;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: center;
     gap: 3px;
     bottom: 9px;
@@ -95,5 +95,17 @@
 @media (prefers-reduced-motion: reduce) {
   .link {
     transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .dock {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .link {
+    width: 100%;
+    min-width: 0;
+    justify-self: stretch;
+    align-self: stretch;
   }
 }

@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 /**
- * Hides public-site chrome on account routes using the active pathname rather
- * than body:has(.kh-account-shell), which can become stale during App Router
- * transitions when an outgoing route tree is temporarily retained.
+ * Hides the public-site chrome on account routes.
+ * On listing details, chrome remains available on desktop and is hidden on mobile;
+ * the listing page keeps its own mobile toolbar and contact actions.
  */
 export default function SiteChromeGate({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/";
@@ -15,5 +15,11 @@ export default function SiteChromeGate({ children }: { children: ReactNode }) {
     /^\/listings\/new(?:\/|$)/.test(pathname);
 
   if (hidePublicChrome) return null;
+
+  const isListingDetail = /^\/listings\/[^/]+\/?$/.test(pathname);
+  if (isListingDetail) {
+    return <div className="kh-listing-detail-public-chrome">{children}</div>;
+  }
+
   return children;
 }
