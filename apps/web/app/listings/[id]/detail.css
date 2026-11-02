@@ -1957,3 +1957,483 @@
     font-weight: 900;
   }
 }
+
+/* KHANEHYAR MOBILE BRAND COLORS RESTORE V1
+   Previous Khanehyar brand palette.
+   Colors only: layout and behavior remain unchanged. */
+
+@media (max-width: 640px) {
+
+  .hd-page {
+    --hd-navy: #17304f;
+    --hd-navy-dark: #10243b;
+    --hd-emerald: #167a64;
+    --hd-muted: #718096;
+    --hd-border: #e4e9ef;
+    --hd-bg: #f6f8fa;
+    --hd-card: #ffffff;
+    --hd-text: #23384f;
+    --hd-card-muted: #f7faf9;
+
+    background: var(--hd-bg) !important;
+    color: var(--hd-text) !important;
+    color-scheme: light;
+  }
+
+  /* HEADER */
+
+  .hd-page .hy-mobile-listing-toolbar {
+    background: rgba(255,255,255,.96);
+    border-bottom: 1px solid #e8edf1;
+    box-shadow: 0 3px 16px rgba(20,47,86,.06);
+  }
+
+  .hd-page .hy-mobile-tool,
+  .hd-page .hy-mobile-listing-toolbar .hy-favorite-button {
+    background: #f3f5f7;
+    color: #263b50;
+  }
+
+  .hd-page .hy-mobile-listing-toolbar .hy-favorite-button.hy-favorite-active {
+    color: #e34f67;
+    background: #fff0f2;
+  }
+
+  .hd-page .hy-mobile-toolbar-summary strong,
+  .hd-page .hy-mobile-toolbar-summary strong small {
+    color: #17304f;
+  }
+
+  .hd-page .hy-mobile-toolbar-summary span {
+    color: #718096;
+  }
+
+  /* GALLERY */
+
+  .hd-page .hd-gallery-main,
+  .hd-page .hd-gallery-empty,
+  .hd-page .hd-similar-image {
+    background: #e9eef1;
+  }
+
+  .hd-page .hd-gallery-empty {
+    color: #718096;
+  }
+
+  /* TITLE AND BADGES */
+
+  .hd-page .hd-mobile-badges span {
+    background: #eef3f6;
+    color: #40596a;
+  }
+
+  .hd-page .hd-mobile-badges .is-urgent {
+    background: #fff4e8;
+    color: #a34b12;
+  }
+
+  .hd-page .hd-mobile-badges .is-value {
+    background: #edf7f2;
+    color: #176b55;
+  }
+
+  .hd-page .hd-mobile-title-block h1,
+  .hd-page .hd-mobile-overview-heading h2,
+  .hd-page .hd-mobile-panel h2,
+  .hd-page .hd-section-heading h2 {
+    color: #17304f;
+  }
+
+  .hd-page .hd-mobile-title-block p {
+    color: #52677b;
+  }
+
+  .hd-page .hd-mobile-title-block p span,
+  .hd-page .hd-quick-address > span {
+    color: #167a64;
+  }
+
+  .hd-page .hd-mobile-title-block > small,
+  .hd-page .hd-mobile-overview-heading p,
+  .hd-page .hd-section-heading p {
+    color: #718096;
+  }
+
+  .hd-page .hd-floorplan-shortcut {
+    border-color: #dbe5ee;
+    background: #f7fafc;
+    color: #1c4d75;
+  }
+
+  /* PRICE */
+
+  .hd-page .hd-price-summary {
+    border-color: #e1e9e6;
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(24,59,80,.05);
+  }
+
+  .hd-page .hd-price-label,
+  .hd-page .hd-price-summary-sub {
+    color: #718096;
+  }
+
+  .hd-page .hd-price-summary .hd-price {
+    color: #173b60;
+  }
+
+  .hd-page .hd-price-summary .hd-price small {
+    color: #718096;
+  }
+
+  .hd-page .hd-price-summary-tags span {
+    background: #edf7f2;
+    color: #176b55;
+  }
+
+  .hd-page .hd-price-summary-tags .is-urgent {
+    background: #fff4e8;
+    color: #a34b12;
+  }
+
+  .hd-page .hd-price-info > summary {
+    border-color: #e4e9ef;
+    background: #f7faf9;
+    color: #17304f;
+  }
+
+  .hd-page .hd-price-info-panel {
+    border-color: #e4e9ef;
+    background: #ffffff;
+    color: #23384f;
+  }
+
+  .hd-page .hd-price-info-panel p {
+    color: #718096;
+  }
+
+  .hd-page .hd-price-offer-toggle,
+  .hd-page .hd-offer-form button,
+  .hd-page .hd-price-summary .hd-offer-form button[type="submit"] {
+    background: #167a64;
+    color: #ffffff;
+  }
+
+  .hd-page .hd-price-summary .hd-offer-form {
+    border-top-color: #edf1f3;
+  }
+
+  .hd-page .hd-offer-form h3,
+  .hd-page .hd-offer-heading-row h3 {
+    color: #1c3d4f;
+  }
+
+  .hd-page .hd-offer-form p {
+    color: #718291;
+  }
+
+  .hd-page .hd-offer-form label {
+    color: #40596a;
+  }
+
+  .hd-page .hd-offer-form input,
+  .hd-page .hd-offer-form textarea {
+    border-color: #dfe7eb;
+    background: #ffffff;
+    color: #23384f;
+  }
+
+  .hd-page .hd-offer-form input::placeholder,
+  .hd-page .hd-offer-form textarea::placeholder {
+    color: #8a98a4;
+  }
+
+  .hd-page .hd-offer-close {
+    background: #f2f4f7 !important;
+    color: #718096 !important;
+  }
+
+  /* PROPERTY FACTS */
+
+  .hd-page .hd-mobile-stats {
+    border-bottom-color: #e4e9ef;
+  }
+
+  .hd-page .hd-mobile-stats strong,
+  .hd-page .hd-mobile-fact-list dd {
+    color: #23384f;
+  }
+
+  .hd-page .hd-mobile-stats small,
+  .hd-page .hd-mobile-fact-list dt {
+    color: #718096;
+  }
+
+  .hd-page .hd-main-column > .hd-panel,
+  .hd-page .hd-mobile-panel {
+    border-bottom-color: #e4e9ef;
+  }
+
+  .hd-page .hd-mobile-fact-list > div {
+    border-bottom-color: #edf1f3;
+  }
+
+  .hd-page .hd-mobile-amenities li {
+    border-color: #e4e9ef;
+    background: #f7faf9;
+    color: #40596a;
+  }
+
+  /* ADDRESS AND NEARBY PLACES */
+
+  .hd-page .hd-quick-address,
+  .hd-page .hd-nearby-explorer,
+  .hd-page .hd-owner-card,
+  .hd-page .hd-mobile-location-panel .hd-location {
+    border-color: #e8efeb;
+    background: #ffffff;
+  }
+
+  .hd-page .hd-quick-address strong,
+  .hd-page .hd-nearby-head strong,
+  .hd-page .hd-owner-details strong,
+  .hd-page .hd-location-copy strong {
+    color: #173b60;
+  }
+
+  .hd-page .hd-quick-address small,
+  .hd-page .hd-nearby-head small,
+  .hd-page .hd-nearby-disclaimer,
+  .hd-page .hd-nearby-name small,
+  .hd-page .hd-nearby-distance small,
+  .hd-page .hd-nearby-state,
+  .hd-page .hd-owner-details small,
+  .hd-page .hd-owner-disclaimer,
+  .hd-page .hd-location-copy small,
+  .hd-page .hd-privacy-note {
+    color: #718096;
+  }
+
+  .hd-page .hd-nearby-head label {
+    color: #52677b;
+  }
+
+  .hd-page .hd-nearby-head select {
+    border-color: #dfe7eb;
+    background: #ffffff;
+    color: #17304f;
+  }
+
+  .hd-page .hd-nearby-categories button {
+    border-color: #e4e9ef;
+    background: #ffffff;
+    color: #52677b;
+  }
+
+  .hd-page .hd-nearby-categories button.is-active {
+    border-color: #9ccfbd;
+    background: #e7f4ef;
+    color: #126b57;
+  }
+
+  .hd-page .hd-nearby-place {
+    border-bottom-color: #e9eef2;
+  }
+
+  .hd-page .hd-nearby-icon {
+    background: #f0f5f7;
+    color: #1c5d70;
+  }
+
+  .hd-page .hd-nearby-name strong {
+    color: #203c50;
+  }
+
+  .hd-page .hd-nearby-distance b {
+    color: #17304f;
+  }
+
+  /* OWNER AND LOCATION */
+
+  .hd-page .hd-owner-avatar {
+    background: #e4f5ee;
+    color: #11755d;
+  }
+
+  .hd-page .hd-owner-details span {
+    color: #167a64;
+  }
+
+  .hd-page .hd-owner-contact {
+    background: #edf7f2;
+    color: #176b55;
+  }
+
+  .hd-page .hd-description,
+  .hd-page .hd-location-copy p,
+  .hd-page .hd-price-history ol {
+    color: #52677b;
+  }
+
+  .hd-page .hd-map-wrap {
+    border-color: #e1e8eb;
+  }
+
+  .hd-page .hd-map-link {
+    background: #e7f4ef;
+    color: #126b57;
+  }
+
+  .hd-page .hd-last-updated {
+    color: #718096;
+  }
+
+  .hd-page .hd-last-updated > span {
+    color: #167a64;
+  }
+
+  .hd-page .hd-last-updated strong {
+    color: #17304f;
+  }
+
+  .hd-page .hd-last-updated p {
+    color: #718096;
+  }
+
+  /* SIMILAR LISTINGS */
+
+  .hd-page .hd-similar-section {
+    border-top-color: #e5eaee;
+    background: #ffffff;
+  }
+
+  .hd-page .hd-similar-section .hd-section-heading h2 {
+    color: #17304f;
+  }
+
+  .hd-page .hd-similar-section .hd-section-heading p,
+  .hd-page .hd-similar-meta,
+  .hd-page .hd-similar-specs {
+    color: #718096;
+  }
+
+  .hd-page .hd-similar-section .hd-see-all,
+  .hd-page .hd-bottom-link a,
+  .hd-page .hd-similar-body > strong {
+    color: #167a64;
+  }
+
+  .hd-page .hd-similar-card {
+    border-color: #e6ecef;
+    background: #ffffff;
+    color: #23384f;
+  }
+
+  .hd-page .hd-similar-badge {
+    background: #edf7f2;
+    color: #176b55;
+  }
+
+  .hd-page .hd-similar-body h3 {
+    color: #203c50;
+  }
+
+  /* BOTTOM ACTION BAR */
+
+  .hd-page .hd-contact-actions.hd-mobile-dock {
+    border-top-color: #e6ecef;
+    background: rgba(255,255,255,.97);
+    box-shadow: 0 -8px 24px rgba(24,59,80,.07);
+  }
+
+  .hd-page .hd-contact-actions.hd-mobile-dock .hd-mobile-message-cta {
+    background: #167a64;
+    color: #ffffff;
+  }
+
+  .hd-page .hd-contact-actions.hd-mobile-dock .hd-mobile-offer-cta {
+    background: #edf3f1;
+    color: #176b55;
+  }
+
+  .hd-page .hd-mobile-contact-error {
+    color: #b42318;
+  }
+
+  /* MENUS AND MODALS */
+
+  .hd-page .hy-mobile-menu-backdrop,
+  .hd-page .hy-mobile-modal-backdrop {
+    background: rgba(13,25,40,.42);
+  }
+
+  .hd-page .hy-mobile-action-menu {
+    border-color: #e7ebf0;
+    background: #ffffff;
+    box-shadow: 0 -16px 50px rgba(16,36,59,.18);
+    color: #20364e;
+  }
+
+  .hd-page .hy-mobile-menu-heading {
+    border-bottom-color: #edf0f4;
+  }
+
+  .hd-page .hy-mobile-menu-heading strong,
+  .hd-page .hy-mobile-action-menu > button b,
+  .hd-page .hy-mobile-modal h3 {
+    color: #17304f;
+  }
+
+  .hd-page .hy-mobile-menu-heading button {
+    background: #f2f4f7;
+    color: #526777;
+  }
+
+  .hd-page .hy-mobile-action-menu > button {
+    border-bottom-color: #f0f2f5;
+    color: #20364e;
+  }
+
+  .hd-page .hy-mobile-action-menu > button svg {
+    color: #54708d;
+  }
+
+  .hd-page .hy-mobile-action-menu > button small {
+    color: #7d8997;
+  }
+
+  .hd-page .hy-mobile-menu-status {
+    background: #eff8f3;
+    color: #17643e;
+  }
+
+  .hd-page .hy-mobile-modal {
+    border-color: #e4e9ef;
+    background: #ffffff;
+    color: #23384f;
+  }
+
+  .hd-page .hy-mobile-modal p {
+    color: #52677b;
+  }
+
+  .hd-page .hy-mobile-modal textarea {
+    border-color: #dce3eb;
+    background: #ffffff;
+    color: #23384f;
+  }
+
+  .hd-page .hy-report-reason {
+    color: #40596a;
+  }
+
+  .hd-page .hy-modal-primary {
+    background: #173b60;
+    color: #ffffff;
+  }
+
+  .hd-page .hy-modal-secondary {
+    background: #eef1f5;
+    color: #34465a;
+  }
+}
