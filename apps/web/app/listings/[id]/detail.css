@@ -2437,3 +2437,82 @@
     color: #34465a;
   }
 }
+/* KHANEHYAR_MOBILE_FINAL_LAYOUT_V2 */
+@media (max-width: 640px) {
+
+  /* Full-width price section */
+  .hd-price-section,
+  .hd-price-card,
+  .hd-price-summary,
+  .hd-offer-form {
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+
+  /* Full-width contact actions */
+  .hd-contact-actions {
+    width: 100%;
+    max-width: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    box-sizing: border-box;
+  }
+
+  .hd-contact-actions > * {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* Address and map alignment */
+  .hd-quick-address,
+  .hd-location-copy,
+  .hd-map-wrap {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Better mobile horizontal alignment */
+  .hd-detail-main,
+  .hd-detail-content,
+  .hd-mobile-panel {
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+
+  /* Offer form */
+  .hd-offer-form--compact {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .hd-offer-amount-label {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .hd-offer-icon-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hd-offer-note-field {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .hd-offer-note-field textarea {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Remove listing title block on mobile */
+  .hd-mobile-title-block {
+    display: none !important;
+  }
+}
