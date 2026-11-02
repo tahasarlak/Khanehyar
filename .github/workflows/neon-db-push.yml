@@ -1,0 +1,49 @@
+name: Neon Database Push
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: khanehyar-neon-db-push
+  cancel-in-progress: false
+
+jobs:
+  database-push:
+    name: Push Prisma schema to Neon
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.14.0
+
+      - name: Verify database secret
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::GitHub Secret DATABASE_URL is missing."
+            exit 1
+          fi
+          echo "Database secret is configured."
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Push Prisma schema
+        run: pnpm --filter web exec prisma db push --schema prisma/schema.prisma
