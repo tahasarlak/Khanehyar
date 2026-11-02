@@ -389,7 +389,7 @@ export default async function ListingDetailPage({ params }: Props) {
         floorSize: { "@type": "QuantitativeValue", value: areaValue, unitCode: "MTK" },
         numberOfRooms: listing.rooms ?? undefined
       }).replace(/<\//g, "<\\/") }} />
-      <MobileListingActions listingId={listing.id} title={listing.title} price={displayPrice} currency={currency} dealLabel={isRent ? "اجاره" : "فروش"} />
+      <MobileListingActions listingId={listing.id} title={listing.title} price={displayPrice} currency={currency} dealLabel={isRent ? "اجاره" : "فروش"} area={`${area} متر`} rooms={listing.rooms === null ? "" : listing.rooms.toLocaleString("fa-IR")} city={listing.city} />
       <main className="hd-container">
         <nav className="hd-breadcrumb" aria-label="مسیر صفحه">
           <Link href="/">خانه‌یار</Link><span>/</span><Link href="/search">آگهی‌های املاک</Link><span>/</span><span aria-current="page">{propertyName}</span>

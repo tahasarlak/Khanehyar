@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import FavoriteButton from "../../_components/FavoriteButton";
 import { ShareListing } from "./PropertyGallery";
-type Props = { listingId: string; title: string; price: string; currency: string; dealLabel: string };
+type Props = { listingId: string; title: string; price: string; currency: string; dealLabel: string; area: string; rooms: string; city: string };
 const reasons = ["اطلاعات یا قیمت گمراه‌کننده است","آگهی تکراری است","تصاویر با ملک مطابقت ندارد","ملک وجود ندارد یا فروخته شده است","محتوای نامناسب یا مشکوک","سایر موارد"];
 const paths: Record<string, ReactNode> = {
  back:<path d="m15 18-6-6 6-6"/>, more:<><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></>,
@@ -15,23 +15,66 @@ const paths: Record<string, ReactNode> = {
  repost:<><path d="m17 1 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 23-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>
 };
 function Icon({name}:{name:keyof typeof paths}) { return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>; }
-export default function MobileListingActions({listingId, price, currency, dealLabel}:Props) {
- const router=useRouter(); const [priceVisible,setPriceVisible]=useState(false),[hasSeenPrice,setHasSeenPrice]=useState(false); const [open,setOpen]=useState(false),[noteOpen,setNoteOpen]=useState(false),[reportOpen,setReportOpen]=useState(false),[note,setNote]=useState(""),[saved,setSaved]=useState(false),[hidden,setHidden]=useState(false),[collection,setCollection]=useState("ذخیره‌شده‌ها"),[reason,setReason]=useState(reasons[0]),[details,setDetails]=useState(""),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[message,setMessage]=useState("");
+export default function MobileListingActions({listingId, price, currency, dealLabel, area, rooms, city}:Props) {
+ const router=useRouter(); const [priceVisible,setPriceVisible]=useState(false); const [open,setOpen]=useState(false),[noteOpen,setNoteOpen]=useState(false),[reportOpen,setReportOpen]=useState(false),[note,setNote]=useState(""),[saved,setSaved]=useState(false),[hidden,setHidden]=useState(false),[collection,setCollection]=useState("ذخیره‌شده‌ها"),[reason,setReason]=useState(reasons[0]),[details,setDetails]=useState(""),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[message,setMessage]=useState("");
  const endpoint=`/api/listings/${encodeURIComponent(listingId)}/actions`;
  async function post(payload:Record<string,unknown>){const r=await fetch(endpoint,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(r.status===401){router.push(`/login?next=${encodeURIComponent(location.pathname)}`);throw new Error("برای استفاده از این قابلیت وارد حساب شوید.");}if(!r.ok)throw new Error(d.error||"عملیات انجام نشد.");return d;}
  useEffect(()=>{let live=true;fetch(endpoint,{credentials:"same-origin",cache:"no-store"}).then(async r=>{if(r.status===401)return null;const d=await r.json();if(!r.ok)throw new Error(d.error);return d;}).then(d=>{if(live&&d){setNote(d.note||"");setSaved(!!d.saved);setHidden(!!d.hidden);setCollection(d.collectionName||"ذخیره‌شده‌ها");}}).catch(()=>{}).finally(()=>{if(live)setLoaded(true);});return()=>{live=false};},[endpoint]);
  useEffect(()=>{
   const target=document.getElementById("hd-price-summary");
   if(!target)return;
-  const observer=new IntersectionObserver(([entry])=>{if(entry.isIntersecting){setHasSeenPrice(true);setPriceVisible(false);}else if(hasSeenPrice){setPriceVisible(true);}}, {threshold:0,rootMargin:"-72px 0px 0px 0px"});
+
+  let hasSeenPrice=false;
+
+  const observer=new IntersectionObserver(([entry])=>{
+    if(entry.isIntersecting){
+      hasSeenPrice=true;
+      setPriceVisible(false);
+      return;
+    }
+
+    const passedPrice=entry.boundingClientRect.bottom<=58;
+    setPriceVisible(hasSeenPrice && passedPrice);
+
+  }, {
+    threshold:0,
+    rootMargin:"-58px 0px 0px 0px"
+  });
+
   observer.observe(target);
   return()=>observer.disconnect();
- },[hasSeenPrice]);
+ },[]);
  async function run(fn:()=>Promise<void>){if(busy)return;setBusy(true);try{await fn()}catch(e){setMessage(e instanceof Error?e.message:"عملیات ناموفق بود.")}finally{setBusy(false)}}
  const openChat=()=>run(async()=>{const r=await fetch(`/api/listings/${encodeURIComponent(listingId)}/inquiries`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"open"})});const d=await r.json().catch(()=>({}));if(r.status===401){router.push(`/login?next=${encodeURIComponent(location.pathname)}`);return;}if(!r.ok)throw new Error(d.error||"گفت‌وگو ایجاد نشد.");router.push(`/dashboard/messages/${d.conversationId}`);});
  return <>
- <div className="hy-mobile-listing-toolbar" dir="rtl"><div className="hy-mobile-toolbar-side"><button type="button" className="hy-mobile-tool" aria-label="سایر گزینه‌های آگهی" aria-expanded={open} onClick={()=>{setOpen(v=>!v);setMessage("")}}><Icon name="more"/></button><FavoriteButton listingId={listingId}/><button type="button" className="hy-mobile-tool" aria-label="اشتراک‌گذاری آگهی" onClick={()=>document.querySelector<HTMLButtonElement>(".hd-share-control > button")?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0L7.5 7.5M12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button></div><div className="hy-mobile-toolbar-side"><button type="button" className="hy-mobile-tool" aria-label="بازگشت" onClick={()=>{if(history.length>1)router.back();else router.push("/search")}}><Icon name="back"/></button></div></div>
- {priceVisible&&<div className="hy-mobile-sticky-price" dir="rtl"><strong>{price} <small>{currency}</small></strong><span>{dealLabel}</span></div>}
+ <div className="hy-mobile-listing-toolbar" dir="rtl">
+  <div className="hy-mobile-toolbar-side">
+    <button type="button" className="hy-mobile-tool" aria-label="سایر گزینه‌های آگهی" aria-expanded={open} onClick={()=>{setOpen(v=>!v);setMessage("")}}>
+      <Icon name="more"/>
+    </button>
+    <FavoriteButton listingId={listingId}/>
+    <button type="button" className="hy-mobile-tool" aria-label="اشتراک‌گذاری آگهی" onClick={()=>document.querySelector<HTMLButtonElement>(".hd-share-control > button")?.click()}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0L7.5 7.5M12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+    </button>
+  </div>
+
+  {priceVisible && (
+    <div className="hy-mobile-toolbar-summary" dir="rtl">
+      <strong>{price} <small>{currency}</small></strong>
+      <span>
+        {dealLabel} · {area}
+        {rooms ? " · " + rooms + " اتاق" : ""}
+        {" · " + city}
+      </span>
+    </div>
+  )}
+
+  <div className="hy-mobile-toolbar-side">
+    <button type="button" className="hy-mobile-tool" aria-label="بازگشت" onClick={()=>{if(history.length>1)router.back();else router.push("/search")}}>
+      <Icon name="back"/>
+    </button>
+  </div>
+</div>
  {open&&<><button className="hy-mobile-menu-backdrop" aria-label="بستن منو" onClick={()=>setOpen(false)}/><section className="hy-mobile-action-menu" dir="rtl" role="dialog" aria-label="گزینه‌های آگهی"><div className="hy-mobile-menu-heading"><strong>گزینه‌های آگهی</strong><button onClick={()=>setOpen(false)} aria-label="بستن">×</button></div>
  <button onClick={()=>{setOpen(false);void openChat()}} disabled={busy}><Icon name="chat"/><span><b>نوشتن چت</b><small>ایجاد یا ادامهٔ گفت‌وگوی اختصاصی دربارهٔ این ملک</small></span></button>
  <button onClick={()=>{setOpen(false);setNoteOpen(true)}}><Icon name="note"/><span><b>یادداشت شخصی</b><small>یادداشت خصوصی متصل به حساب کاربری</small></span></button>
