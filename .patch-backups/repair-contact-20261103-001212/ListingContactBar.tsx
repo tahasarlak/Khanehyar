@@ -1,0 +1,17 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+export default function ListingContactBar({listingId}:{listingId:string}){
+ const router=useRouter(); const [busy,setBusy]=useState(false); const [error,setError]=useState("");
+ async function openChat(){if(busy)return;setBusy(true);setError("");try{const r=await fetch(`/api/listings/${encodeURIComponent(listingId)}/inquiries`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"open"})});const d=await r.json().catch(()=>({}));if(r.status===401){router.push(`/login?next=${encodeURIComponent(location.pathname)}`);return;}if(!r.ok||!d.conversationId)throw new Error(d.error||"باز کردن گفت‌وگو ممکن نشد.");router.push(`/dashboard/messages/${encodeURIComponent(d.conversationId)}`);}catch(e){setError(e instanceof Error?e.message:"ارتباط برقرار نشد.");}finally{setBusy(false);}}
+ function goToOffer(){
+  const toggle=document.getElementById("hd-price-offer-toggle") as HTMLButtonElement | null;
+  if(toggle && toggle.getAttribute("aria-expanded") !== "true") toggle.click();
+  requestAnimationFrame(()=>{
+    const form=document.getElementById("hd-offer-form");
+    form?.scrollIntoView({behavior:"smooth",block:"center"});
+    form?.querySelector<HTMLInputElement>('input[type="number"]')?.focus({preventScroll:true});
+  });
+});form?.querySelector<HTMLInputElement>("input")?.focus({preventScroll:true});}
+ return <div className="hd-contact-actions hd-mobile-dock" aria-label="ارتباط با آگهی‌دهنده"><button type="button" className="hd-mobile-message-cta" onClick={openChat} disabled={busy}><svg className="hd-mobile-cta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 8.7 3.9a8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8Z"/></svg><span className="hd-contact-label-desktop">{busy?"در حال ورود به چت…":"پیام به آگهی‌دهنده"}</span><span className="hd-contact-label-mobile">پیام</span></button><button type="button" className="hd-mobile-call-cta" disabled title="تماس صوتی درون‌برنامه‌ای پس از راه‌اندازی زیرساخت تماس فعال می‌شود">تماس صوتی · به‌زودی</button><button type="button" className="hd-mobile-offer-cta" onClick={goToOffer}><svg className="hd-mobile-cta-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 9 11l4 4 8-8M15 7h6v6"/></svg>پیشنهاد قیمت</button>{error&&<span role="alert" className="hd-mobile-contact-error">{error}</span>}</div>;
+}

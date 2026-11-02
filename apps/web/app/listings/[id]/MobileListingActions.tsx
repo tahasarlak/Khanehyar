@@ -2,8 +2,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import FavoriteButton from "../../_components/FavoriteButton";
-import { ShareListing } from "./PropertyGallery";
-type Props = { listingId: string; title: string; price: string; currency: string; dealLabel: string; area: string; rooms: string; city: string };
+type Props = { listingId: string; title: string; price: string; currency: string; area: string; rooms: string; propertyName: string; floorLabel: string };
 const reasons = ["اطلاعات یا قیمت گمراه‌کننده است","آگهی تکراری است","تصاویر با ملک مطابقت ندارد","ملک وجود ندارد یا فروخته شده است","محتوای نامناسب یا مشکوک","سایر موارد"];
 const paths: Record<string, ReactNode> = {
  back:<path d="m15 18-6-6 6-6"/>, more:<><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></>,
@@ -15,7 +14,7 @@ const paths: Record<string, ReactNode> = {
  repost:<><path d="m17 1 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 23-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>
 };
 function Icon({name}:{name:keyof typeof paths}) { return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>; }
-export default function MobileListingActions({listingId, price, currency, dealLabel, area, rooms, city}:Props) {
+export default function MobileListingActions({listingId, title, price, currency, area, rooms, propertyName, floorLabel}:Props) {
  const router=useRouter(); const [priceVisible,setPriceVisible]=useState(false); const [open,setOpen]=useState(false),[noteOpen,setNoteOpen]=useState(false),[reportOpen,setReportOpen]=useState(false),[note,setNote]=useState(""),[saved,setSaved]=useState(false),[hidden,setHidden]=useState(false),[collection,setCollection]=useState("ذخیره‌شده‌ها"),[reason,setReason]=useState(reasons[0]),[details,setDetails]=useState(""),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[message,setMessage]=useState("");
  const endpoint=`/api/listings/${encodeURIComponent(listingId)}/actions`;
  async function post(payload:Record<string,unknown>){const r=await fetch(endpoint,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(r.status===401){router.push(`/login?next=${encodeURIComponent(location.pathname)}`);throw new Error("برای استفاده از این قابلیت وارد حساب شوید.");}if(!r.ok)throw new Error(d.error||"عملیات انجام نشد.");return d;}
@@ -46,6 +45,7 @@ export default function MobileListingActions({listingId, price, currency, dealLa
  },[]);
  async function run(fn:()=>Promise<void>){if(busy)return;setBusy(true);try{await fn()}catch(e){setMessage(e instanceof Error?e.message:"عملیات ناموفق بود.")}finally{setBusy(false)}}
  const openChat=()=>run(async()=>{const r=await fetch(`/api/listings/${encodeURIComponent(listingId)}/inquiries`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"open"})});const d=await r.json().catch(()=>({}));if(r.status===401){router.push(`/login?next=${encodeURIComponent(location.pathname)}`);return;}if(!r.ok)throw new Error(d.error||"گفت‌وگو ایجاد نشد.");router.push(`/dashboard/messages/${d.conversationId}`);});
+ async function shareListing(){try{const url=window.location.href;if(navigator.share){await navigator.share({title,text:`${title} | خانه‌یار`,url});return;}await navigator.clipboard.writeText(url);setMessage("لینک آگهی کپی شد.");setOpen(true);}catch(error){if(error instanceof DOMException&&error.name==="AbortError")return;setMessage("اشتراک‌گذاری خودکار در دسترس نیست؛ لینک صفحه را از مرورگر کپی کن.");setOpen(true);}}
  return <>
  <div className="hy-mobile-listing-toolbar" dir="rtl">
   <div className="hy-mobile-toolbar-side">
@@ -53,7 +53,7 @@ export default function MobileListingActions({listingId, price, currency, dealLa
       <Icon name="more"/>
     </button>
     <FavoriteButton listingId={listingId}/>
-    <button type="button" className="hy-mobile-tool" aria-label="اشتراک‌گذاری آگهی" onClick={()=>document.querySelector<HTMLButtonElement>(".hd-share-control > button")?.click()}>
+    <button type="button" className="hy-mobile-tool" aria-label="اشتراک‌گذاری آگهی" onClick={()=>void shareListing()}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0L7.5 7.5M12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
     </button>
   </div>
@@ -62,9 +62,8 @@ export default function MobileListingActions({listingId, price, currency, dealLa
     <div className="hy-mobile-toolbar-summary" dir="rtl">
       <strong>{price} <small>{currency}</small></strong>
       <span>
-        {dealLabel} · {area}
-        {rooms ? " · " + rooms + " اتاق" : ""}
-        {" · " + city}
+        {rooms ? `${rooms} اتاق` : propertyName} · {area}
+        {floorLabel ? ` · ${floorLabel}` : ""}
       </span>
     </div>
   )}
@@ -78,7 +77,7 @@ export default function MobileListingActions({listingId, price, currency, dealLa
  {open&&<><button className="hy-mobile-menu-backdrop" aria-label="بستن منو" onClick={()=>setOpen(false)}/><section className="hy-mobile-action-menu" dir="rtl" role="dialog" aria-label="گزینه‌های آگهی"><div className="hy-mobile-menu-heading"><strong>گزینه‌های آگهی</strong><button onClick={()=>setOpen(false)} aria-label="بستن">×</button></div>
  <button onClick={()=>{setOpen(false);void openChat()}} disabled={busy}><Icon name="chat"/><span><b>نوشتن چت</b><small>ایجاد یا ادامهٔ گفت‌وگوی اختصاصی دربارهٔ این ملک</small></span></button>
  <button onClick={()=>{setOpen(false);setNoteOpen(true)}}><Icon name="note"/><span><b>یادداشت شخصی</b><small>یادداشت خصوصی متصل به حساب کاربری</small></span></button>
- <button onClick={()=>{setOpen(false);document.querySelector<HTMLButtonElement>(".hd-share-control > button")?.click()}}><Icon name="repost"/><span><b>اشتراک‌گذاری مجدد</b><small>ارسال آگهی برای دوستان و شبکه‌های اجتماعی</small></span></button>
+ <button onClick={()=>{setOpen(false);void shareListing()}}><Icon name="repost"/><span><b>اشتراک‌گذاری مجدد</b><small>ارسال آگهی برای دوستان و شبکه‌های اجتماعی</small></span></button>
  <button disabled={busy||!loaded} onClick={()=>void run(async()=>{const next=!saved;const prompted=next?window.prompt("نام مجموعه برای ذخیرهٔ این ملک:",collection):collection;if(next&&prompted===null)return;const name=(prompted||"ذخیره‌شده‌ها").trim()||"ذخیره‌شده‌ها";await post({action:"save",enabled:next,collectionName:name});setSaved(next);setCollection(name);setMessage(next?`به مجموعهٔ «${name}» اضافه شد.`:"از مجموعه حذف شد.")})}><Icon name="save"/><span><b>{saved?"حذف از مجموعه":"ذخیره در مجموعه"}</b><small>{saved?`ذخیره‌شده در «${collection}»`:"ذخیرهٔ ملک در مجموعهٔ شخصی"}</small></span></button>
  <button disabled={busy||!loaded} onClick={()=>void run(async()=>{await post({action:"hide",enabled:!hidden});setHidden(!hidden);setMessage(!hidden?"این آگهی از پیشنهادهای بعدی شما پنهان می‌شود.":"آگهی دوباره نمایش داده می‌شود.")})}><Icon name="hide"/><span><b>{hidden?"نمایش دوبارهٔ آگهی":"نمایش ندادن این آگهی"}</b><small>تنظیم به حساب شما متصل می‌شود</small></span></button>
  <button onClick={()=>{setOpen(false);setReportOpen(true)}}><Icon name="report"/><span><b>گزارش آگهی</b><small>ارسال گزارش برای بررسی مدیران خانه‌یار</small></span></button>{message&&<p className="hy-mobile-menu-status" role="status">{message}</p>}</section></>}
