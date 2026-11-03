@@ -410,7 +410,7 @@ export default async function ListingDetailPage({ params }: Props) {
         floorSize: { "@type": "QuantitativeValue", value: areaValue, unitCode: "MTK" },
         numberOfRooms: listing.rooms ?? undefined
       }).replace(/<\//g, "<\\/") }} />
-      <MobileListingActions imageUrl={pictures[0] ?? null} listingId={listing.id} title={listing.title} price={displayPrice} currency={currency} area={`${area} متر`} rooms={listing.rooms === null ? "" : listing.rooms.toLocaleString("fa-IR")} propertyName={propertyName} floorLabel={listing.floor !== null ? `طبقه ${listing.floor.toLocaleString("fa-IR")}${listing.totalFloors !== null ? ` از ${listing.totalFloors.toLocaleString("fa-IR")}` : ""}` : ""} />
+      <MobileListingActions listingId={listing.id} title={listing.title} price={displayPrice} currency={currency} area={`${area} متر`} rooms={listing.rooms === null ? "" : listing.rooms.toLocaleString("fa-IR")} propertyName={propertyName} floorLabel={listing.floor !== null ? `طبقه ${listing.floor.toLocaleString("fa-IR")}${listing.totalFloors !== null ? ` از ${listing.totalFloors.toLocaleString("fa-IR")}` : ""}` : ""} image={pictures[0] ?? ""} />
       <main className="hd-container">
         <nav className="hd-breadcrumb" aria-label="مسیر صفحه">
           <Link href="/">خانه‌یار</Link><span>/</span><Link href="/search">آگهی‌های املاک</Link><span>/</span><span aria-current="page">{propertyName}</span>

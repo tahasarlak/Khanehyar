@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import FavoriteButton from "../../_components/FavoriteButton";
-type Props = { imageUrl: string | null; listingId: string; title: string; price: string; currency: string; area: string; rooms: string; propertyName: string; floorLabel: string };
+type Props = { listingId: string; title: string; price: string; currency: string; area: string; rooms: string; propertyName: string; floorLabel: string; image: string };
 const reasons = ["اطلاعات یا قیمت گمراه‌کننده است","آگهی تکراری است","تصاویر با ملک مطابقت ندارد","ملک وجود ندارد یا فروخته شده است","محتوای نامناسب یا مشکوک","سایر موارد"];
 const paths: Record<string, ReactNode> = {
  back:<path d="m15 18-6-6 6-6"/>, more:<><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></>,
@@ -14,7 +15,7 @@ const paths: Record<string, ReactNode> = {
  repost:<><path d="m17 1 4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="m7 23-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>
 };
 function Icon({name}:{name:keyof typeof paths}) { return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>; }
-export default function MobileListingActions({imageUrl, listingId, title, price, currency, area, rooms, propertyName, floorLabel}:Props) {
+export default function MobileListingActions({listingId, title, price, currency, area, rooms, propertyName, floorLabel, image}:Props) {
  const router=useRouter(); const [priceVisible,setPriceVisible]=useState(false); const [open,setOpen]=useState(false),[noteOpen,setNoteOpen]=useState(false),[reportOpen,setReportOpen]=useState(false),[note,setNote]=useState(""),[saved,setSaved]=useState(false),[hidden,setHidden]=useState(false),[collection,setCollection]=useState("ذخیره‌شده‌ها"),[reason,setReason]=useState(reasons[0]),[details,setDetails]=useState(""),[busy,setBusy]=useState(false),[loaded,setLoaded]=useState(false),[message,setMessage]=useState("");
  const endpoint=`/api/listings/${encodeURIComponent(listingId)}/actions`;
  async function post(payload:Record<string,unknown>){const r=await fetch(endpoint,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});const d=await r.json().catch(()=>({}));if(r.status===401){router.push(`/login?next=${encodeURIComponent(location.pathname)}`);throw new Error("برای استفاده از این قابلیت وارد حساب شوید.");}if(!r.ok)throw new Error(d.error||"عملیات انجام نشد.");return d;}
@@ -59,22 +60,26 @@ export default function MobileListingActions({imageUrl, listingId, title, price,
   </div>
 
   {priceVisible && (
-    <div className="kh-sticky-listing-info" dir="rtl">
-      {imageUrl && (
-        <img
-          className="kh-sticky-listing-image"
-          src={imageUrl}
-          alt="تصویر ملک"
-          width={46}
-          height={46}
+    <div className="hy-mobile-toolbar-summary" dir="rtl">
+      {image ? (
+        <Image
+          src={image}
+          alt=""
+          width={42}
+          height={42}
+          unoptimized
+          className="hy-mobile-toolbar-summary__image"
         />
+      ) : (
+        <span className="hy-mobile-toolbar-summary__placeholder" aria-hidden="true">⌂</span>
       )}
-      <div className="hy-mobile-toolbar-summary" dir="rtl">
-      <strong>{price} <small>{currency}</small></strong>
-      <span>
-        {rooms ? `${rooms} اتاق` : propertyName} · {area}
-        {floorLabel ? ` · ${floorLabel}` : ""}
-      </span>
+      <div className="hy-mobile-toolbar-summary__copy">
+        <strong className="hy-mobile-toolbar-summary__price">{price} <small>{currency}</small></strong>
+        <span className="hy-mobile-toolbar-summary__meta">
+          {rooms ? `${rooms} اتاق` : propertyName} · {area}
+          {floorLabel ? ` · ${floorLabel}` : ""}
+        </span>
+      </div>
     </div>
   )}
 
