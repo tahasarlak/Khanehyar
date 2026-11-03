@@ -2516,3 +2516,37 @@
     display: none !important;
   }
 }
+/* KH_MOBILE_STICKY_IMAGE_V1 */
+@media (max-width: 640px) {
+  .hd-page .kh-sticky-listing-info {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 7px;
+    overflow: hidden;
+    direction: rtl;
+  }
+
+  .hd-page .kh-sticky-listing-image {
+    display: block;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 9px;
+  }
+
+  .hd-page .kh-sticky-listing-info
+  .hy-mobile-toolbar-summary {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 641px) {
+  .kh-sticky-listing-info {
+    display: none !important;
+  }
+}
