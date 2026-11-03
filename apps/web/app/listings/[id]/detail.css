@@ -2696,3 +2696,65 @@
     font-size: 9px;
   }
 }
+
+
+/* KHANEHYAR_STICKY_HORIZONTAL_V2 */
+
+@media (max-width: 640px) {
+
+  .hy-mobile-listing-toolbar .hy-mobile-toolbar-summary {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 9px !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .hy-mobile-listing-toolbar .hy-mobile-toolbar-summary__image {
+    display: block !important;
+    width: 42px !important;
+    height: 42px !important;
+    flex: 0 0 42px !important;
+    object-fit: cover !important;
+    border-radius: 9px !important;
+    align-self: center !important;
+  }
+
+  .hy-mobile-listing-toolbar .hy-mobile-toolbar-summary__copy {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    gap: 3px !important;
+    text-align: right !important;
+    overflow: hidden !important;
+  }
+
+  .hy-mobile-listing-toolbar .hy-mobile-toolbar-summary__price,
+  .hy-mobile-listing-toolbar .hy-mobile-toolbar-summary__meta {
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-align: right !important;
+  }
+
+}
+
+@media (max-width: 380px) {
+  .hy-mobile-listing-toolbar .hy-mobile-toolbar-summary__image {
+    width: 35px !important;
+    height: 35px !important;
+    flex-basis: 35px !important;
+  }
+}
+
+/* END KHANEHYAR_STICKY_HORIZONTAL_V2 */
