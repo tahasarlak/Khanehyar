@@ -3312,3 +3312,446 @@
     display: none !important;
   }
 }
+
+/* ================================================================
+   KHANEHYAR — MOBILE LISTING DETAIL POLISH (Cian-inspired)
+   Scoped to small screens only. Desktop/tablet layout is untouched.
+   ================================================================ */
+@media (max-width: 640px) {
+  .hd-page {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .hd-page,
+  .hd-page * {
+    box-sizing: border-box;
+  }
+
+  .hd-page .hd-container {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: auto;
+    padding-inline: 14px;
+    padding-bottom: calc(118px + env(safe-area-inset-bottom));
+  }
+
+  /* Main gallery: edge-to-edge image, like the reference app. */
+  .hd-page .hd-desktop-detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    width: calc(100% + 28px);
+    max-width: none;
+    margin: 0 -14px 12px;
+    overflow: visible;
+  }
+
+  .hd-page .hd-desktop-gallery-column,
+  .hd-page .hd-desktop-price-column {
+    display: contents;
+    min-width: 0;
+  }
+
+  .hd-page .hd-gallery {
+    order: 1;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .hd-page .hd-gallery-main {
+    width: 100%;
+    height: clamp(250px, 72vw, 390px);
+    min-height: 250px;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .hd-page .hd-gallery-main img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hd-page .hd-thumbnails {
+    padding: 9px 14px 3px;
+    gap: 8px;
+  }
+
+  /* Listing heading and main attributes. */
+  .hd-page .hd-mobile-title-block {
+    order: 2;
+    display: block !important;
+    min-width: 0;
+    padding: 15px 17px 13px;
+  }
+
+  .hd-page .hd-mobile-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .hd-page .hd-mobile-title-block h1 {
+    margin: 0;
+    font-size: clamp(20px, 5.5vw, 25px);
+    line-height: 1.5;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+  }
+
+  .hd-page .hd-mobile-title-block p {
+    margin: 7px 0 0;
+    font-size: 13px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+  }
+
+  .hd-page .hd-mobile-title-block > small {
+    display: block;
+    margin-top: 7px;
+    font-size: 11px;
+    line-height: 1.7;
+  }
+
+  .hd-page .hd-floorplan-shortcut {
+    order: 3;
+    margin: 0 14px 12px;
+  }
+
+  .hd-page .hd-mobile-stats {
+    order: 4;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 14px;
+    margin: 0;
+    padding: 12px 17px 14px;
+  }
+
+  .hd-page .hd-mobile-stats > div {
+    min-width: 0;
+    padding: 9px 0;
+    align-items: flex-start;
+    border-bottom: 1px solid rgba(150, 160, 180, .18);
+  }
+
+  .hd-page .hd-mobile-stats strong {
+    font-size: 15px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+
+  .hd-page .hd-mobile-stats small {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  /* Price and offer card. */
+  .hd-page .hd-price-summary {
+    order: 5;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    width: auto;
+    min-width: 0;
+    margin: 14px 14px 18px;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .hd-page .hd-price-summary-main,
+  .hd-page .hd-price-summary-main-top,
+  .hd-page .hd-price-summary-price {
+    min-width: 0;
+  }
+
+  .hd-page .hd-price-summary .hd-price {
+    font-size: clamp(25px, 7vw, 31px);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .hd-page .hd-price-summary-tags {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .hd-page .hd-price-summary .hd-offer-form,
+  .hd-page .hd-price-summary .hd-price-offer-widget .hd-offer-form {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  /* Long-form content follows one consistent mobile column. */
+  .hd-page .hd-layout {
+    order: 7;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .hd-page .hd-main-column {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: 0;
+  }
+
+  .hd-page .hd-main-column > .hd-panel,
+  .hd-page .hd-mobile-panel {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 21px 17px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .hd-page .hd-mobile-panel h2,
+  .hd-page .hd-section-heading h2,
+  .hd-page .hd-mobile-overview-heading h2 {
+    margin: 0 0 13px;
+    font-size: clamp(19px, 5vw, 23px);
+    line-height: 1.5;
+    font-weight: 900;
+  }
+
+  .hd-page .hd-section-heading {
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .hd-page .hd-section-heading > div {
+    min-width: 0;
+  }
+
+  .hd-page .hd-section-heading p {
+    margin: 3px 0 0;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  /* Property data: two label/value pairs per row on normal phones.
+     At very narrow widths it becomes one pair per row. */
+  .hd-page .hd-mobile-fact-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 16px;
+    width: 100%;
+    margin: 0;
+  }
+
+  .hd-page .hd-mobile-fact-list > div {
+    display: grid;
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    align-items: start;
+    gap: 7px;
+    min-width: 0;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(150, 160, 180, .2);
+  }
+
+  .hd-page .hd-mobile-fact-list dt,
+  .hd-page .hd-mobile-fact-list dd {
+    min-width: 0;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .hd-page .hd-mobile-fact-list dt {
+    font-weight: 650;
+  }
+
+  .hd-page .hd-mobile-fact-list dd {
+    text-align: start;
+    font-weight: 850;
+  }
+
+  .hd-page .hd-mobile-fact-sections {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .hd-page .hd-mobile-description-panel .hd-description {
+    font-size: 14px;
+    line-height: 2;
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+  }
+
+  /* Location card and map stay within the viewport. */
+  .hd-page .hd-mobile-location-panel .hd-location {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .hd-page .hd-location-copy {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .hd-page .hd-location-copy strong {
+    display: block;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .hd-page .hd-location-copy p,
+  .hd-page .hd-location-copy small,
+  .hd-page .hd-privacy-note {
+    font-size: 12px;
+    line-height: 1.9;
+    overflow-wrap: anywhere;
+  }
+
+  .hd-page .hd-map-wrap {
+    width: 100%;
+    max-width: 100%;
+    margin-top: 13px;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .hd-page .hd-map-wrap iframe,
+  .hd-page .hd-map {
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: clamp(210px, 62vw, 280px);
+    border: 0;
+  }
+
+  .hd-page .hd-map-link {
+    display: block;
+    padding: 12px;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  /* Owner card. */
+  .hd-page .hd-owner-card {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .hd-page .hd-owner-avatar,
+  .hd-page .hd-owner-avatar-image {
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+  }
+
+  .hd-page .hd-owner-details {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .hd-page .hd-owner-details strong,
+  .hd-page .hd-owner-details span,
+  .hd-page .hd-owner-details small {
+    overflow-wrap: anywhere;
+  }
+
+  .hd-page .hd-owner-contact {
+    flex: 0 0 auto;
+    max-width: 100px;
+    font-size: 10px;
+  }
+
+  /* Similar properties and footer spacing. */
+  .hd-page .hd-similar-section {
+    order: 8;
+    width: 100%;
+    min-width: 0;
+    padding: 20px 14px;
+  }
+
+  .hd-page .hd-similar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .hd-page .hd-similar-card,
+  .hd-page .hd-similar-body {
+    min-width: 0;
+  }
+
+  .hd-page .hd-bottom-link {
+    order: 9;
+    padding-bottom: 20px;
+  }
+
+  /* Fixed contact bar respects Android/iOS safe areas. */
+  .hd-page .hd-contact-actions.hd-mobile-dock {
+    position: fixed;
+    z-index: 1100;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    width: 100%;
+    margin: 0;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(150, 160, 180, .22);
+    border-radius: 0;
+    backdrop-filter: blur(18px);
+  }
+
+  .hd-page .hd-contact-actions.hd-mobile-dock button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 50px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+}
+
+@media (max-width: 390px) {
+  .hd-page .hd-mobile-fact-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .hd-page .hd-mobile-stats {
+    gap: 0 10px;
+  }
+
+  .hd-page .hd-mobile-stats strong {
+    font-size: 14px;
+  }
+
+  .hd-page .hd-owner-contact {
+    display: none;
+  }
+}
