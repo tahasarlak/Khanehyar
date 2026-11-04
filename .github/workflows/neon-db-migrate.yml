@@ -1,0 +1,62 @@
+name: Neon Database Migration
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: khanehyar-neon-db-migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Apply Prisma Migrations to Neon
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.14.0
+
+      - name: Verify database secret
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::GitHub Secret DATABASE_URL is missing."
+            exit 1
+          fi
+          echo "DATABASE_URL is configured."
+
+      - name: Verify migration files
+        shell: bash
+        run: |
+          test -f apps/web/prisma/schema.prisma
+          test -f apps/web/prisma/migrations/20261104180000_listing_daily_views/migration.sql
+          echo "Prisma schema and ListingDailyView migration found."
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter web exec prisma generate --schema prisma/schema.prisma
+
+      - name: Apply pending migrations
+        run: pnpm --filter web exec prisma migrate deploy --schema prisma/schema.prisma
+
+      - name: Migration completed
+        run: echo "Prisma migrations completed successfully."
