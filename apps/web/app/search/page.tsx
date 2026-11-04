@@ -11,7 +11,7 @@ import "./map-view.css";
 type RawValue = string | string[] | undefined;
 
 type SearchParams = {
-  city?: RawValue;
+  city?: RawValue; address?: RawValue; hasPhotos?: RawValue;
   deal?: RawValue;
   property?: RawValue;
   minPrice?: RawValue;
@@ -23,10 +23,11 @@ type SearchParams = {
   page?: RawValue;
   view?: RawValue;
   floorMin?: RawValue; floorMax?: RawValue; furnished?: RawValue; elevator?: RawValue; parking?: RawValue; urgent?: RawValue; pets?: RawValue; buildingType?: RawValue; constructionStatus?: RawValue; architecturalStyle?: RawValue; windowView?: RawValue; rentalPeriod?: RawValue;
+  minDeposit?: RawValue; maxDeposit?: RawValue; bathrooms?: RawValue; yearFrom?: RawValue; yearTo?: RawValue; totalFloorsMin?: RawValue; totalFloorsMax?: RawValue; storage?: RawValue; balcony?: RawValue; terrace?: RawValue; garden?: RawValue; readyToMove?: RawValue; documentType?: RawValue; orientation?: RawValue; naturalLight?: RawValue; heatingType?: RawValue; coolingType?: RawValue; ceilingMin?: RawValue; ceilingMax?: RawValue; advertiserType?: RawValue; negotiable?: RawValue;
 };
 
 type SearchFilters = {
-  city: string;
+  city: string; address: string; hasPhotos: string;
   deal: "SALE" | "RENT" | "";
   property: "APARTMENT" | "HOUSE" | "VILLA" | "LAND" | "COMMERCIAL" | "";
   minPrice: string;
@@ -36,6 +37,7 @@ type SearchFilters = {
   rooms: string;
   sort: "newest" | "price_asc" | "price_desc" | "area_desc" | "popular";
   floorMin: string; floorMax: string; furnished: string; elevator: string; parking: string; urgent: string; pets: string; buildingType: string; constructionStatus: string; architecturalStyle: string; windowView: string; rentalPeriod: string;
+  minDeposit: string; maxDeposit: string; bathrooms: string; yearFrom: string; yearTo: string; totalFloorsMin: string; totalFloorsMax: string; storage: string; balcony: string; terrace: string; garden: string; readyToMove: string; documentType: string; orientation: string; naturalLight: string; heatingType: string; coolingType: string; ceilingMin: string; ceilingMax: string; advertiserType: string; negotiable: string;
 };
 
 const PAGE_SIZE = 6;
@@ -100,7 +102,7 @@ function parseFilters(params: SearchParams): SearchFilters {
     sortOptions.find((item) => item === sortValue) ?? "newest";
 
   return {
-    city: single(params.city).slice(0, 100),
+    city: single(params.city).slice(0, 100), address: single(params.address).slice(0, 150), hasPhotos: single(params.hasPhotos) === "true" ? "true" : "",
     deal,
     property,
     minPrice: moneyInput(params.minPrice),
@@ -110,6 +112,7 @@ function parseFilters(params: SearchParams): SearchFilters {
     rooms: roomInput(params.rooms),
     sort,
     floorMin: moneyInput(params.floorMin), floorMax: moneyInput(params.floorMax), furnished: ["true","false"].includes(single(params.furnished)) ? single(params.furnished) : "", elevator: ["true","false"].includes(single(params.elevator)) ? single(params.elevator) : "", parking: ["true","false"].includes(single(params.parking)) ? single(params.parking) : "", urgent: single(params.urgent) === "true" ? "true" : "", pets: ["true","false"].includes(single(params.pets)) ? single(params.pets) : "", buildingType: single(params.buildingType).slice(0,80), constructionStatus: single(params.constructionStatus).slice(0,80), architecturalStyle: single(params.architecturalStyle).slice(0,80), windowView: single(params.windowView).slice(0,80), rentalPeriod: ["LONG_TERM","DAILY","WEEKLY","HOURLY"].includes(single(params.rentalPeriod)) ? single(params.rentalPeriod) : "",
+    minDeposit: moneyInput(params.minDeposit), maxDeposit: moneyInput(params.maxDeposit), bathrooms: roomInput(params.bathrooms), yearFrom: moneyInput(params.yearFrom), yearTo: moneyInput(params.yearTo), totalFloorsMin: moneyInput(params.totalFloorsMin), totalFloorsMax: moneyInput(params.totalFloorsMax), storage: ["true","false"].includes(single(params.storage)) ? single(params.storage) : "", balcony: ["true","false"].includes(single(params.balcony)) ? single(params.balcony) : "", terrace: ["true","false"].includes(single(params.terrace)) ? single(params.terrace) : "", garden: ["true","false"].includes(single(params.garden)) ? single(params.garden) : "", readyToMove: ["true","false"].includes(single(params.readyToMove)) ? single(params.readyToMove) : "", documentType: single(params.documentType).slice(0,100), orientation: single(params.orientation).slice(0,50), naturalLight: single(params.naturalLight).slice(0,50), heatingType: single(params.heatingType).slice(0,80), coolingType: single(params.coolingType).slice(0,80), ceilingMin: single(params.ceilingMin).match(/^\d{1,2}(?:\.\d{1,2})?$/) ? single(params.ceilingMin) : "", ceilingMax: single(params.ceilingMax).match(/^\d{1,2}(?:\.\d{1,2})?$/) ? single(params.ceilingMax) : "", advertiserType: ["OWNER","AGENT","AGENCY","BUILDER"].includes(single(params.advertiserType)) ? single(params.advertiserType) : "", negotiable: ["true","false"].includes(single(params.negotiable)) ? single(params.negotiable) : "",
   };
 }
 
@@ -120,11 +123,10 @@ function buildWhere(filters: SearchFilters): Prisma.ListingWhereInput {
   };
 
   if (filters.city) {
-    where.city = {
-      contains: filters.city,
-      mode: "insensitive",
-    };
+    where.city = { contains: filters.city, mode: "insensitive" };
   }
+  if (filters.address) where.address = { contains: filters.address, mode: "insensitive" };
+  if (filters.hasPhotos === "true") where.images = { some: {} };
 
   if (filters.deal) {
     where.listingType = filters.deal;
@@ -161,6 +163,23 @@ function buildWhere(filters: SearchFilters): Prisma.ListingWhereInput {
   if (filters.architecturalStyle) where.architecturalStyle = filters.architecturalStyle;
   if (filters.windowView) where.windowView = filters.windowView;
   if (filters.rentalPeriod) where.rentalPeriod = filters.rentalPeriod as "LONG_TERM" | "DAILY" | "WEEKLY" | "HOURLY";
+  if (filters.minDeposit || filters.maxDeposit) where.deposit = { ...(filters.minDeposit ? { gte: filters.minDeposit } : {}), ...(filters.maxDeposit ? { lte: filters.maxDeposit } : {}) };
+  if (filters.bathrooms) where.bathrooms = { gte: Number(filters.bathrooms) };
+  if (filters.yearFrom || filters.yearTo) where.yearBuilt = { ...(filters.yearFrom ? { gte: Number(filters.yearFrom) } : {}), ...(filters.yearTo ? { lte: Number(filters.yearTo) } : {}) };
+  if (filters.totalFloorsMin || filters.totalFloorsMax) where.totalFloors = { ...(filters.totalFloorsMin ? { gte: Number(filters.totalFloorsMin) } : {}), ...(filters.totalFloorsMax ? { lte: Number(filters.totalFloorsMax) } : {}) };
+  if (filters.storage) where.hasStorage = filters.storage === "true";
+  if (filters.balcony) where.balcony = filters.balcony === "true";
+  if (filters.terrace) where.terrace = filters.terrace === "true";
+  if (filters.garden) where.garden = filters.garden === "true";
+  if (filters.readyToMove) where.readyToMove = filters.readyToMove === "true";
+  if (filters.documentType) where.documentType = filters.documentType;
+  if (filters.orientation) where.orientation = filters.orientation;
+  if (filters.naturalLight) where.naturalLight = filters.naturalLight;
+  if (filters.heatingType) where.heatingType = filters.heatingType;
+  if (filters.coolingType) where.coolingType = filters.coolingType;
+  if (filters.ceilingMin || filters.ceilingMax) where.ceilingHeight = { ...(filters.ceilingMin ? { gte: filters.ceilingMin } : {}), ...(filters.ceilingMax ? { lte: filters.ceilingMax } : {}) };
+  if (filters.advertiserType) where.advertiserType = filters.advertiserType;
+  if (filters.negotiable) where.priceNegotiable = filters.negotiable === "true";
 
   return where;
 }
@@ -183,7 +202,7 @@ function pageUrl(filters: SearchFilters, page: number): string {
   const query = new URLSearchParams();
 
   const values: Record<string, string> = {
-    city: filters.city,
+    city: filters.city, address: filters.address, hasPhotos: filters.hasPhotos,
     deal: filters.deal,
     property: filters.property,
     minPrice: filters.minPrice,
@@ -192,6 +211,7 @@ function pageUrl(filters: SearchFilters, page: number): string {
     maxArea: filters.maxArea,
     rooms: filters.rooms,
     sort: filters.sort === "newest" ? "" : filters.sort, floorMin: filters.floorMin, floorMax: filters.floorMax, furnished: filters.furnished, elevator: filters.elevator, parking: filters.parking, urgent: filters.urgent, pets: filters.pets, buildingType: filters.buildingType, constructionStatus: filters.constructionStatus, architecturalStyle: filters.architecturalStyle, windowView: filters.windowView, rentalPeriod: filters.rentalPeriod,
+    minDeposit: filters.minDeposit, maxDeposit: filters.maxDeposit, bathrooms: filters.bathrooms, yearFrom: filters.yearFrom, yearTo: filters.yearTo, totalFloorsMin: filters.totalFloorsMin, totalFloorsMax: filters.totalFloorsMax, storage: filters.storage, balcony: filters.balcony, terrace: filters.terrace, garden: filters.garden, readyToMove: filters.readyToMove, documentType: filters.documentType, orientation: filters.orientation, naturalLight: filters.naturalLight, heatingType: filters.heatingType, coolingType: filters.coolingType, ceilingMin: filters.ceilingMin, ceilingMax: filters.ceilingMax, advertiserType: filters.advertiserType, negotiable: filters.negotiable,
   };
 
   for (const [key, value] of Object.entries(values)) {
@@ -287,17 +307,71 @@ async function SearchResults({
 
   const lastResult =
     total === 0 ? 0 : Math.min(currentPage * PAGE_SIZE, total);
+  const activeFilterCount = Object.entries(filters).filter(([key, value]) => key !== "sort" && value !== "").length;
 
   return (
     <div className="hy-advanced-layout">
-      <details className="hy-advanced-sidebar hy-mobile-filter-panel">
-        <summary className="hy-mobile-filter-summary">
-          <span>فیلترهای جست‌وجو</span>
-          <span className="hy-mobile-filter-summary-hint">برای محدودکردن نتایج باز کن</span>
-        </summary>
+      <div className="hy-search-filter-toolbar">
+        <form action="/search" method="get" className="hy-search-box" role="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+          <input name="city" type="search" defaultValue={filters.city} maxLength={100} placeholder="جست‌وجو بر اساس شهر..." aria-label="جست‌وجوی شهر، محله یا نشانی" />
+          <button type="submit">جست‌وجو</button>
+        </form>
+        <form action="/search" method="get" className="hy-cian-quick-filters" aria-label="فیلترهای سریع">
+          <input type="hidden" name="city" value={filters.city} />
+          <input type="hidden" name="address" value={filters.address} />
+          <input type="hidden" name="hasPhotos" value={filters.hasPhotos} />
+          <input type="hidden" name="minArea" value={filters.minArea} />
+          <input type="hidden" name="maxArea" value={filters.maxArea} />
+          <input type="hidden" name="floorMin" value={filters.floorMin} />
+          <input type="hidden" name="floorMax" value={filters.floorMax} />
+          <input type="hidden" name="furnished" value={filters.furnished} />
+          <input type="hidden" name="elevator" value={filters.elevator} />
+          <input type="hidden" name="parking" value={filters.parking} />
+          <input type="hidden" name="urgent" value={filters.urgent} />
+          <input type="hidden" name="pets" value={filters.pets} />
+          <input type="hidden" name="buildingType" value={filters.buildingType} />
+          <input type="hidden" name="constructionStatus" value={filters.constructionStatus} />
+          <input type="hidden" name="architecturalStyle" value={filters.architecturalStyle} />
+          <input type="hidden" name="windowView" value={filters.windowView} />
+          <input type="hidden" name="rentalPeriod" value={filters.rentalPeriod} />
+          <input type="hidden" name="minDeposit" value={filters.minDeposit} />
+          <input type="hidden" name="maxDeposit" value={filters.maxDeposit} />
+          <input type="hidden" name="bathrooms" value={filters.bathrooms} />
+          <input type="hidden" name="yearFrom" value={filters.yearFrom} />
+          <input type="hidden" name="yearTo" value={filters.yearTo} />
+          <input type="hidden" name="totalFloorsMin" value={filters.totalFloorsMin} />
+          <input type="hidden" name="totalFloorsMax" value={filters.totalFloorsMax} />
+          <input type="hidden" name="storage" value={filters.storage} />
+          <input type="hidden" name="balcony" value={filters.balcony} />
+          <input type="hidden" name="terrace" value={filters.terrace} />
+          <input type="hidden" name="garden" value={filters.garden} />
+          <input type="hidden" name="readyToMove" value={filters.readyToMove} />
+          <input type="hidden" name="documentType" value={filters.documentType} />
+          <input type="hidden" name="orientation" value={filters.orientation} />
+          <input type="hidden" name="naturalLight" value={filters.naturalLight} />
+          <input type="hidden" name="heatingType" value={filters.heatingType} />
+          <input type="hidden" name="coolingType" value={filters.coolingType} />
+          <input type="hidden" name="ceilingMin" value={filters.ceilingMin} />
+          <input type="hidden" name="ceilingMax" value={filters.ceilingMax} />
+          <input type="hidden" name="advertiserType" value={filters.advertiserType} />
+          <input type="hidden" name="negotiable" value={filters.negotiable} />
+          <label className="hy-cian-chip"><span>نوع معامله</span><select name="deal" defaultValue={filters.deal}><option value="">خرید و اجاره</option><option value="SALE">خرید</option><option value="RENT">اجاره</option></select></label>
+          <label className="hy-cian-chip"><span>نوع ملک</span><select name="property" defaultValue={filters.property}><option value="">همه املاک</option><option value="APARTMENT">آپارتمان</option><option value="HOUSE">خانه</option><option value="VILLA">ویلا</option><option value="LAND">زمین</option><option value="COMMERCIAL">تجاری</option></select></label>
+          <label className="hy-cian-chip"><span>اتاق</span><select name="rooms" defaultValue={filters.rooms}><option value="">هر تعداد</option><option value="1">۱</option><option value="2">۲</option><option value="3">۳</option><option value="4">۴</option><option value="5">۵+</option></select></label>
+          <label className="hy-cian-price"><span>قیمت از</span><input name="minPrice" type="number" min="0" defaultValue={filters.minPrice} placeholder="حداقل" /></label>
+          <label className="hy-cian-price"><span>تا</span><input name="maxPrice" type="number" min="0" defaultValue={filters.maxPrice} placeholder="حداکثر" /></label>
+          <button type="submit" className="hy-cian-apply">اعمال</button>
+        </form>
+        <details className="hy-advanced-sidebar hy-mobile-filter-panel">
+          <summary className="hy-mobile-filter-summary" aria-label="باز کردن فیلترهای پیشرفته">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6.2 7.1v5.1l-3.6 1.8v-6.9L4 5Z"/></svg>
+            <span className="hy-filter-trigger-label">فیلترهای بیشتر</span>
+            {activeFilterCount > 0 && <span className="hy-filter-count">{activeFilterCount.toLocaleString("fa-IR")}</span>}
+          </summary>
         <div className="hy-mobile-filter-content">
         <div className="hy-filter-header">
-          <h2>فیلترهای جست‌وجو</h2>
+          <h2>فیلترهای بیشتر</h2>
           <Link href="/search">پاک کردن فیلترها</Link>
         </div>
 
@@ -312,6 +386,9 @@ async function SearchResults({
               placeholder="مثلاً تهران"
             />
           </label>
+
+          <label className="hy-field"><span>محله، خیابان یا نشانی</span><input name="address" type="search" maxLength={150} defaultValue={filters.address} placeholder="مثلاً سعادت‌آباد، خیابان فرشته" /></label>
+          <label className="hy-field"><span>وجود تصویر</span><select name="hasPhotos" defaultValue={filters.hasPhotos}><option value="">همه آگهی‌ها</option><option value="true">فقط آگهی‌های دارای عکس</option></select></label>
 
           <label className="hy-field">
             <span>نوع معامله</span>
@@ -427,6 +504,25 @@ async function SearchResults({
           <label className="hy-field"><span>سبک معماری</span><select name="architecturalStyle" defaultValue={filters.architecturalStyle}><option value="">همه</option>{["مدرن","کلاسیک","نئوکلاسیک","رومی","مینیمال","اسکاندیناوی","سنتی ایرانی","صنعتی","روستیک","لوکس"].map(x=><option key={x}>{x}</option>)}</select></label>
           <label className="hy-field"><span>منظره پنجره</span><select name="windowView" defaultValue={filters.windowView}><option value="">همه</option>{["خیابان","کوچه","حیاط","باغ و فضای سبز","جنگل","کوهستان","دریا","خط آسمان شهر","بدون منظرهٔ خاص"].map(x=><option key={x}>{x}</option>)}</select></label>
 
+          <div className="hy-filter-section-title"><strong>جزئیات تکمیلی ملک</strong><span>برای رسیدن به نتیجه دقیق‌تر</span></div>
+          <fieldset className="hy-filter-group"><legend>ودیعه / رهن (ویژه اجاره)</legend><div className="hy-filter-pair"><label className="hy-field"><span>حداقل</span><input name="minDeposit" type="number" min="0" defaultValue={filters.minDeposit} placeholder="از" /></label><label className="hy-field"><span>حداکثر</span><input name="maxDeposit" type="number" min="0" defaultValue={filters.maxDeposit} placeholder="تا" /></label></div></fieldset>
+          <label className="hy-field"><span>تعداد سرویس بهداشتی</span><select name="bathrooms" defaultValue={filters.bathrooms}><option value="">فرقی ندارد</option>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} و بیشتر</option>)}</select></label>
+          <fieldset className="hy-filter-group"><legend>سال ساخت</legend><div className="hy-filter-pair"><label className="hy-field"><span>از سال</span><input name="yearFrom" type="number" min="1300" max="1500" defaultValue={filters.yearFrom} placeholder="مثلاً ۱۳۹۵" /></label><label className="hy-field"><span>تا سال</span><input name="yearTo" type="number" min="1300" max="1500" defaultValue={filters.yearTo} placeholder="مثلاً ۱۴۰۵" /></label></div></fieldset>
+          <fieldset className="hy-filter-group"><legend>تعداد طبقات ساختمان</legend><div className="hy-filter-pair"><label className="hy-field"><span>حداقل</span><input name="totalFloorsMin" type="number" min="1" max="200" defaultValue={filters.totalFloorsMin} /></label><label className="hy-field"><span>حداکثر</span><input name="totalFloorsMax" type="number" min="1" max="200" defaultValue={filters.totalFloorsMax} /></label></div></fieldset>
+          <label className="hy-field"><span>انباری</span><select name="storage" defaultValue={filters.storage}><option value="">فرقی ندارد</option><option value="true">دارد</option><option value="false">ندارد</option></select></label>
+          <label className="hy-field"><span>بالکن</span><select name="balcony" defaultValue={filters.balcony}><option value="">فرقی ندارد</option><option value="true">دارد</option><option value="false">ندارد</option></select></label>
+          <label className="hy-field"><span>تراس</span><select name="terrace" defaultValue={filters.terrace}><option value="">فرقی ندارد</option><option value="true">دارد</option><option value="false">ندارد</option></select></label>
+          <label className="hy-field"><span>حیاط / باغ</span><select name="garden" defaultValue={filters.garden}><option value="">فرقی ندارد</option><option value="true">دارد</option><option value="false">ندارد</option></select></label>
+          <label className="hy-field"><span>آماده تحویل</span><select name="readyToMove" defaultValue={filters.readyToMove}><option value="">فرقی ندارد</option><option value="true">بله</option><option value="false">خیر</option></select></label>
+          <label className="hy-field"><span>نوع سند</span><select name="documentType" defaultValue={filters.documentType}><option value="">همه انواع</option>{["شش‌دانگ","تک‌برگ","منگوله‌دار","قولنامه‌ای","سند تعاونی","اوقافی","در حال اخذ سند"].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label className="hy-field"><span>جهت ملک</span><select name="orientation" defaultValue={filters.orientation}><option value="">فرقی ندارد</option>{["شمالی","جنوبی","شرقی","غربی","دو نبش","سه نبش"].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label className="hy-field"><span>نور طبیعی</span><select name="naturalLight" defaultValue={filters.naturalLight}><option value="">فرقی ندارد</option>{["زیاد","متوسط","کم","نورگیر از دو طرف"].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label className="hy-field"><span>سیستم گرمایش</span><select name="heatingType" defaultValue={filters.heatingType}><option value="">همه</option>{["پکیج","شوفاژ","موتورخانه","بخاری","گرمایش از کف","اسپلیت"].map(x=><option key={x}>{x}</option>)}</select></label>
+          <label className="hy-field"><span>سیستم سرمایش</span><select name="coolingType" defaultValue={filters.coolingType}><option value="">همه</option>{["کولر آبی","کولر گازی","اسپلیت","چیلر","داکت اسپلیت","بدون سیستم سرمایش"].map(x=><option key={x}>{x}</option>)}</select></label>
+          <fieldset className="hy-filter-group"><legend>ارتفاع سقف (متر)</legend><div className="hy-filter-pair"><label className="hy-field"><span>از</span><input name="ceilingMin" type="number" min="1" max="10" step="0.1" defaultValue={filters.ceilingMin}/></label><label className="hy-field"><span>تا</span><input name="ceilingMax" type="number" min="1" max="10" step="0.1" defaultValue={filters.ceilingMax}/></label></div></fieldset>
+          <label className="hy-field"><span>آگهی‌دهنده</span><select name="advertiserType" defaultValue={filters.advertiserType}><option value="">همه</option><option value="OWNER">مالک</option><option value="AGENT">مشاور املاک</option><option value="AGENCY">آژانس</option><option value="BUILDER">سازنده</option></select></label>
+          <label className="hy-field"><span>قیمت</span><select name="negotiable" defaultValue={filters.negotiable}><option value="">فرقی ندارد</option><option value="true">قابل مذاکره</option><option value="false">قطعی</option></select></label>
+
           <label className="hy-field">
             <span>مرتب‌سازی</span>
             <select name="sort" defaultValue={filters.sort}>
@@ -445,7 +541,8 @@ async function SearchResults({
           </button>
         </form>
         </div>
-      </details>
+        </details>
+      </div>
 
       <section className="hy-advanced-results" aria-label="نتایج جست‌وجو">
         <div className="hy-advanced-summary">

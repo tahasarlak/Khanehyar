@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/src/lib/auth";
 import UnreadMessagesLink from "./UnreadMessagesLink";
 import SignOutButton from "./SignOutButton";
 import SiteHeaderMobileMenu from "./SiteHeaderMobileMenu";
+import SiteMegaNavigation from "./SiteMegaNavigation";
 import styles from "./SiteHeader.module.css";
 
 /* KHANEHYAR_CIAN_INSPIRED_HEADER_V2 */
@@ -57,16 +58,7 @@ export default async function SiteHeader() {
           />
         </div>
 
-        <nav className={styles.nav} aria-label="دسته‌بندی‌های اصلی">
-          <Link href="/search?deal=RENT">اجاره</Link>
-          <Link href="/search?deal=SALE">خرید و فروش</Link>
-          <Link href="/projects">پروژه‌های ساختمانی</Link>
-          <Link href="/search?property=HOUSE">خانه و ویلا</Link>
-          <Link href="/search?property=COMMERCIAL">املاک تجاری</Link>
-          <Link href="/stays">اجاره روزانه و اقامتگاه</Link>
-          <Link href="/agents">مشاوران املاک</Link>
-          <Link href="/help">خدمات و راهنما</Link>
-        </nav>
+        <SiteMegaNavigation />
       </div>
     </header>
   );

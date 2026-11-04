@@ -38,6 +38,7 @@ export default function SiteFooter() {
           <Link href="/search?urgent=true">فروش فوری</Link>
           <Link href="/listings/new">ثبت آگهی ملک</Link>
           <Link href="/dashboard/listings">مدیریت آگهی‌ها</Link>
+          <Link href="/my-home">خانه من؛ مرکز مدیریت ملک</Link>
           <Link href="/favorites">علاقه‌مندی‌ها</Link>
         </div>
 
@@ -64,7 +65,7 @@ export default function SiteFooter() {
       </div>
 
       <div className={`hy-wrap ${styles.bottom}`}>
-        <span>© {2026} خانه‌یار — تمامی حقوق محفوظ است.</span>
+        <span>© ۲۰۲۶ خانه‌یار — تمامی حقوق محفوظ است.</span>
         <span>با دقت انتخاب کن، با خیال راحت خانه پیدا کن.</span>
         <div className={styles.bottomLinks}>
           <Link href="/privacy">حریم خصوصی</Link>
