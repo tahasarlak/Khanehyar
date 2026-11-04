@@ -117,6 +117,13 @@ export default async function HomePage() {
                 <span>✓ جست‌وجوی آسان</span>
                 <span>✓ ثبت آگهی آنلاین</span>
               </div>
+              <div className="hy-home-quicklinks" aria-label="جست‌وجوی سریع">
+                <Link href="/search?deal=SALE">خرید آپارتمان</Link>
+                <Link href="/search?deal=RENT">اجاره بلندمدت</Link>
+                <Link href="/stays">اجاره روزانه</Link>
+                <Link href="/projects">پروژه‌های جدید</Link>
+                <Link href="/search?property=COMMERCIAL">ملک تجاری</Link>
+              </div>
               <Link href="/search?view=map" className="hy-map-entry">⌖ مشاهدهٔ آگهی‌ها روی نقشه</Link>
             </div>
 

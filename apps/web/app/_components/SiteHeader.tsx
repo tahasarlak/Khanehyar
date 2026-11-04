@@ -5,7 +5,7 @@ import SignOutButton from "./SignOutButton";
 import SiteHeaderMobileMenu from "./SiteHeaderMobileMenu";
 import styles from "./SiteHeader.module.css";
 
-/* KHANEHYAR_SITEWIDE_HEADER_V1 */
+/* KHANEHYAR_CIAN_INSPIRED_HEADER_V2 */
 export default async function SiteHeader() {
   const user = await getCurrentUser();
   const userName = user?.name?.trim() || "کاربر خانه‌یار";
@@ -14,50 +14,59 @@ export default async function SiteHeader() {
   return (
     <header className={styles.header} dir="rtl">
       <div className={`hy-wrap ${styles.inner}`}>
-        <Link href="/" className={styles.logo} aria-label="خانه‌یار، صفحه اصلی">
-          <span className={styles.logoMark} aria-hidden="true">⌂</span>
-          <span className={styles.logoText}>
-            <strong>خانه‌یار</strong>
-            <small>انتخاب خانه، با خیال راحت</small>
-          </span>
-        </Link>
+        <div className={styles.topRow}>
+          <Link href="/" className={styles.logo} aria-label="خانه‌یار، صفحه اصلی">
+            <span className={styles.logoMark} aria-hidden="true">⌂</span>
+            <span className={styles.logoText}>
+              <strong>خانه‌یار</strong>
+              <small>انتخاب خانه، با خیال راحت</small>
+            </span>
+          </Link>
 
-        <nav className={styles.nav} aria-label="منوی اصلی">
-          <Link href="/search">جست‌وجوی ملک</Link>
-          <Link href="/search?deal=SALE">خرید ملک</Link>
-          <Link href="/search?deal=RENT">اجاره ملک</Link>
-          <Link href="/projects">پروژه‌ها</Link>
-          <Link href="/stays">اقامتگاه‌ها</Link>
-          <Link href="/agents">مشاوران</Link>
-          {user ? <Link href="/dashboard/listings">آگهی‌های من</Link> : null}
-          {user ? <UnreadMessagesLink /> : null}
-        </nav>
+          <div className={styles.actions} aria-label="ابزارهای کاربری">
+            <Link href="/search?view=map" className={styles.utilityLink}>
+              <span aria-hidden="true">⌖</span><span>جست‌وجو روی نقشه</span>
+            </Link>
+            {user ? (
+              <>
+                <Link href="/dashboard/favorites" className={styles.iconLink} aria-label="علاقه‌مندی‌ها" title="علاقه‌مندی‌ها">♡</Link>
+                <Link href="/dashboard/notifications" className={styles.iconLink} aria-label="اعلان‌ها" title="اعلان‌ها">♧</Link>
+                <span className={styles.messageLink}><UnreadMessagesLink /></span>
+                <Link href="/dashboard" className={styles.account}>
+                  <span className={styles.accountAvatar} aria-hidden="true">{userInitial}</span>
+                  <span className={styles.accountName}>{userName}</span>
+                </Link>
+                {user.role === "ADMIN" ? <Link href="/admin/listings" className={styles.adminLink}>مدیریت</Link> : null}
+                <SignOutButton />
+              </>
+            ) : (
+              <>
+                <Link href="/favorites" className={styles.iconLink} aria-label="علاقه‌مندی‌ها" title="علاقه‌مندی‌ها">♡</Link>
+                <Link href="/login" className={styles.login}>ورود</Link>
+                <Link href="/register" className={styles.register}>ساخت حساب</Link>
+              </>
+            )}
+            <Link href="/listings/new" className={styles.create}>＋ ثبت آگهی</Link>
+          </div>
 
-        <div className={styles.actions}>
-          {user ? (
-            <>
-              <Link href="/dashboard" className={styles.account}>
-                <span className={styles.accountAvatar} aria-hidden="true">{userInitial}</span>
-                <span className={styles.accountName}>{userName}</span>
-              </Link>
-              {user.role === "ADMIN" ? <Link href="/admin/listings" className="ui-btn ui-btn-outline">مدیریت</Link> : null}
-              <SignOutButton />
-            </>
-          ) : (
-            <>
-              <Link href="/login" className={styles.login}>ورود</Link>
-              <Link href="/register" className="ui-btn ui-btn-outline">ساخت حساب</Link>
-            </>
-          )}
-          <Link href="/listings/new" className="ui-btn ui-btn-primary">+ ثبت آگهی</Link>
+          <SiteHeaderMobileMenu
+            authenticated={Boolean(user)}
+            userName={userName}
+            userInitial={userInitial}
+            isAdmin={user?.role === "ADMIN"}
+          />
         </div>
 
-        <SiteHeaderMobileMenu
-          authenticated={Boolean(user)}
-          userName={userName}
-          userInitial={userInitial}
-          isAdmin={user?.role === "ADMIN"}
-        />
+        <nav className={styles.nav} aria-label="دسته‌بندی‌های اصلی">
+          <Link href="/search?deal=RENT">اجاره</Link>
+          <Link href="/search?deal=SALE">خرید و فروش</Link>
+          <Link href="/projects">پروژه‌های ساختمانی</Link>
+          <Link href="/search?property=HOUSE">خانه و ویلا</Link>
+          <Link href="/search?property=COMMERCIAL">املاک تجاری</Link>
+          <Link href="/stays">اجاره روزانه و اقامتگاه</Link>
+          <Link href="/agents">مشاوران املاک</Link>
+          <Link href="/help">خدمات و راهنما</Link>
+        </nav>
       </div>
     </header>
   );

@@ -1,135 +1,68 @@
+/* KHANEHYAR_CIAN_INSPIRED_FOOTER_V2 */
 .footer {
-  margin-top: 0;
-  padding: 46px 0 18px;
-  color: #dce8f0;
-  background: var(--color-brand-primary-hover);
+  margin-top:0;
+  padding:48px 0 18px;
+  color:#34465d;
+  background:#f2f5f9;
+  border-top:1px solid #e5eaf0;
 }
-
 .main {
-  display: grid;
-  grid-template-columns: 1.5fr repeat(3, minmax(0, 1fr));
-  gap: 32px;
-  padding-bottom: 32px;
+  display:grid;
+  grid-template-columns:1.45fr repeat(4,minmax(0,1fr));
+  gap:28px;
+  padding-bottom:34px;
 }
-
+.brandBlock { min-width:0; }
 .brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  color: #fff;
-  text-decoration: none;
-  font-size: 23px;
-  font-weight: 950;
+  display:inline-flex; align-items:center; gap:10px;
+  color:#183b63; text-decoration:none;
 }
-
 .brand span {
-  display: grid;
-  place-items: center;
-  width: 39px;
-  height: 39px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.12);
-  font-size: 26px;
+  display:grid; place-items:center; width:39px; height:39px;
+  border-radius:11px; background:#1769d2; color:#fff;
+  font-size:25px; font-weight:900;
 }
-
+.brand strong { font-size:23px; font-weight:950; }
 .brandBlock p {
-  max-width: 300px;
-  color: #c2d1dd;
-  font-size: 12px;
-  line-height: 2.1;
+  max-width:310px; margin:14px 0 10px;
+  color:#718096; font-size:12px; line-height:2.1;
 }
-
-.column {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 11px;
-}
-
+.aboutLink { color:#1769d2; text-decoration:none; font-size:11px; font-weight:850; }
+.column { display:flex; flex-direction:column; align-items:flex-start; gap:10px; min-width:0; }
 .column h2 {
-  margin: 0 0 5px;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 900;
+  margin:0 0 7px; padding-bottom:12px; width:100%;
+  border-bottom:1px solid #dce3ec; color:#1d3553;
+  font-size:13px; font-weight:950;
 }
-
 .column a {
-  color: #c7d5df;
-  text-decoration: none;
-  font-size: 12px;
-  line-height: 1.8;
-  transition: color 150ms ease;
+  color:#667991; text-decoration:none; font-size:11px; line-height:1.9;
+  transition:color 150ms ease;
 }
-
-.column a:hover {
-  color: #8de0c7;
-}
-
-.column a:focus-visible,
-.brand:focus-visible {
-  outline: 3px solid #8de0c7;
-  outline-offset: 4px;
-  border-radius: 4px;
-}
-
+.column a:hover,.aboutLink:hover { color:#1769d2; }
 .bottom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  padding-top: 17px;
-  color: #b7c8d5;
-  font-size: 10px;
-  line-height: 1.9;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:12px; border-top:1px solid #dce3ec;
+  padding-top:16px; color:#8290a1; font-size:10px; line-height:1.9;
 }
-
-@media (max-width: 900px) {
-  .main {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 24px;
-  }
-
-  .brandBlock {
-    grid-column: 1 / -1;
-  }
-
-  .brandBlock p {
-    max-width: 440px;
-  }
+.bottomLinks { display:flex; align-items:center; gap:17px; }
+.bottomLinks a { color:#718096; text-decoration:none; }
+.bottomLinks a:hover { color:#1769d2; }
+.column a:focus-visible,.brand:focus-visible,.aboutLink:focus-visible,.bottomLinks a:focus-visible {
+  outline:3px solid #75aaf2; outline-offset:3px; border-radius:4px;
 }
-
-@media (max-width: 500px) {
-  .footer {
-    padding-top: 32px;
-  }
-
-  .main {
-    gap: 25px 18px;
-    padding-bottom: 25px;
-  }
-
-  .column {
-    gap: 9px;
-  }
-
-  .column h2 {
-    font-size: 12px;
-  }
-
-  .column a {
-    font-size: 11px;
-  }
-
-  .bottom {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
-  }
+@media(max-width:1100px) {
+  .main { grid-template-columns:repeat(3,minmax(0,1fr)); gap:27px 22px; }
+  .brandBlock { grid-column:1/-1; }
+  .brandBlock p { max-width:620px; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .column a {
-    transition: none;
-  }
+@media(max-width:650px) {
+  .footer { padding-top:34px; }
+  .main { grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px 17px; padding-bottom:25px; }
+  .brandBlock { grid-column:1/-1; }
+  .column { gap:8px; }
+  .column h2 { font-size:12px; }
+  .column a { font-size:10px; }
+  .bottom { flex-direction:column; align-items:flex-start; gap:6px; }
+  .bottomLinks { gap:14px; }
 }
+@media(prefers-reduced-motion:reduce) { .column a { transition:none; } }
