@@ -229,6 +229,7 @@ export default async function ListingDetailPage({ params }: Props) {
   const floorPlanImage = listing.images.find((item) => /^(floor.?plan|plan|نقشه|پلان)$/i.test(item.label || ""))?.url;
   const isRent = listing.listingType === "RENT";
   const propertyName = propertyNames[listing.propertyType] ?? "ملک";
+  const generatedListingTitle = `${isRent ? "اجاره" : "فروش"} ${propertyName}${listing.rooms !== null && ["APARTMENT", "HOUSE", "VILLA"].includes(listing.propertyType) ? ` ${listing.rooms.toLocaleString("fa-IR")} خوابه` : ""}، ${formatNumber(listing.area.toString(), 2)} متر در ${listing.city}`;
   const currency = currencyNames[listing.currency] ?? listing.currency;
   const priceValue = Number(listing.price.toString());
   const areaValue = Number(listing.area.toString());
@@ -239,7 +240,12 @@ export default async function ListingDetailPage({ params }: Props) {
     ? formatNumber(priceValue / areaValue)
     : null;
   const publishedDate = formatDateTime(listing.publishedAt ?? listing.createdAt);
-  const updatedDate = formatDate(listing.updatedAt);
+  const updatedDate = formatDateTime(listing.updatedAt);
+  const tehranDateParts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tehran", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const tehranDateValues = Object.fromEntries(tehranDateParts.map((part) => [part.type, part.value]));
+  const tehranToday = `${tehranDateValues.year}-${tehranDateValues.month}-${tehranDateValues.day}`;
+  const todayViewRecord = await prisma.listingDailyView.findUnique({ where: { listingId_date: { listingId: listing.id, date: tehranToday } }, select: { count: true } });
+  const todayViewCount = todayViewRecord?.count ?? 0;
   const effectivePrice = isRent ? Number((listing.monthlyRent ?? listing.price).toString()) : priceValue;
   const comparableListings = await prisma.listing.findMany({
     where: { id: { not: listing.id }, status: "PUBLISHED", deletedAt: null, city: listing.city, propertyType: listing.propertyType, listingType: listing.listingType, currency: listing.currency, area: { gte: areaValue * 0.7, lte: areaValue * 1.3 } },
@@ -412,35 +418,39 @@ export default async function ListingDetailPage({ params }: Props) {
       }).replace(/<\//g, "<\\/") }} />
       <MobileListingActions listingId={listing.id} title={listing.title} price={displayPrice} currency={currency} area={`${area} متر`} rooms={listing.rooms === null ? "" : listing.rooms.toLocaleString("fa-IR")} propertyName={propertyName} floorLabel={listing.floor !== null ? `طبقه ${listing.floor.toLocaleString("fa-IR")}${listing.totalFloors !== null ? ` از ${listing.totalFloors.toLocaleString("fa-IR")}` : ""}` : ""} image={pictures[0] ?? ""} />
       <main className="hd-container">
-        <nav className="hd-breadcrumb" aria-label="مسیر صفحه">
-          <Link href="/">خانه‌یار</Link><span>/</span><Link href="/search">آگهی‌های املاک</Link><span>/</span><span aria-current="page">{propertyName}</span>
+        <nav className="hd-breadcrumb" aria-label="مسیر دسته‌بندی آگهی">
+          <Link href={`/search?city=${encodeURIComponent(listing.city)}`}>{listing.city}</Link>
+          <span aria-hidden="true">›</span>
+          <Link href={`/search?city=${encodeURIComponent(listing.city)}&deal=${listing.listingType}`}>{isRent ? "اجاره" : "فروش"}</Link>
+          <span aria-hidden="true">›</span>
+          <Link href={`/search?city=${encodeURIComponent(listing.city)}&deal=${listing.listingType}&property=${listing.propertyType}`}>{isRent ? "اجاره" : "فروش"} {propertyName}</Link>
+          {listing.rooms !== null && <><span aria-hidden="true">›</span><Link href={`/search?city=${encodeURIComponent(listing.city)}&deal=${listing.listingType}&property=${listing.propertyType}&rooms=${listing.rooms}`}>{listing.rooms.toLocaleString("fa-IR")} خوابه</Link></>}
+          <span aria-hidden="true">›</span>
+          <Link href={`/search?city=${encodeURIComponent(listing.city)}&deal=${listing.listingType}&property=${listing.propertyType}&minArea=${Math.floor(areaValue)}&maxArea=${Math.ceil(areaValue)}`}>{area} متر مربع</Link>
+          {listing.showExactLocation && listing.address && <><span aria-hidden="true">›</span><a href="#hd-location">{listing.address}</a></>}
         </nav>
+        <div className="hd-listing-stats" aria-label="آمار آگهی">
+          <span>آخرین به‌روزرسانی: {updatedDate}</span>
+          <span className="hd-stats-separator" aria-hidden="true">·</span>
+          <ListingViewTracker listingId={listing.id} initialCount={listing.viewCount} initialTodayCount={todayViewCount} />
+        </div>
 
         <div className="hd-heading">
           <div className="hd-heading-copy">
             <div className="hd-tags"><span>{isRent ? "برای اجاره" : "برای فروش"}</span><span>{propertyName}</span></div>
-            <div className="hd-market-badges">{listing.urgentSale && !isRent && <span className="hd-market-badge is-urgent">فروش فوری</span>}{isBelowAverage && <span className="hd-market-badge">حدود {Math.max(0, averageDifferencePercent ?? 0).toLocaleString("fa-IR")}٪ پایین‌تر از میانگین آگهی‌های مشابه</span>}{isRent && listing.rentalPeriod && <span className="hd-market-badge">{({LONG_TERM:"اجاره بلندمدت",DAILY:"اجاره روزانه",WEEKLY:"اجاره هفتگی",HOURLY:"اجاره ساعتی"} as const)[listing.rentalPeriod]}</span>}</div>
-            <h1>{listing.title}</h1>
-            <p className="hd-address-line"><span aria-hidden="true">⌖</span>{listing.city}{listing.showExactLocation && listing.address ? `، ${listing.address}` : ""}{listing.address && !listing.showExactLocation ? " · نشانی دقیق پس از هماهنگی" : ""}</p>
-            <div className="hd-heading-meta"><span className="hd-meta-item">کد آگهی: {listing.id.slice(-8).toLocaleUpperCase()}</span><span className="hd-meta-item">منتشرشده در {publishedDate}</span><span className="hd-meta-item hd-view-meta"><ListingViewTracker listingId={listing.id} initialCount={listing.viewCount} /></span></div>
+            <div className="hd-market-badges">{isBelowAverage && <span className="hd-market-badge is-good-price">قیمت مناسب · حدود {Math.max(0, averageDifferencePercent ?? 0).toLocaleString("fa-IR")}٪ پایین‌تر از میانگین</span>}{isRent && (listing.commission?.isZero() ?? false) && <span className="hd-market-badge">بدون کمیسیون</span>}{listing.urgentSale && !isRent && <span className="hd-market-badge is-urgent">فروش فوری</span>}{isRent && listing.rentalPeriod && <span className="hd-market-badge">{({LONG_TERM:"اجاره بلندمدت",DAILY:"اجاره روزانه",WEEKLY:"اجاره هفتگی",HOURLY:"اجاره ساعتی"} as const)[listing.rentalPeriod]}</span>}{listing.furnished === true && <span className="hd-market-badge">مبله</span>}{isRent && listing.petsAllowed === true && <span className="hd-market-badge">مجاز با حیوان خانگی</span>}{listing.priceNegotiable && <span className="hd-market-badge">قیمت قابل مذاکره</span>}</div>
+            <h1>{generatedListingTitle}</h1>
+            <p className="hd-address-line"><span aria-hidden="true">⌖</span>{listing.city}{listing.showExactLocation && listing.address ? `، ${listing.address}` : ""}{listing.address && !listing.showExactLocation ? " · نشانی دقیق پس از هماهنگی" : ""}<a className="hd-inline-map-link" href="#hd-location">دیدن روی نقشه</a></p>
+            <div className="hd-heading-meta"><span className="hd-meta-item">کد آگهی: {listing.id.slice(-8).toLocaleUpperCase()}</span><span className="hd-meta-item">منتشرشده در {publishedDate}</span></div>
           </div>
           <div className="hd-favorite-actions" aria-label="اقدام‌های آگهی"><ShareListing title={listing.title} /><FavoriteButton listingId={listing.id} /></div>
         </div>
 
-        <PropertyGallery title={listing.title} images={pictures} />
-        <section className="hd-mobile-title-block" aria-label="عنوان آگهی">
-          <div className="hd-mobile-badges">
-            <span>{isRent ? "اجاره" : "فروش"}</span><span>{propertyName}</span>
-            {listing.urgentSale && !isRent && <span className="is-urgent">فروش فوری</span>}
-            {isBelowAverage && <span className="is-value">حدود {Math.max(0, averageDifferencePercent ?? 0).toLocaleString("fa-IR")}٪ زیر میانگین</span>}
-            {isRent && listing.rentalPeriod && <span>{({LONG_TERM:"بلندمدت",DAILY:"روزانه",WEEKLY:"هفتگی",HOURLY:"ساعتی"} as const)[listing.rentalPeriod]}</span>}
+        <div className="hd-desktop-detail-grid">
+          <div className="hd-desktop-gallery-column">
+            <PropertyGallery title={generatedListingTitle} images={pictures} />
           </div>
-          <h1>{listing.title}</h1>
-          <p><span aria-hidden="true">⌖</span>{listing.city}{listing.showExactLocation && listing.address ? `، ${listing.address}` : ""}</p>
-          <small>کد آگهی: {listing.id.slice(-8).toLocaleUpperCase()} · انتشار {publishedDate}</small>
-        </section>
-        {floorPlanImage && <a className="hd-floorplan-shortcut" href={floorPlanImage} target="_blank" rel="noreferrer">⌗ مشاهدهٔ پلان یا نقشهٔ واحد</a>}
-
+          <aside className="hd-desktop-price-column" aria-label="قیمت و شرایط آگهی">
         <section className="hd-price-summary" id="hd-price-summary" aria-label="قیمت و پیشنهاد قیمت">
   <div className="hd-price-summary-main">
     <div className="hd-price-summary-main-top">
@@ -472,6 +482,45 @@ export default async function ListingDetailPage({ params }: Props) {
     </div>
   </div>
 </section>
+            <div className="hd-desktop-price-details">
+              <h2>شرایط معامله</h2>
+              {isRent ? (
+                <>
+                  {listing.deposit !== null && <div><span>ودیعه</span><strong>{formatNumber(listing.deposit.toString())} {currency}</strong></div>}
+                  {listing.monthlyRent !== null && <div><span>اجاره ماهانه</span><strong>{formatNumber(listing.monthlyRent.toString())} {currency}</strong></div>}
+                  {listing.commission !== null && <div><span>کمیسیون مستأجر</span><strong>{(listing.commission?.isZero() ?? false) ? "ندارد" : `${formatNumber(listing.commission.toString())}٪`}</strong></div>}
+                  {listing.advancePayment !== null && <div><span>پیش‌پرداخت</span><strong>{formatNumber(listing.advancePayment.toString())} ماه</strong></div>}
+                  {listing.minimumContractMonths !== null && <div><span>حداقل مدت قرارداد</span><strong>{formatNumber(listing.minimumContractMonths)} ماه</strong></div>}
+                </>
+              ) : (
+                <>
+                  {listing.priceNegotiable && <div><span>شرایط قیمت</span><strong>قابل مذاکره</strong></div>}
+                  {listing.commission !== null && <div><span>کمیسیون</span><strong>{(listing.commission?.isZero() ?? false) ? "ندارد" : `${formatNumber(listing.commission.toString())}٪`}</strong></div>}
+                </>
+              )}
+              {listing.serviceCharge !== null && <div><span>شارژ ماهانه</span><strong>{formatNumber(listing.serviceCharge.toString())} {currency}</strong></div>}
+              {listing.petsAllowed !== null && <div><span>نگهداری حیوانات</span><strong>{listing.petsAllowed ? "مجاز" : "مجاز نیست"}</strong></div>}
+              {listing.familyOnly && <div><span>شرایط سکونت</span><strong>فقط خانواده</strong></div>}
+              {listing.advertiserType && <div><span>نوع آگهی‌دهنده</span><strong>{listing.advertiserType === "OWNER" ? "مالک" : listing.advertiserType === "AGENT" ? "مشاور" : "آگهی‌دهنده"}</strong></div>}
+            </div>
+            <div className="hd-desktop-owner-mini">
+              <span className="hd-desktop-owner-avatar">{ownerInitial}</span>
+              <div><small>{listing.owner.role === "ADMIN" ? "مدیریت خانه‌یار" : "آگهی‌دهنده"}</small><strong>{ownerName}</strong><span>عضویت از {ownerMemberSince}</span></div>
+            </div>
+          </aside>
+          <section className="hd-mobile-title-block" aria-label="عنوان آگهی">
+            <div className="hd-mobile-badges">
+              <span>{isRent ? "اجاره" : "فروش"}</span><span>{propertyName}</span>
+              {listing.urgentSale && !isRent && <span className="is-urgent">فروش فوری</span>}
+              {isBelowAverage && <span className="is-value">حدود {Math.max(0, averageDifferencePercent ?? 0).toLocaleString("fa-IR")}٪ زیر میانگین</span>}
+              {isRent && listing.rentalPeriod && <span>{({LONG_TERM:"بلندمدت",DAILY:"روزانه",WEEKLY:"هفتگی",HOURLY:"ساعتی"} as const)[listing.rentalPeriod]}</span>}
+            </div>
+            <h1>{generatedListingTitle}</h1>
+            <p><span aria-hidden="true">⌖</span>{listing.city}{listing.showExactLocation && listing.address ? `، ${listing.address}` : ""}</p>
+            <small>کد آگهی: {listing.id.slice(-8).toLocaleUpperCase()} · انتشار {publishedDate}</small>
+          </section>
+          {floorPlanImage && <a className="hd-floorplan-shortcut" href={floorPlanImage} target="_blank" rel="noreferrer">⌗ مشاهدهٔ پلان یا نقشهٔ واحد</a>}
+        </div>
         <div className="hd-mobile-stats" aria-label="مشخصات اصلی ملک">
           <div><strong>{listing.rooms === null ? "—" : listing.rooms.toLocaleString("fa-IR")}</strong><small>تعداد اتاق</small></div>
           <div><strong>{area} متر</strong><small>مساحت کل</small></div>
@@ -512,7 +561,7 @@ export default async function ListingDetailPage({ params }: Props) {
 
             <section className="hd-panel hd-mobile-location-panel">
               <div className="hd-section-heading"><span className="hd-section-icon" aria-hidden="true">⌖</span><div><h2>موقعیت و محله</h2><p>اطلاعات مکانی ثبت‌شده برای این آگهی</p></div></div>
-              <div className="hd-location">
+              <div className="hd-location" id="hd-location">
                 <div className="hd-location-symbol" aria-hidden="true">⌖</div>
                 <div className="hd-location-copy"><strong>{listing.city}</strong><p>{listing.showExactLocation && listing.address ? listing.address : "موقعیت تقریبی محله نمایش داده می‌شود؛ نشانی دقیق برای عموم منتشر نمی‌شود."}</p><small>{!listing.showOnMap ? "نمایش موقعیت این آگهی روی نقشه توسط آگهی‌دهنده غیرفعال شده است." : mapUrl ? (listing.showExactLocation ? "نشانگر بر اساس مختصات ثبت‌شده آگهی است." : "نشانگر تقریبی محدودهٔ ملک است؛ برای حفظ حریم خصوصی کمی جابه‌جا شده.") : "برای این شهر هنوز نقطهٔ مرجع نقشه تعریف نشده است."}</small></div>
               </div>

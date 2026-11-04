@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import "./new-listing.css";
 import ListingImageUploader from "../../_components/ListingImageUploader";
 const draftKey = "khanehyar-listing-draft-v2";
-const steps = [{title:"اطلاعات اصلی",detail:"عنوان و موقعیت ملک"},{title:"قیمت و مشخصات",detail:"قیمت و اندازه‌ها"},{title:"امکانات",detail:"ویژگی‌های ساختمان"},{title:"تصاویر و بازبینی",detail:"آماده‌سازی انتشار"}];
+const steps = [{title:"اطلاعات اصلی",detail:"نوع معامله و موقعیت ملک"},{title:"قیمت و مشخصات",detail:"قیمت و اندازه‌ها"},{title:"امکانات",detail:"ویژگی‌های ساختمان"},{title:"تصاویر و بازبینی",detail:"آماده‌سازی انتشار"}];
 const amenitiesOptions = ["آسانسور","پارکینگ","انباری","بالکن","تراس","حیاط یا باغ","لابی","نگهبانی","دوربین مداربسته","استخر","سالن ورزش","سیستم گرمایش"];
 function nullableBooleanOptions(){return <><option value="">مشخص نشده</option><option value="true">دارد</option><option value="false">ندارد</option></>}
 export default function NewListingPage(){
@@ -22,7 +22,7 @@ export default function NewListingPage(){
  <div className="nl-notice"><span className="nl-notice-icon" aria-hidden="true">i</span><div><strong>پیش‌نویس خودکار</strong><p>اطلاعات متنی فرم روی همین دستگاه ذخیره می‌شود. تصاویر در زمان ثبت ارسال می‌شوند.</p></div>{draftRestored&&<span className="nl-draft-restored">پیش‌نویس بازیابی شد</span>}</div>
  <form ref={formRef} onSubmit={handleSubmit} onInput={saveDraft} className="nl-form" noValidate>
  <section className="nl-section nl-step-panel" data-step-panel="0" hidden={step!==0}><div className="nl-section-heading"><span className="nl-section-number">۱</span><div><h2>اطلاعات اصلی ملک</h2><p>عنوان، نوع معامله و موقعیت ملک را مشخص کن.</p></div></div><div className="nl-grid">
- <label className="nl-field">عنوان آگهی *<input name="title" required minLength={5} maxLength={120} placeholder="مثلاً آپارتمان دوخوابه نزدیک مترو"/></label>
+ <div className="nl-auto-title-note"><strong>عنوان آگهی خودکار ساخته می‌شود</strong><p>عنوان بر اساس نوع معامله، نوع ملک، تعداد اتاق، متراژ و شهر ساخته می‌شود؛ نیازی به وارد کردن عنوان نیست.</p></div>
  <label className="nl-field">نوع معامله *<select name="listingType" required defaultValue="SALE"><option value="SALE">فروش</option><option value="RENT">اجاره</option></select></label>
  <label className="nl-field">مدت اجاره<select name="rentalPeriod" defaultValue="LONG_TERM"><option value="LONG_TERM">بلندمدت</option><option value="DAILY">روزانه</option><option value="WEEKLY">هفتگی</option><option value="HOURLY">ساعتی</option></select><small>برای آگهی فروش نادیده گرفته می‌شود.</small></label>
  <label className="nl-field">نوع ملک *<select name="propertyType" required defaultValue="APARTMENT"><option value="APARTMENT">آپارتمان</option><option value="HOUSE">خانه</option><option value="VILLA">ویلا</option><option value="LAND">زمین</option><option value="COMMERCIAL">تجاری</option></select></label>

@@ -239,8 +239,29 @@ export async function PATCH(request: Request, context: Context) {
     );
   }
 
+  const propertyTitleNames: Record<string, string> = {
+    APARTMENT: "آپارتمان",
+    HOUSE: "خانه",
+    VILLA: "ویلا",
+    LAND: "زمین",
+    COMMERCIAL: "ملک تجاری",
+  };
+  const propertyTypeValue = String(input.propertyType ?? "");
+  const dealTypeValue = String(input.listingType ?? "");
+  const roomsValue = typeof input.rooms === "number" ? input.rooms : null;
+  const areaValue = Number(input.area);
+  const cityValue = String(input.city ?? "").trim();
+  const roomsLabel = roomsValue !== null && ["APARTMENT", "HOUSE", "VILLA"].includes(propertyTypeValue)
+    ? ` ${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(roomsValue)} خوابه`
+    : "";
+  const areaLabel = Number.isFinite(areaValue)
+    ? new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(areaValue)
+    : "";
+  const generatedTitle = `${dealTypeValue === "RENT" ? "اجاره" : "فروش"} ${propertyTitleNames[propertyTypeValue] ?? "ملک"}${roomsLabel}، ${areaLabel} متری در ${cityValue}`.replace(/\s+/g, " ").trim().slice(0, 120);
+
   const validation = listingSchema.safeParse({
     ...input,
+    title: generatedTitle,
     imageUrls: [],
   });
 

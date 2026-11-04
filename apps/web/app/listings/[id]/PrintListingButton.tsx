@@ -6,10 +6,10 @@ export default function PrintListingButton() {
       type="button"
       className="hd-print-button"
       onClick={() => window.print()}
-      aria-label="چاپ مشخصات ملک"
+      aria-label="چاپ یا ذخیره آگهی به‌صورت PDF"
     >
       <span aria-hidden="true">⎙</span>
-      <span>چاپ مشخصات</span>
+      <span>چاپ / ذخیره PDF</span>
     </button>
   );
 }

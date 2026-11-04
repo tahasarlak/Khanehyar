@@ -95,8 +95,15 @@ export async function POST(request: Request) {
       }
     }
 
+    const propertyTitleNames: Record<string, string> = { APARTMENT: "آپارتمان", HOUSE: "خانه", VILLA: "ویلا", LAND: "زمین", COMMERCIAL: "ملک تجاری" };
+    const submittedPropertyType = String(formData.get("propertyType") ?? "");
+    const submittedDealType = String(formData.get("listingType") ?? "");
+    const submittedRooms = optionalNumber("rooms");
+    const submittedArea = Number(formData.get("area"));
+    const submittedCity = String(formData.get("city") ?? "").trim();
+    const generatedTitle = `${submittedDealType === "RENT" ? "اجاره" : "فروش"} ${propertyTitleNames[submittedPropertyType] ?? "ملک"}${submittedRooms !== null && ["APARTMENT", "HOUSE", "VILLA"].includes(submittedPropertyType) ? ` ${new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 0 }).format(submittedRooms)} خوابه` : ""}، ${Number.isFinite(submittedArea) ? new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(submittedArea) : ""} متری در ${submittedCity}`.replace(/\s+/g, " ").trim().slice(0, 120);
     const rawInput = {
-      title: String(formData.get("title") ?? ""), description: String(formData.get("description") ?? ""),
+      title: generatedTitle, description: String(formData.get("description") ?? ""),
       listingType: String(formData.get("listingType") ?? ""), propertyType: String(formData.get("propertyType") ?? ""),
       urgentSale: formData.get("urgentSale") === "true", rentalPeriod: String(formData.get("rentalPeriod") ?? "LONG_TERM"),
       price: Number(formData.get("price")), currency: String(formData.get("currency") ?? "IRT"), area: Number(formData.get("area")),

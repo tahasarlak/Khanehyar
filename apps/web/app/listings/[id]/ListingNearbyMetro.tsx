@@ -42,9 +42,9 @@ function walkingMinutes(meters: number) {
   return Math.max(1, Math.round(meters / 75));
 }
 
-export default function ListingNearbyMetro({ latitude, longitude }: { latitude: number | null; longitude: number | null }) {
+export default function ListingNearbyMetro({ latitude, longitude, compact = false }: { latitude: number | null; longitude: number | null; compact?: boolean }) {
   const [places, setPlaces] = useState<PlaceWithDistance[]>([]);
-  const [radius, setRadius] = useState(1000);
+  const [radius, setRadius] = useState(3000);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error">("loading");
 
@@ -61,29 +61,35 @@ export default function ListingNearbyMetro({ latitude, longitude }: { latitude: 
         if (controller.signal.aborted) return;
         const items = (data.places ?? []).map((place) => ({ ...place, distance: distanceMeters(latitude, longitude, place.latitude, place.longitude) })).sort((a, b) => a.distance - b.distance);
         setPlaces(items);
-        setState(items.length ? "ready" : "empty");
+        const relevantItems = compact ? items.filter((place) => place.category === "metro" || place.category === "transit") : items;
+        setState(relevantItems.length ? "ready" : "empty");
       })
       .catch(() => { if (!controller.signal.aborted) setState("error"); });
     return () => controller.abort();
-  }, [latitude, longitude, radius]);
+  }, [latitude, longitude, radius, compact]);
 
-  const visible = useMemo(() => (activeCategory === "all" ? places : places.filter((place) => place.category === activeCategory)).slice(0, 18), [places, activeCategory]);
+  const visible = useMemo(() => {
+    const filtered = compact
+      ? places.filter((place) => place.category === "metro" || place.category === "transit")
+      : activeCategory === "all" ? places : places.filter((place) => place.category === activeCategory);
+    return filtered.slice(0, compact ? 6 : 18);
+  }, [places, activeCategory, compact]);
   const counts = useMemo(() => categories.map((category) => ({ ...category, count: places.filter((place) => place.category === category.id).length })), [places]);
 
   return (
-    <section className="hd-nearby-explorer" dir="rtl" aria-label="امکانات و دسترسی‌های اطراف ملک">
+    <section className={`hd-nearby-explorer${compact ? " is-compact" : ""}`} dir="rtl" aria-label={compact ? "فاصله تا ایستگاه‌های اطراف ملک" : "امکانات و دسترسی‌های اطراف ملک"}>
       <div className="hd-nearby-head">
-        <div><strong>امکانات اطراف ملک</strong><small>بر اساس داده‌های نقشه و مکان‌های ثبت‌شده در محدوده</small></div>
-        <label>شعاع جست‌وجو <select value={radius} onChange={(event) => setRadius(Number(event.target.value))}><option value={500}>۵۰۰ متر</option><option value={1000}>۱ کیلومتر</option><option value={3000}>۳ کیلومتر</option><option value={5000}>۵ کیلومتر</option></select></label>
+        <div><strong>{compact ? "فاصله تا ایستگاه‌های اطراف" : "امکانات اطراف ملک"}</strong><small>{compact ? "فاصلهٔ تقریبی تا ایستگاه‌های ثبت‌شده در نقشه" : "بر اساس داده‌های نقشه و مکان‌های ثبت‌شده در محدوده"}</small></div>
+        {!compact && <label>شعاع جست‌وجو <select value={radius} onChange={(event) => setRadius(Number(event.target.value))}><option value={500}>۵۰۰ متر</option><option value={1000}>۱ کیلومتر</option><option value={3000}>۳ کیلومتر</option><option value={5000}>۵ کیلومتر</option></select></label>}
       </div>
       {state === "loading" && <p className="hd-nearby-state">در حال دریافت امکانات اطراف…</p>}
       {state === "error" && <p className="hd-nearby-state">اطلاعات نقشه موقتاً در دسترس نیست. کمی بعد دوباره تلاش کن.</p>}
-      {state === "empty" && <p className="hd-nearby-state">برای این محدوده اطلاعات مکانی کافی پیدا نشد. این به معنی نبود امکانات نیست.</p>}
+      {state === "empty" && <p className="hd-nearby-state">{compact ? "برای این محدوده ایستگاه مترو یا حمل‌ونقل ثبت‌شده‌ای پیدا نشد." : "برای این محدوده اطلاعات مکانی کافی پیدا نشد. این به معنی نبود امکانات نیست."}</p>}
       {state === "ready" && <>
-        <div className="hd-nearby-categories">
+        {!compact && <div className="hd-nearby-categories">
           <button type="button" className={activeCategory === "all" ? "is-active" : ""} onClick={() => setActiveCategory("all")}>همه ({places.length.toLocaleString("fa-IR")})</button>
           {counts.filter((item) => item.count > 0).map((item) => <button type="button" key={item.id} className={activeCategory === item.id ? "is-active" : ""} onClick={() => setActiveCategory(item.id)}>{item.icon} {item.label} ({item.count.toLocaleString("fa-IR")})</button>)}
-        </div>
+        </div>}
         <div className="hd-nearby-list">{visible.map((place) => <div className="hd-nearby-place" key={place.id}><span className="hd-nearby-icon">{place.icon}</span><span className="hd-nearby-name"><strong>{place.name}</strong><small>{place.categoryLabel}</small></span><span className="hd-nearby-distance"><b>{formatDistance(place.distance)}</b><small>حدود {walkingMinutes(place.distance).toLocaleString("fa-IR")} دقیقه پیاده</small></span></div>)}</div>
         <small className="hd-nearby-disclaimer">فاصله و زمان پیاده‌روی تخمینی و بر پایه فاصله مستقیم هستند، نه مسیریابی خیابانی. داده‌ها از OpenStreetMap می‌آیند و ممکن است کامل یا به‌روز نباشند.</small>
       </>}

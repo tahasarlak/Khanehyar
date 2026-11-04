@@ -91,6 +91,7 @@ model Listing {
   conversations Conversation[]
   reviews ListingReview[]
   priceHistory ListingPriceHistory[]
+  dailyViews  ListingDailyView[]
   id           String        @id @default(cuid())
   title        String        @db.VarChar(120)
   description  String        @db.Text
@@ -184,6 +185,18 @@ model Listing {
   hiddenListings HiddenListing[]
   listingReports ListingReport[]
 
+}
+
+model ListingDailyView {
+  id        String   @id @default(cuid())
+  listingId String
+  date      String   @db.VarChar(10)
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, date])
+  @@index([date])
 }
 
 model ListingPriceHistory {

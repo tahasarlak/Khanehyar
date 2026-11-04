@@ -1,0 +1,237 @@
+import { NextResponse } from "next/server";
+import { mkdir, unlink, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+import { checkRateLimit, getRequestIdentity, rateLimitResponse } from "../../../src/lib/rate-limit";
+import { prisma } from "../../../src/lib/prisma";
+import { getCurrentUser } from "../../../src/lib/auth";
+import { listingSchema } from "@real-estate/shared";
+
+type ImageFormat = { mime: "image/jpeg" | "image/png" | "image/webp"; extension: "jpg" | "png" | "webp" };
+async function detectImageFormat(file: File): Promise<ImageFormat | null> {
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  // Detect the real format from the file signature; MIME type and filename are user-controlled.
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return { mime: "image/jpeg", extension: "jpg" };
+  if (bytes.length >= 8 && [0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a].every((value,index) => bytes[index] === value)) return { mime: "image/png", extension: "png" };
+  if (bytes.length >= 12 && String.fromCharCode(...bytes.slice(0,4)) === "RIFF" && String.fromCharCode(...bytes.slice(8,12)) === "WEBP") return { mime: "image/webp", extension: "webp" };
+  return null;
+}
+
+export async function POST(request: Request) {
+  const storedFilePaths: string[] = [];
+  let createdListingId: string | null = null;
+  const limit = await checkRateLimit("create-listing", getRequestIdentity(request));
+  if (!limit.allowed) {
+    return rateLimitResponse(limit.retryAfterSeconds);
+  }
+  try {
+    // Prevent cross-origin browser submissions.
+    const origin = request.headers.get("origin");
+    const requestOrigin = new URL(request.url).origin;
+
+    if (!origin || origin !== requestOrigin) {
+      return NextResponse.json(
+        { error: "مبدأ درخواست معتبر نیست." },
+        { status: 403 },
+      );
+    }
+
+    // Ownership must come from the verified session.
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "برای ثبت آگهی ابتدا وارد حساب شوید." },
+        { status: 401 },
+      );
+    }
+
+    const contentType = request.headers.get("content-type") ?? "";
+
+    if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
+      return NextResponse.json(
+        { error: "فرمت درخواست باید FormData باشد." },
+        { status: 415 },
+      );
+    }
+
+    let formData: FormData;
+
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ارسال‌شده قابل خواندن نیست." },
+        { status: 400 },
+      );
+    }
+
+    const optionalNumber = (name: string) => { const value = formData.get(name); return value === null || value === "" ? null : Number(value); };
+    const optionalBoolean = (name: string) => { const value = String(formData.get(name) ?? ""); return value === "true" ? true : value === "false" ? false : null; };
+    const imageEntries = formData.getAll("images");
+    const imageFiles = imageEntries.filter((entry): entry is File => entry instanceof File && entry.size > 0);
+    if (imageFiles.length > 8) return NextResponse.json({ error: "حداکثر ۸ تصویر می‌توانی برای هر آگهی ثبت کنی." }, { status: 400 });
+    if (imageFiles.some((file) => file.size > 8 * 1024 * 1024)) return NextResponse.json({ error: "حجم هر تصویر باید حداکثر ۸ مگابایت باشد." }, { status: 400 });
+    const imageFormats = await Promise.all(imageFiles.map(detectImageFormat));
+    const invalidImageIndex = imageFormats.findIndex((format) => format === null);
+    if (invalidImageIndex !== -1) {
+      console.warn("Listing image upload rejected: unsupported image signature", { declaredType: imageFiles[invalidImageIndex].type, size: imageFiles[invalidImageIndex].size });
+      return NextResponse.json({ error: "فرمت واقعی یکی از تصاویر قابل تشخیص نیست. لطفاً تصویر را به JPG، PNG یا WebP تبدیل و دوباره انتخاب کن." }, { status: 400 });
+    }
+    imageFormats.forEach((format, index) => { if (format && imageFiles[index].type && imageFiles[index].type !== format.mime) console.info("Listing image MIME normalized from file signature", { declaredType: imageFiles[index].type, detectedType: format.mime }); });
+    if (imageEntries.some((entry) => typeof entry === "string" && entry.trim() !== "")) return NextResponse.json({ error: "فایل تصویر نامعتبر است." }, { status: 400 });
+    const allowedImageLabels = new Set(["نمای بیرونی", "پذیرایی", "آشپزخانه", "اتاق خواب", "سرویس بهداشتی", "حمام", "بالکن و تراس", "حیاط و باغ", "منظره", "نقشهٔ ملک", "سایر"]);
+    let imageLabels: (string | null)[] = imageFiles.map(() => null);
+    const rawImageLabels = formData.get("imageLabels");
+    if (typeof rawImageLabels === "string" && rawImageLabels.trim()) {
+      try {
+        const parsed: unknown = JSON.parse(rawImageLabels);
+        if (!Array.isArray(parsed) || parsed.length !== imageFiles.length || parsed.some((label) => label !== null && label !== "" && (typeof label !== "string" || !allowedImageLabels.has(label)))) {
+          return NextResponse.json({ error: "برچسب یکی از تصاویر معتبر نیست." }, { status: 400 });
+        }
+        imageLabels = parsed.map((label) => typeof label === "string" && label ? label : null);
+      } catch {
+        return NextResponse.json({ error: "اطلاعات برچسب تصاویر معتبر نیست." }, { status: 400 });
+      }
+    }
+
+    const rawInput = {
+      title: String(formData.get("title") ?? ""), description: String(formData.get("description") ?? ""),
+      listingType: String(formData.get("listingType") ?? ""), propertyType: String(formData.get("propertyType") ?? ""),
+      urgentSale: formData.get("urgentSale") === "true", rentalPeriod: String(formData.get("rentalPeriod") ?? "LONG_TERM"),
+      price: Number(formData.get("price")), currency: String(formData.get("currency") ?? "IRT"), area: Number(formData.get("area")),
+      rooms: optionalNumber("rooms"), city: String(formData.get("city") ?? ""), address: String(formData.get("address") ?? "").trim() || null,
+      latitude: null, longitude: null, yearBuilt: optionalNumber("yearBuilt"), bathrooms: optionalNumber("bathrooms"), parkingSpaces: optionalNumber("parkingSpaces"),
+      hasElevator: optionalBoolean("hasElevator"), hasStorage: optionalBoolean("hasStorage"),
+      heatingType: String(formData.get("heatingType") ?? "").trim() || null, coolingType: String(formData.get("coolingType") ?? "").trim() || null,
+      documentType: String(formData.get("documentType") ?? "").trim() || null, orientation: String(formData.get("orientation") ?? "").trim() || null,
+      naturalLight: String(formData.get("naturalLight") ?? "").trim() || null, furnished: optionalBoolean("furnished"),
+      ceilingHeight: optionalNumber("ceilingHeight"), architecturalStyle: String(formData.get("architecturalStyle") ?? "").trim() || null, windowView: String(formData.get("windowView") ?? "").trim() || null,
+      furnishedItems: formData.getAll("furnishedItems").filter((value): value is string => typeof value === "string"), accessibilitySuitable: optionalBoolean("accessibilitySuitable"), accessibilityFeatures: formData.getAll("accessibilityFeatures").filter((value): value is string => typeof value === "string"),
+      buildingType: String(formData.get("buildingType") ?? "").trim() || null, constructionStatus: String(formData.get("constructionStatus") ?? "").trim() || null, structureType: String(formData.get("structureType") ?? "").trim() || null, facadeType: String(formData.get("facadeType") ?? "").trim() || null, elevatorCount: optionalNumber("elevatorCount"), unitCount: optionalNumber("unitCount"), parkingType: String(formData.get("parkingType") ?? "").trim() || null, serviceCharge: optionalNumber("serviceCharge"), commission: optionalNumber("commission"), advancePayment: optionalNumber("advancePayment"), minimumContractMonths: optionalNumber("minimumContractMonths"), petsAllowed: optionalBoolean("petsAllowed"), familyOnly: optionalBoolean("familyOnly"), smokingAllowed: optionalBoolean("smokingAllowed"), priceNegotiable: formData.get("priceNegotiable") === "true",
+      readyToMove: optionalBoolean("readyToMove"),
+      balcony: optionalBoolean("balcony"), terrace: optionalBoolean("terrace"), garden: optionalBoolean("garden"),
+      amenities: formData.getAll("amenities").filter((value): value is string => typeof value === "string"),
+      monthlyRent: optionalNumber("monthlyRent"), deposit: optionalNumber("deposit"), allowDepositConversion: formData.get("allowDepositConversion") === "true",
+      advertiserType: String(formData.get("advertiserType") ?? "UNSPECIFIED"), showExactLocation: formData.get("showExactLocation") === "true", showOnMap: formData.has("showOnMap") ? formData.getAll("showOnMap").includes("true") : true, imageUrls: [],
+    };
+
+    const validation = listingSchema.safeParse(rawInput);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: "اطلاعات فرم معتبر نیست.",
+          details: validation.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const floorValue = formData.get("floor");
+    const totalFloorsValue = formData.get("totalFloors");
+
+    const floor =
+      floorValue === null || floorValue === ""
+        ? null
+        : Number(floorValue);
+
+    const totalFloors =
+      totalFloorsValue === null || totalFloorsValue === ""
+        ? null
+        : Number(totalFloorsValue);
+
+    if (
+      (floor !== null && (!Number.isInteger(floor) || floor < 0)) ||
+      (totalFloors !== null &&
+        (!Number.isInteger(totalFloors) || totalFloors < 1)) ||
+      (floor !== null &&
+        totalFloors !== null &&
+        floor > totalFloors)
+    ) {
+      return NextResponse.json(
+        { error: "اطلاعات طبقه معتبر نیست." },
+        { status: 400 },
+      );
+    }
+
+    const listing = await prisma.listing.create({
+      data: {
+        title: validation.data.title,
+        description: validation.data.description,
+        listingType: validation.data.listingType,
+        propertyType: validation.data.propertyType,
+        urgentSale: validation.data.listingType === "SALE" && validation.data.urgentSale,
+        rentalPeriod: validation.data.listingType === "RENT" ? (validation.data.rentalPeriod ?? "LONG_TERM") : null,
+        price: validation.data.price,
+        currency: validation.data.currency,
+        area: validation.data.area,
+        rooms: validation.data.rooms,
+        city: validation.data.city,
+        address: validation.data.address,
+        latitude: validation.data.latitude,
+        longitude: validation.data.longitude,
+        floor, totalFloors,
+        yearBuilt: validation.data.yearBuilt ?? null, bathrooms: validation.data.bathrooms ?? null, parkingSpaces: validation.data.parkingSpaces ?? null,
+        hasElevator: validation.data.hasElevator ?? null, hasStorage: validation.data.hasStorage ?? null,
+        heatingType: validation.data.heatingType ?? null, coolingType: validation.data.coolingType ?? null, documentType: validation.data.documentType ?? null,
+        orientation: validation.data.orientation ?? null, naturalLight: validation.data.naturalLight ?? null,
+        furnished: validation.data.furnished ?? null, ceilingHeight: validation.data.ceilingHeight ?? null, architecturalStyle: validation.data.architecturalStyle ?? null, windowView: validation.data.windowView ?? null, furnishedItems: validation.data.furnishedItems, accessibilitySuitable: validation.data.accessibilitySuitable ?? null, accessibilityFeatures: validation.data.accessibilityFeatures,
+        buildingType: validation.data.buildingType ?? null, constructionStatus: validation.data.constructionStatus ?? null, structureType: validation.data.structureType ?? null, facadeType: validation.data.facadeType ?? null, elevatorCount: validation.data.elevatorCount ?? null, unitCount: validation.data.unitCount ?? null, parkingType: validation.data.parkingType ?? null, serviceCharge: validation.data.serviceCharge ?? null, commission: validation.data.commission ?? null, advancePayment: validation.data.advancePayment ?? null, minimumContractMonths: validation.data.minimumContractMonths ?? null, petsAllowed: validation.data.petsAllowed ?? null, familyOnly: validation.data.familyOnly ?? null, smokingAllowed: validation.data.smokingAllowed ?? null, priceNegotiable: validation.data.priceNegotiable,
+        readyToMove: validation.data.readyToMove ?? null, balcony: validation.data.balcony ?? null,
+        terrace: validation.data.terrace ?? null, garden: validation.data.garden ?? null, amenities: validation.data.amenities,
+        monthlyRent: validation.data.monthlyRent ?? null, deposit: validation.data.deposit ?? null,
+        allowDepositConversion: validation.data.allowDepositConversion, advertiserType: validation.data.advertiserType, showExactLocation: validation.data.showExactLocation, showOnMap: validation.data.showOnMap,
+        ownerId: user.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        ownerId: true,
+        createdAt: true,
+      },
+    });
+
+    createdListingId = listing.id;
+    if (imageFiles.length > 0) {
+      const uploadDir = process.env.LISTING_UPLOAD_DIR || path.join(process.cwd(), ".data", "listing-uploads");
+      await mkdir(uploadDir, { recursive: true });
+      for (const [index, file] of imageFiles.entries()) {
+        const extension = imageFormats[index]!.extension; const imageId = randomUUID(); const filename = `${imageId}.${extension}`;
+        const diskPath = path.join(uploadDir, filename);
+        await writeFile(diskPath, Buffer.from(await file.arrayBuffer()), { flag: "wx" }); storedFilePaths.push(diskPath);
+        await prisma.listingImage.create({ data: { id: imageId, url: `/api/listing-images/${filename}`, sortOrder: index, label: imageLabels[index] ?? null, altText: validation.data.title.slice(0, 200), listingId: listing.id } });
+      }
+    }
+
+    await prisma.listingAuditLog.create({
+      data: {
+        listingId: listing.id,
+        listingTitle: listing.title,
+        actorId: user.id,
+        actorRole: user.role,
+        action: "CREATED",
+        reason: "ثبت آگهی توسط مالک",
+        after: { status: listing.status, title: listing.title, createdAt: listing.createdAt.toISOString() },
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: "آگهی ثبت شد و منتظر تأیید مدیر است.",
+        listing,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    if (createdListingId) await prisma.listing.deleteMany({ where: { id: createdListingId } }).catch(() => undefined);
+    await Promise.all(storedFilePaths.map((filePath) => unlink(filePath).catch(() => undefined)));
+    console.error("Create listing failed:", error);
+
+    return NextResponse.json(
+      { error: "خطای داخلی هنگام ثبت آگهی." },
+      { status: 500 },
+    );
+  }
+}

@@ -32,6 +32,27 @@ type Property = {
   images: (ExistingListingImage & { sortOrder: number })[];
 };
 
+const propertyTitleNames: Record<Property["propertyType"], string> = {
+  APARTMENT: "آپارتمان",
+  HOUSE: "خانه",
+  VILLA: "ویلا",
+  LAND: "زمین",
+  COMMERCIAL: "ملک تجاری",
+};
+
+function makeGeneratedTitle(form: Pick<Property, "listingType" | "propertyType" | "rooms" | "area" | "city">) {
+  const deal = form.listingType === "RENT" ? "اجاره" : "فروش";
+  const property = propertyTitleNames[form.propertyType] ?? "ملک";
+  const rooms = form.rooms !== null && ["APARTMENT", "HOUSE", "VILLA"].includes(form.propertyType)
+    ? ` ${form.rooms.toLocaleString("fa-IR")} خوابه`
+    : "";
+  const parsedArea = Number(form.area);
+  const area = Number.isFinite(parsedArea)
+    ? new Intl.NumberFormat("fa-IR", { maximumFractionDigits: 2 }).format(parsedArea)
+    : form.area;
+  return `${deal} ${property}${rooms}، ${area} متری در ${form.city}`.replace(/\s+/g, " ").trim();
+}
+
 export default function EditListingForm() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -96,7 +117,6 @@ export default function EditListingForm() {
     setError("");
 
     const payload = {
-      title: form.title,
       description: form.description,
       listingType: form.listingType,
       urgentSale: form.urgentSale,
@@ -235,17 +255,12 @@ export default function EditListingForm() {
         </p>
 
         <form onSubmit={submit} className="kh-edit-listing-form grid gap-5 md:grid-cols-2">
-          <div className="kh-edit-section-heading md:col-span-2"><span>بخش ۱</span><div><strong>اطلاعات اصلی آگهی</strong><small>عنوان، توضیحات، نوع معامله و موقعیت ملک</small></div></div>
-          <label className="md:col-span-2">
-            عنوان آگهی
-            <input
-              required
-              maxLength={120}
-              className={inputClass}
-              value={form.title}
-              onChange={(e) => update("title", e.target.value)}
-            />
-          </label>
+          <div className="kh-edit-section-heading md:col-span-2"><span>بخش ۱</span><div><strong>اطلاعات اصلی آگهی</strong><small>عنوان به‌صورت خودکار ساخته می‌شود؛ توضیحات و موقعیت ملک را بررسی کن.</small></div></div>
+          <div className="md:col-span-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-slate-700">
+            <strong className="block text-sm">عنوان خودکار آگهی</strong>
+            <p className="mt-1 text-sm" aria-live="polite">{makeGeneratedTitle(form)}</p>
+            <small className="mt-1 block text-xs text-slate-500">با تغییر نوع معامله، نوع ملک، تعداد اتاق، متراژ یا شهر، عنوان نیز خودکار به‌روزرسانی می‌شود.</small>
+          </div>
 
           <label className="md:col-span-2">
             توضیحات
