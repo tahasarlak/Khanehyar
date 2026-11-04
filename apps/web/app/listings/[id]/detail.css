@@ -2965,3 +2965,350 @@
   .hd-floorplan-shortcut { order: 3; }
   .hd-price-summary { order: 4; }
 }
+
+
+/* ==========================================================
+   KHANEHYAR CIAN-STYLE DETAIL REBUILD — based on latest project
+   Desktop: left content + right sticky price/contact rail.
+   Mobile/tablet: preserve the existing single-column flow and dock.
+   ========================================================== */
+@media (min-width: 821px) {
+  .hd-page .hd-container {
+    width: min(1320px, calc(100% - 64px));
+    max-width: 1320px;
+  }
+
+  .hd-page .hd-desktop-detail-grid {
+    display: grid;
+    direction: ltr;
+    grid-template-columns: minmax(0, 1fr) minmax(350px, 410px);
+    gap: 28px;
+    align-items: start;
+    margin: 0 0 36px;
+  }
+
+  .hd-page .hd-desktop-gallery-column {
+    direction: rtl;
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .hd-page .hd-desktop-gallery-column > .hd-gallery {
+    width: 100%;
+    max-width: none;
+    margin: 0 0 22px;
+  }
+
+  .hd-page .hd-desktop-gallery-column .hd-gallery-main {
+    height: clamp(390px, 37vw, 560px);
+    border-radius: 12px;
+  }
+
+  .hd-page .hd-desktop-price-column {
+    direction: rtl;
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    padding: 0 2px 8px 0;
+  }
+
+  .hd-page .hd-price-summary,
+  .hd-page .hd-desktop-price-details,
+  .hd-page .hd-desktop-owner-mini {
+    flex: 0 0 auto;
+    width: 100%;
+    margin: 0;
+    border: 1px solid #e5eaf0;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 5px 22px rgba(20, 43, 70, .06);
+  }
+
+  .hd-page .hd-price-summary {
+    padding: 20px 22px;
+  }
+
+  .hd-page .hd-price-summary-main-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
+  }
+
+  .hd-page .hd-price-summary .hd-price {
+    color: #102d50;
+    font-size: clamp(27px, 2.2vw, 33px);
+    font-weight: 900;
+    line-height: 1.45;
+  }
+
+  .hd-page .hd-price-summary .hd-price small {
+    font-size: 13px;
+    font-weight: 750;
+  }
+
+  .hd-page .hd-price-summary .hd-price-label {
+    color: #77869a;
+    font-size: 11px;
+  }
+
+  .hd-page .hd-desktop-price-details {
+    padding: 17px 21px;
+  }
+
+  .hd-page .hd-desktop-price-details h2 {
+    margin: 0 0 9px;
+    color: #17324f;
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  .hd-page .hd-desktop-price-details > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dotted #d6dee8;
+    font-size: 12px;
+  }
+
+  .hd-page .hd-desktop-price-details > div:last-child {
+    border-bottom: 0;
+  }
+
+  .hd-page .hd-desktop-price-details > div span {
+    color: #53657a;
+  }
+
+  .hd-page .hd-desktop-price-details > div strong {
+    color: #102d50;
+    text-align: end;
+    font-weight: 800;
+  }
+
+  .hd-page .hd-desktop-owner-mini {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 16px 19px;
+  }
+
+  .hd-page .hd-desktop-owner-avatar-image,
+  .hd-page .hd-desktop-owner-avatar {
+    display: grid;
+    place-items: center;
+    flex: 0 0 54px;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #eef3fa;
+    color: #49627f;
+    font-size: 22px;
+    font-weight: 900;
+  }
+
+  .hd-page .hd-desktop-owner-mini > div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .hd-page .hd-desktop-owner-mini small {
+    color: #7b8da0;
+    font-size: 9px;
+  }
+
+  .hd-page .hd-desktop-owner-mini strong {
+    color: #142f50;
+    font-size: 14px;
+  }
+
+  .hd-page .hd-desktop-owner-mini > div > span {
+    color: #8996a6;
+    font-size: 10px;
+  }
+
+  .hd-page .hd-desktop-price-column > .hd-contact-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .hd-page .hd-desktop-price-column > .hd-contact-actions button {
+    width: 100%;
+    min-height: 46px;
+    border-radius: 9px;
+  }
+
+  .hd-page .hd-desktop-price-column .hd-mobile-offer-cta {
+    display: none;
+  }
+
+  .hd-page .hd-mobile-title-block,
+  .hd-page .hd-mobile-stats {
+    display: none !important;
+  }
+
+  .hd-page .hd-floorplan-shortcut {
+    display: inline-flex;
+    align-self: flex-start;
+    margin: 0 0 20px;
+  }
+
+  /* All long-form listing sections remain in the left content column. */
+  .hd-page .hd-layout {
+    display: block;
+    width: 100%;
+    margin: 0;
+  }
+
+  .hd-page .hd-main-column {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .hd-page .hd-main-column > .hd-panel {
+    width: 100%;
+    margin: 0;
+  }
+
+  .hd-page .hd-sidebar {
+    position: static;
+    width: 100%;
+    margin-top: 18px;
+  }
+
+  .hd-page .hd-safety-card {
+    width: 100%;
+    margin-top: 0;
+    border-radius: 12px;
+  }
+
+  .hd-page .hd-similar-section {
+    margin-top: 28px;
+  }
+
+  .hd-page .hd-bottom-link {
+    padding: 28px 0 60px;
+  }
+
+  .hd-page .hd-nearby-explorer.is-compact {
+    margin: 9px 0 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1100px) {
+  .hd-page .hd-desktop-detail-grid {
+    grid-template-columns: minmax(0, 1fr) 350px;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 820px) {
+  .hd-page .hd-desktop-detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 20px;
+  }
+
+  /* Flatten the two desktop columns so mobile ordering remains controlled
+     by the existing responsive order rules below. */
+  .hd-page .hd-desktop-gallery-column,
+  .hd-page .hd-desktop-price-column {
+    display: contents;
+  }
+
+  .hd-page .hd-gallery { order: 1; }
+  .hd-page .hd-mobile-title-block { order: 2; display: block !important; }
+  .hd-page .hd-floorplan-shortcut { order: 3; }
+  .hd-page .hd-mobile-stats { order: 4; display: grid !important; }
+  .hd-page .hd-price-summary { order: 5; }
+  .hd-page .hd-desktop-price-details,
+  .hd-page .hd-desktop-owner-mini { display: none !important; }
+  .hd-page .hd-contact-actions { order: 6; }
+  .hd-page .hd-layout { order: 7; display: block; width: 100%; }
+  .hd-page .hd-similar-section { order: 8; }
+  .hd-page .hd-bottom-link { order: 9; }
+
+  .hd-page .hd-desktop-price-column {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .hd-page .hd-desktop-detail-grid {
+    margin-inline: -14px;
+    width: calc(100% + 28px);
+  }
+
+  .hd-page .hd-gallery-main {
+    border-radius: 0;
+  }
+
+  .hd-page .hd-desktop-price-column {
+    display: contents;
+  }
+
+  .hd-page .hd-contact-actions.hd-mobile-dock {
+    position: fixed;
+    z-index: 1100;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin: 0;
+  }
+}
+
+/* End Cian-style full-page layout */
+
+
+@media (min-width: 821px) {
+  .hd-page .hd-desktop-gallery-column > .hd-heading {
+    width: 100%;
+    margin: 0 0 19px;
+    padding: 0;
+    align-items: flex-start;
+  }
+  .hd-page .hd-desktop-gallery-column > .hd-heading h1 {
+    margin-top: 5px;
+  }
+  .hd-page .hd-desktop-gallery-column > .hd-heading .hd-favorite-actions {
+    padding-top: 2px;
+  }
+}
+@media (max-width: 640px) {
+  .hd-page .hd-desktop-gallery-column > .hd-heading {
+    display: none !important;
+  }
+}
